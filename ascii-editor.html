@@ -215,6 +215,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
+// ═══ ASCII Diagram Editor — Grid-Based Visual Editor ═══
 // ═══════════════════════════════════════
 // Colors
 // ═══════════════════════════════════════
@@ -236,14 +237,15 @@ const BOX_CHARS = '┌┐└┘├┤┬┴┼─│';
 // ═══════════════════════════════════════
 // Grid State
 // ═══════════════════════════════════════
-let COLS = 120, ROWS = 50;
-let grid = []; // grid[r][c] = char or ''
+let COLS = 120, ROWS = 50; // grid dimensions (auto-expand)
+let grid = []; // grid[r][c] = char or empty string // grid[r][c] = char or ''
+// ── active tool, color, shade ──
 let activeTool = 'select';
 let activeColor = 'g';
 let activeShade = 3;
-let textMode = 'insert'; // 'insert' 或 'replace'，文字输入模式
-let isVisual = false; // Visual 模式（v 键切换）
-let lastVimKey = null; // Vim 双键命令（dd/yy）的状态记忆
+let textMode = 'insert'; // text editing mode // 'insert' 或 'replace'，文字输入模式
+let isVisual = false; // Vim Visual mode // Visual 模式（v 键切换）
+let lastVimKey = null; // for dd / yy two-key commands // Vim 双键命令（dd/yy）的状态记忆
 let selStart = null, selEnd = null; // {r, c}
 let cursorR = 0, cursorC = 0;
 let isDragging = false;
@@ -285,6 +287,7 @@ function charWidth(ch) {
   return 1;
 }
 
+// ═══ Render Grid from array → DOM ═══
 function renderGrid() {
   const root = document.getElementById('canvas');
   root.innerHTML = '';
@@ -322,11 +325,14 @@ function getCell(r, c) {
   return document.querySelector('.cell[data-r="' + r + '"][data-c="' + c + '"]');
 }
 
+// ═══ Cell Accessors ═══
+// getCellText(r, c) — safe read from grid
 function getCellText(r, c) {
   if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '';
   return grid[r][c];
 }
 
+// setCell(r, c, ch) — update grid array + DOM + trigger preview
 function setCell(r, c, ch) {
   if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
   grid[r][c] = ch;
@@ -370,7 +376,7 @@ function updateSelection() {
 }
 
 // ═══════════════════════════════════════
-// History (Undo)
+// ═══ History (Undo/Redo) ═══
 // ═══════════════════════════════════════
 function saveHistory() {
   const state = grid.map(row => [...row]);
@@ -601,6 +607,8 @@ function onCellDblClick(e) {
 // ═══════════════════════════════════════
 // Drawing Helpers
 // ═══════════════════════════════════════
+// ═══ Coordinate Helpers (grid column ↔ display column) ═══
+// findCellByDispColAny — scan all cells including w2 (for wall detection)
 function findCellByDispColAny(r, dispCol) {
   const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
   for (const cell of cells) {
@@ -609,6 +617,7 @@ function findCellByDispColAny(r, dispCol) {
   return -1;
 }
 
+// findCellByDispCol — skip w2 cells (for cursor placement)
 function findCellByDispCol(r, dispCol) {
   const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
   for (const cell of cells) {
@@ -635,6 +644,7 @@ function setCellByDisp(r, d, ch) {
 }
 
 // ── Line-character direction merging (so intersections become ├┤┬┴┼) ──
+// ═══ Line Character Connection Table ═══
 const LINE_DIRS = {
   '─': ['L','R'], '│': ['U','D'],
   '┌': ['R','D'], '┐': ['L','D'], '└': ['U','R'], '┘': ['U','L'],
@@ -686,6 +696,7 @@ function neighborConnects(r, d, dir) {
 }
 
 // Recompute a cell's line char from its actual neighbors (endpoints → T-joints, not crossings)
+// autoConnect(r, c, d) — recompute cell char from 4-neighbor connections
 function autoConnect(r, c, d) {
   const dirs = [];
   if (neighborConnects(r, d, 'U')) dirs.push('U');
@@ -699,6 +710,7 @@ function autoConnect(r, c, d) {
 }
 
 // Two-phase placement: stamp all chars, then recompute each from neighbors
+// placePath(path) — 3-phase: overwrite → renderGrid → autoConnect
 function placePath(path) {
   const placed = [];
   for (const { r, d, ch } of path) {
@@ -779,6 +791,7 @@ function previewMoveTarget(p) {
 }
 
 // 按网格行列偏移移动选区内容（grid 数组级别操作，双字节安全）
+// ═══ Content Move (grid-array based, safe for double-width chars) ═══
 function moveContentByGrid(b, dr, dc) {
   if (dr === 0 && dc === 0) return;
   const rows = b.maxR - b.minR + 1;
@@ -996,6 +1009,8 @@ function eraseSelection() {
 // Check that the left/right walls are continuous between top and bottom edges.
 // Wall chars must connect BOTH up and down (│ ├ ┤ ┼) — corners (┌┐└┘) only connect
 // one vertical direction, so they break the wall (e.g. two stacked frames).
+// ═══ Box Detection ═══
+// hasWalls — verify vertical border continuity
 function hasWalls(topR, botR, leftD, rightD) {
   for (let r = topR + 1; r < botR; r++) {
     const lc = findCellByDispColAny(r, leftD);
@@ -1030,6 +1045,7 @@ function hasHorizontalEdge(rowR, leftD, rightD) {
 // then down for bottom edge └...┘ at matching display columns.
 // The cursor must be inside the box: topR <= r <= botR AND leftD <= d <= rightD.
 // Left/right walls must be continuous (rejects "fake boxes" from two separate frames).
+// findBoxAt(r, d) — smallest enclosing box, supports nesting & rounded corners
 function findBoxAt(r, d) {
   const isCorner = ch => ch === '┌' || ch === '╭' || ch === '┐' || ch === '╮' || ch === '└' || ch === '╰' || ch === '┘' || ch === '╯' || COLOR_CODES.includes(ch);
   let best = null, bestArea = Infinity;
@@ -1081,6 +1097,7 @@ function applyColor() {
 }
 
 // Color the box under the current cursor position (triggered by clicking a color swatch)
+// ═══ Coloring ═══
 function colorAtCursor() {
   const cell = getCell(cursorR, cursorC);
   if (!cell) return;
@@ -1194,6 +1211,7 @@ function pasteAtCursor() {
 // ═══════════════════════════════════════
 // Keyboard
 // ═══════════════════════════════════════
+// ═══ Keyboard Handler (central event dispatch) ═══
 document.addEventListener('keydown', (e) => {
   // Skip if user is typing in a modal input
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
@@ -2098,6 +2116,7 @@ function adjustColor(hex, digit) {
   return hslToHex(hsl);
 }
 
+// ═══ Preview Panel (colored box rendering + text markup) ═══
 function renderPreview(text) {
   const lines = text.split('\n');
   const boxes = findBoxes(lines);
