@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ASCII 图编辑器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%234a90d9'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='18' font-weight='bold' fill='white' text-anchor='middle'%3E%E2%94%90%3C/text%3E%3C/svg%3E">
 <style>
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('fonts/sarasa-mono-sc-nerd-regular.ttf') format('truetype');font-weight:normal;font-style:normal}
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('fonts/sarasa-mono-sc-nerd-bold.ttf') format('truetype');font-weight:bold;font-style:normal}
@@ -31,7 +32,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Grid canvas (the core) ── */
 .canvas-wrap{flex:1;overflow:auto;padding:10px;background:#e8e8e8;user-select:none;-webkit-user-select:none}
-.canvas-wrap .grid-root{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);display:inline-block;font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:16px;line-height:1.45}
+.canvas-wrap .grid-root{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);display:inline-block;font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.45}
 .canvas-wrap .row{display:flex;height:1.45em;align-items:stretch}
 .canvas-wrap .row-num{color:#999;font-size:11px;background:#f8f8f8;min-width:3ch;text-align:right;padding-right:4px;user-select:none;display:flex;align-items:center;justify-content:flex-end;border-right:1px solid #eee}
 .canvas-wrap .cell{height:100%;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:default;position:relative;box-sizing:content-box;flex-shrink:0;user-select:none;-webkit-user-select:none}
@@ -54,7 +55,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Preview ── */
 .preview-wrap{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center}
-.preview-wrap pre{font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;display:inline-block;font-variant-ligatures:none;font-kerning:none;background:#fff}
+.preview-wrap pre{font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;display:inline-block;font-variant-ligatures:none;font-kerning:none;background:#fff}
 .preview-wrap pre span{padding:0}
 .preview-empty{color:#999;font-size:14px;text-align:center;margin-top:40px}
 
@@ -76,7 +77,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-overlay.active{display:flex}
 .modal-box{background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);padding:20px;width:90%;max-width:900px;max-height:85vh;display:flex;flex-direction:column}
 .modal-box h3{margin:0 0 10px;font-size:16px}
-.modal-box textarea{flex:1;min-height:300px;font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:14px;line-height:1.3;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;white-space:pre;tab-size:2}
+.modal-box textarea{flex:1;min-height:300px;font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:14px;line-height:1.3;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;white-space:pre;tab-size:2}
 .modal-box .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .modal-box .modal-buttons button{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px}
 .modal-box .modal-buttons .primary{background:#4a90d9;color:#fff;border:1px solid #3a7bc8}
@@ -139,15 +140,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <tr><td style="padding:2px 8px"><b>L</b></td><td>直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td>剪切</td></tr>
       <tr><td style="padding:2px 8px"><b>B</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
       <tr><td style="padding:2px 8px"><b>R</b></td><td>圆角矩形</td><td style="padding:2px 8px"><b>I</b></td><td>插入列</td></tr>
-      <tr><td style="padding:2px 8px"><b>Ctrl+R</b></td><td>圆角化当前框</td><td></td><td></td></tr>
-      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+I</b></td><td>插入行</td></tr>
-      <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>圆角化当前框</td><td></td><td></td></tr>
+      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Ctrl+Shift+I</b></td><td>插入行</td></tr>
+      <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Insert</b></td><td>切换插入/覆盖</td></tr>
       <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
       <tr><td style="padding:2px 8px"><b>M</b></td><td>移动</td><td style="padding:2px 8px"><b>Shift+色码</b></td><td>着色</td></tr>
       <tr><td style="padding:2px 8px"><b>E</b></td><td>擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td>各颜色</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td>清空/框选删C列</td><td style="padding:2px 8px"><b>Shift+Delete</b></td><td>删除列</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td>删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Delete</b></td><td>删除行</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td>保存</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Ctrl+[</b></td><td>上一张图</td><td style="padding:2px 8px"><b>Ctrl+]</b></td><td>下一张图</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Esc</b></td><td>退出文字模式</td></tr>
+      <tr><td style="padding:2px 8px"><b>u</b></td><td>撤销(Vim)</td><td style="padding:2px 8px"><b>Ctrl+r</b></td><td>重做(Vim)</td></tr>
+      <tr><td style="padding:2px 8px"><b>x / X</b></td><td>删当前/前格</td><td style="padding:2px 8px"><b>dd</b></td><td>删当前行</td></tr>
+      <tr><td style="padding:2px 8px"><b>p</b></td><td>粘贴(Vim)</td><td style="padding:2px 8px"><b>yy</b></td><td>复制当前行</td></tr>
+      <tr><td style="padding:2px 8px"><b>0 / $</b></td><td>行首/行尾</td><td style="padding:2px 8px"></td><td></td></tr>
     </table>
     <div class="modal-buttons">
       <button class="primary" id="btn-close-shortcuts">关闭</button>
@@ -162,6 +169,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="status">
       <span id="status-pos">行: 1 列: 1</span>
       <span id="status-size">网格: 30 × 20</span>
+      <span id="status-mode">模式: 插入</span>
       <span id="status-tool">工具: 选择</span>
     </div>
   </div>
@@ -233,6 +241,8 @@ let grid = []; // grid[r][c] = char or ''
 let activeTool = 'select';
 let activeColor = 'g';
 let activeShade = 3;
+let textMode = 'insert'; // 'insert' 或 'replace'，文字输入模式
+let lastVimKey = null; // Vim 双键命令（dd/yy）的状态记忆
 let selStart = null, selEnd = null; // {r, c}
 let cursorR = 0, cursorC = 0;
 let isDragging = false;
@@ -268,6 +278,9 @@ function charWidth(ch) {
   if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
   if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2;
   if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
+  if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
+  if (cp >= 0x2600 && cp <= 0x27BF) return 2; // Misc symbols
+  if (cp >= 0x231A && cp <= 0x23FF) return 2; // Misc technical
   return 1;
 }
 
@@ -371,6 +384,15 @@ function undo() {
     historyIdx--;
     grid = history[historyIdx].map(row => [...row]);
     renderGrid();
+    refreshPreview();
+  }
+}
+function redo() {
+  if (historyIdx < history.length - 1) {
+    historyIdx++;
+    grid = history[historyIdx].map(row => [...row]);
+    renderGrid();
+    refreshPreview();
   }
 }
 
@@ -1178,6 +1200,7 @@ document.addEventListener('keydown', (e) => {
       case 'l': case 'L': setTool('line'); e.preventDefault(); return;
       case 'b': case 'B': setTool('box'); e.preventDefault(); return;
             case 'a': case 'A': setTool('arrow'); e.preventDefault(); return;
+      case 'i': setTool('text'); e.preventDefault(); return;
       case 't': case 'T': setTool('text'); e.preventDefault(); return;
       case 'w': case 'W': setTool('magic'); e.preventDefault(); return;
       case 'm': case 'M': setTool('move'); e.preventDefault(); return;
@@ -1185,10 +1208,39 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
-  // Ctrl+Z undo
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-    undo(); e.preventDefault(); return;
+  // Vim 风格编辑操作（非文字模式）
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
+    // dd 删当前行 / yy 复制当前行（双键）
+    if (lastVimKey === 'd' && e.key === 'd') {
+      saveHistory();
+      for (let c = 0; c < COLS; c++) grid[cursorR][c] = '';
+      renderGrid(); refreshPreview();
+      lastVimKey = null; e.preventDefault(); return;
+    }
+    if (lastVimKey === 'y' && e.key === 'y') {
+      clipboard = [grid[cursorR].map(ch => ch || '')];
+      lastVimKey = null; e.preventDefault(); return;
+    }
+    if (e.key === 'd') { lastVimKey = 'd'; e.preventDefault(); return; }
+    if (e.key === 'y') { lastVimKey = 'y'; e.preventDefault(); return; }
+    lastVimKey = null;
+    switch (e.key) {
+      case 'u': undo(); e.preventDefault(); return;
+      case 'x': setCell(cursorR, cursorC, ''); saveHistory(); e.preventDefault(); return;
+      case 'X':
+        if (cursorC > 0) { setCell(cursorR, cursorC - 1, ''); saveHistory(); }
+        e.preventDefault(); return;
+      case 'p': pasteAtCursor(); e.preventDefault(); return;
+      case '0':
+      case '$':
+        cursorC = e.key === '0' ? 0 : COLS - 1;
+        selStart = { r: cursorR, c: cursorC };
+        selEnd = { r: cursorR, c: cursorC };
+        updateSelection(); updateStatus();
+        e.preventDefault(); return;
+    }
   }
+
   // Ctrl+S 保存
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
@@ -1196,8 +1248,8 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Ctrl+R 圆角化当前矩形框
-  if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+  // Ctrl+Shift+R 圆角化当前矩形框
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
     e.preventDefault();
     roundCorners();
     return;
@@ -1250,11 +1302,13 @@ document.addEventListener('keydown', (e) => {
     updateStatus();
     return;
   }
-  // Insert/delete columns at cursor
-  if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'i') {
-    if (e.shiftKey) insertRow();
-    else insertColumn();
-    e.preventDefault(); return;
+  // Ctrl+Shift+I 插入行
+  if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+    insertRow(); e.preventDefault(); return;
+  }
+  // I 插入列
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'I') {
+    insertColumn(); e.preventDefault(); return;
   }
 
   // Delete/Backspace：框选→局部删C列左移；单格Backspace→删前一个左移；单格Delete→清空当前
@@ -1301,6 +1355,27 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  // Ctrl+[/] 切换图
+  if ((e.ctrlKey || e.metaKey) && (e.key === '[' || e.key === ']')) {
+    e.preventDefault();
+    if (diagrams.length) {
+      let idx = selectedIndex < 0 ? 0 : selectedIndex + (e.key === ']' ? 1 : -1);
+      idx = Math.max(0, Math.min(diagrams.length - 1, idx));
+      if (idx !== selectedIndex) {
+        selectDiagram(idx);
+        document.getElementById('diagram-select').value = idx;
+      }
+    }
+    return;
+  }
+
+  // Esc 退出文字模式
+  if (e.key === 'Escape' && activeTool === 'text') {
+    setTool('select');
+    e.preventDefault();
+    return;
+  }
+
   // Arrow keys - move cursor
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
     e.preventDefault();
@@ -1318,14 +1393,28 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-    // Text input - only in text tool
-  if (e.key.length === 1 && activeTool === 'text') {
+    // Text input - only in text tool (支持 Emoji 等多码元字符)
+  if (e.key.length >= 1 && activeTool === 'text' && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !['Backspace','Delete','Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) {
+    // Insert 键切换 insert/replace 模式
+    if (e.key === 'Insert') {
+      textMode = (textMode === 'insert') ? 'replace' : 'insert';
+      updateStatus();
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
-    setCell(cursorR, cursorC, e.key);
+    const nextC = cursorC + 1;
+    if (textMode === 'insert') {
+      // 插入模式：先确保容量，再右移后续内容，插入字符
+      ensureCapacity(cursorR, nextC);
+      for (let c = COLS - 1; c > cursorC; c--) grid[cursorR][c] = grid[cursorR][c - 1];
+    }
+    grid[cursorR][cursorC] = e.key;
     saveHistory();
-    // Move cursor right
-    cursorC = Math.min(COLS - 1, cursorC + 1);
-    ensureCapacity(cursorR, cursorC);
+    cursorC = Math.min(COLS - 1, nextC);
+    renderGrid();
+    refreshPreview();
     selStart = { r: cursorR, c: cursorC };
     selEnd = { r: cursorR, c: cursorC };
     updateSelection();
@@ -1469,6 +1558,7 @@ function initColorLegend() {
 function updateStatus() {
   document.getElementById('status-pos').textContent = `行: ${cursorR + 1} 列: ${cursorC + 1}`;
   document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
+  document.getElementById('status-mode').textContent = `模式: ${textMode === 'insert' ? '插入' : '覆盖'}`;
 }
 
 // ═══════════════════════════════════════
@@ -1754,7 +1844,7 @@ function importText(text) {
   for (let r = 0; r < Math.min(lines.length, ROWS); r++) {
     const line = lines[r];
     for (let c = 0; c < Math.min(line.length, COLS); c++) {
-      grid[r][c] = line[c];
+      grid[r][c] = Array.from(line)[c] || line[c];
     }
   }
 
@@ -1798,8 +1888,9 @@ function ensureCapacity(r, c) {
 function lineCells(line) {
   const cells = [];
   let dispCol = 0;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  const chars = Array.from(line);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
     const w = charWidth(ch);
     cells.push({ char: ch, idx: i, dispCol, width: w });
     dispCol += w;
