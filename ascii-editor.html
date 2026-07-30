@@ -472,8 +472,20 @@ function onCellMouseDown(e) {
       }
     } else { selStart = p; selEnd = p; updateSelection(); }
   } else if (activeTool === 'select') {
-    if (isVisual) { selStart = p; selEnd = p; updateSelection(); }
-    else { selStart = null; selEnd = null; updateSelection(); }
+    // 鼠标拖拽自动进入 Visual；拖拽已有选区内部 → 激活移动
+    if (isVisual && selStart && selEnd && (selStart.r !== selEnd.r || selStart.c !== selEnd.c)) {
+      const b = getSelectionBounds();
+      if (b && p.r >= b.minR && p.r <= b.maxR && p.c >= b.minC && p.c <= b.maxC) {
+        moveDragging = true;
+        moveSelection = b;
+        drawStart = p;
+        return;
+      }
+    }
+    // 新选区
+    isVisual = true;
+    selStart = p; selEnd = p;
+    updateSelection(); updateStatus();
   } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
     selStart = p; selEnd = p;
     updateSelection();
@@ -500,7 +512,11 @@ function onCellMouseMove(e) {
     }
     lastFreeCell = p;
   } else if (activeTool === 'select') {
-    if (isVisual) { selEnd = p; updateSelection(); }
+    if (moveDragging) {
+      document.querySelectorAll('.cell.sel').forEach(el => el.classList.remove('sel'));
+      clearPreview();
+      setPreview(previewMoveTarget(p));
+    } else if (isVisual) { selEnd = p; updateSelection(); }
     else { cursorR = p.r; cursorC = p.c; updateSelection(); updateStatus(); }
   } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic' ) {
     selEnd = p;
@@ -547,12 +563,25 @@ function onCellMouseUp(e) {
   } else if (activeTool === 'move') {
     if (moveDragging && moveSelection) {
       clearPreview();
-      moveContentWithSelection(moveSelection, p, drawStart);
+      moveContentByGrid(moveSelection, p.r - drawStart.r, p.dispCol - drawStart.dispCol);
       moveDragging = false;
       moveSelection = null;
       clearSelection();
     }
     // else: keep selection for next action
+  } else if (activeTool === 'select' && moveDragging && moveSelection) {
+    // Visual 模式下拖拽选区 → 移动，保持选区跟随
+    const b = moveSelection;
+    const dr = p.r - drawStart.r, dc = p.dispCol - drawStart.dispCol;
+    clearPreview();
+    moveContentByGrid(b, dr, dc);
+    moveDragging = false;
+    moveSelection = null;
+    const c1 = getCell(b.minR + dr, b.minC + dc), c2 = getCell(b.maxR + dr, b.maxC + dc);
+    selStart = { r: b.minR + dr, c: b.minC + dc, dispCol: c1 ? parseInt(c1.dataset.dispCol) : 0 };
+    selEnd = { r: b.maxR + dr, c: b.maxC + dc, dispCol: c2 ? parseInt(c2.dataset.dispCol) : 0 };
+    isVisual = true;
+    updateSelection(); updateStatus();
   } else if (activeTool === 'magic') {
     magicAlign();
   }
@@ -749,42 +778,33 @@ function previewMoveTarget(p) {
   return out;
 }
 
-function moveContentWithSelection(b, endP, startP) {
-  const dr = endP.r - startP.r;
-  const dd = endP.dispCol - startP.dispCol;
-  if (dr === 0 && dd === 0) return;
-  // Save all cells in selection (including double-width CJK)
-  const buffer = [];
+// 按网格行列偏移移动选区内容（grid 数组级别操作，双字节安全）
+function moveContentByGrid(b, dr, dc) {
+  if (dr === 0 && dc === 0) return;
+  const rows = b.maxR - b.minR + 1;
+  const cols = b.maxC - b.minC + 1;
+  // 保存选区切片
+  const slice = [];
   for (let r = b.minR; r <= b.maxR; r++) {
-    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
-    cells.forEach(cell => {
-      const d = parseInt(cell.dataset.dispCol);
-      if (d >= b.minD && d <= b.maxD) {
-        const ch = getCellText(r, parseInt(cell.dataset.c));
-        if (ch) buffer.push({ r: r, dispCol: d, ch: ch });
-      }
-    });
+    const row = [];
+    for (let c = b.minC; c <= b.maxC; c++) row.push(grid[r][c] || '');
+    slice.push(row);
   }
-  // Clear original
-  for (let r = b.minR; r <= b.maxR; r++) {
-    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
-    cells.forEach(cell => {
-      const d = parseInt(cell.dataset.dispCol);
-      if (d >= b.minD && d <= b.maxD) setCell(r, parseInt(cell.dataset.c), '');
-    });
-  }
-  // Write to new position (find target cell by dispCol, including w2)
-  buffer.forEach(item => {
-    const newR = item.r + dr;
-    const newD = item.dispCol + dd;
-    const cells = document.querySelectorAll('.cell[data-r="' + newR + '"]');
-    for (const cell of cells) {
-      if (parseInt(cell.dataset.dispCol) === newD) {
-        setCell(newR, parseInt(cell.dataset.c), item.ch);
-        break;
+  // 清空原区域
+  for (let r = b.minR; r <= b.maxR; r++)
+    for (let c = b.minC; c <= b.maxC; c++) grid[r][c] = '';
+  // 写入新位置
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++) {
+      const ch = slice[i][j];
+      if (ch) {
+        const nr = b.minR + i + dr, nc = b.minC + j + dc;
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) grid[nr][nc] = ch;
       }
     }
-  });
+  renderGrid();
+  refreshPreview();
+  saveHistory();
 }
 
 function previewRoundedBox(b) {
@@ -1379,16 +1399,35 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Esc 退出文字模式或 Visual 模式
+  // Esc 回到 Normal 模式（选择工具，取消 Visual）
   if (e.key === 'Escape') {
-    if (activeTool === 'text') { setTool('select'); }
-    if (isVisual) { isVisual = false; clearSelection(); updateSelection(); updateStatus(); }
+    if (isVisual) { isVisual = false; clearSelection(); }
+    if (activeTool !== 'select') { setTool('select'); }
+    updateSelection(); updateStatus();
     e.preventDefault(); return;
   }
 
-  // Arrow keys - move cursor
+  // Arrow keys - move cursor / move selection
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
     e.preventDefault();
+    // 移动工具 + 有选区 → 键盘移动选区内容
+    if (activeTool === 'move' && selStart && selEnd) {
+      const b = getSelectionBounds();
+      if (b) {
+        const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+        const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        moveContentByGrid(b, dr, dc);
+        // 更新选区跟随移动后的位置
+        const nMinR = b.minR + dr, nMaxR = b.maxR + dr;
+        const nMinC = b.minC + dc, nMaxC = b.maxC + dc;
+        const c1 = getCell(nMinR, nMinC), c2 = getCell(nMaxR, nMaxC);
+        selStart = { r: nMinR, c: nMinC, dispCol: c1 ? parseInt(c1.dataset.dispCol) : 0 };
+        selEnd = { r: nMaxR, c: nMaxC, dispCol: c2 ? parseInt(c2.dataset.dispCol) : 0 };
+        updateSelection();
+        updateStatus();
+      }
+      return;
+    }
     if (activeTool === 'select' || activeTool === 'text') {
       const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
@@ -1474,7 +1513,6 @@ document.addEventListener('keydown', (e) => {
 function setTool(tool) {
   activeTool = tool;
   isVisual = false;
-  clearSelection();
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
   const btnMap = {
     select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
@@ -2241,7 +2279,10 @@ setTool('select');
 
 // 点击网格空白处取消选择
 document.getElementById('canvas-wrap').addEventListener('mousedown', (e) => {
-  if (!e.target.classList.contains('cell')) clearSelection();
+  if (!e.target.classList.contains('cell')) {
+    clearSelection();
+    if (isVisual) { isVisual = false; updateStatus(); }
+  }
 });
 console.log('ASCII 图编辑器已加载');
 console.log('快捷键: V=选择, F=自由, L=直线, B=矩形, A=箭头, T=文字, W=梳子, E=擦除, Ctrl+Z=撤销, Ctrl+C/X/V=复制剪切粘贴');
