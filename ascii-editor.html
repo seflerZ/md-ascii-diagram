@@ -1385,8 +1385,19 @@ document.addEventListener('keydown', (e) => {
       const nr = Math.max(0, Math.min(ROWS - 1, cursorR + dr));
       const nc = Math.max(0, Math.min(COLS - 1, cursorC + dc));
       cursorR = nr; cursorC = nc;
-      selStart = { r: cursorR, c: cursorC };
-      selEnd = { r: cursorR, c: cursorC };
+      if (activeTool === 'select') {
+        // 选择工具：扩展选区（selStart 固定一次后不动，selEnd 跟随光标）
+        if (!selStart || (selStart.r === selEnd.r && selStart.c === selEnd.c)) {
+          const sc = getCell(cursorR - dr, cursorC - dc);
+          selStart = { r: cursorR - dr, c: cursorC - dc, dispCol: sc ? parseInt(sc.dataset.dispCol) : cursorC - dc };
+        }
+        const ec = getCell(cursorR, cursorC);
+        selEnd = { r: cursorR, c: cursorC, dispCol: ec ? parseInt(ec.dataset.dispCol) : cursorC };
+      } else {
+        // 文字工具：单格光标移动
+        selStart = { r: cursorR, c: cursorC };
+        selEnd = { r: cursorR, c: cursorC };
+      }
       updateSelection();
       updateStatus();
     }
