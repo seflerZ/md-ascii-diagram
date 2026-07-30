@@ -242,6 +242,7 @@ let activeTool = 'select';
 let activeColor = 'g';
 let activeShade = 3;
 let textMode = 'insert'; // 'insert' 或 'replace'，文字输入模式
+let isVisual = false; // Visual 模式（v 键切换）
 let lastVimKey = null; // Vim 双键命令（dd/yy）的状态记忆
 let selStart = null, selEnd = null; // {r, c}
 let cursorR = 0, cursorC = 0;
@@ -470,7 +471,10 @@ function onCellMouseDown(e) {
         updateSelection();
       }
     } else { selStart = p; selEnd = p; updateSelection(); }
-  } else if (activeTool === 'select' || activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
+  } else if (activeTool === 'select') {
+    if (isVisual) { selStart = p; selEnd = p; updateSelection(); }
+    else { selStart = null; selEnd = null; updateSelection(); }
+  } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
     selStart = p; selEnd = p;
     updateSelection();
   } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow') {
@@ -495,7 +499,10 @@ function onCellMouseMove(e) {
       else setCell(p.r, p.c, '─');
     }
     lastFreeCell = p;
-  } else if (activeTool === 'select' || activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic' ) {
+  } else if (activeTool === 'select') {
+    if (isVisual) { selEnd = p; updateSelection(); }
+    else { cursorR = p.r; cursorC = p.c; updateSelection(); updateStatus(); }
+  } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic' ) {
     selEnd = p;
     updateSelection();
   } else if (activeTool === 'move') {
@@ -1195,7 +1202,10 @@ document.addEventListener('keydown', (e) => {
   if (!e.ctrlKey && !e.metaKey && !e.altKey && !(activeTool === 'text' && e.key.length === 1)) {
     switch (e.key) {
       case 'r': case 'R': setTool('rounded'); e.preventDefault(); return;
-      case 'v': case 'V': setTool('select'); e.preventDefault(); return;
+      case 'v': case 'V':
+        if (activeTool === 'select' || activeTool === 'text') { isVisual = !isVisual; updateStatus(); }
+        else { setTool('select'); }
+        e.preventDefault(); return;
       case 'f': case 'F': setTool('free'); e.preventDefault(); return;
       case 'l': case 'L': setTool('line'); e.preventDefault(); return;
       case 'b': case 'B': setTool('box'); e.preventDefault(); return;
@@ -1369,11 +1379,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Esc 退出文字模式
-  if (e.key === 'Escape' && activeTool === 'text') {
-    setTool('select');
-    e.preventDefault();
-    return;
+  // Esc 退出文字模式或 Visual 模式
+  if (e.key === 'Escape') {
+    if (activeTool === 'text') { setTool('select'); }
+    if (isVisual) { isVisual = false; clearSelection(); updateSelection(); updateStatus(); }
+    e.preventDefault(); return;
   }
 
   // Arrow keys - move cursor
@@ -1385,8 +1395,8 @@ document.addEventListener('keydown', (e) => {
       const nr = Math.max(0, Math.min(ROWS - 1, cursorR + dr));
       const nc = Math.max(0, Math.min(COLS - 1, cursorC + dc));
       cursorR = nr; cursorC = nc;
-      if (activeTool === 'select') {
-        // 选择工具：扩展选区（selStart 固定一次后不动，selEnd 跟随光标）
+      if (activeTool === 'select' && isVisual) {
+        // Visual 模式：扩展选区（selStart 固定，selEnd 跟随光标）
         if (!selStart || (selStart.r === selEnd.r && selStart.c === selEnd.c)) {
           const sc = getCell(cursorR - dr, cursorC - dc);
           selStart = { r: cursorR - dr, c: cursorC - dc, dispCol: sc ? parseInt(sc.dataset.dispCol) : cursorC - dc };
@@ -1394,7 +1404,8 @@ document.addEventListener('keydown', (e) => {
         const ec = getCell(cursorR, cursorC);
         selEnd = { r: cursorR, c: cursorC, dispCol: ec ? parseInt(ec.dataset.dispCol) : cursorC };
       } else {
-        // 文字工具：单格光标移动
+        // 非 Visual / 文字工具：只移动光标，无选区
+        clearSelection();
         selStart = { r: cursorR, c: cursorC };
         selEnd = { r: cursorR, c: cursorC };
       }
@@ -1462,6 +1473,8 @@ document.addEventListener('keydown', (e) => {
 // ═══════════════════════════════════════
 function setTool(tool) {
   activeTool = tool;
+  isVisual = false;
+  clearSelection();
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
   const btnMap = {
     select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
@@ -1569,7 +1582,10 @@ function initColorLegend() {
 function updateStatus() {
   document.getElementById('status-pos').textContent = `行: ${cursorR + 1} 列: ${cursorC + 1}`;
   document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
-  document.getElementById('status-mode').textContent = `模式: ${textMode === 'insert' ? '插入' : '覆盖'}`;
+  let mode = activeTool === 'text' ? (textMode === 'insert' ? '插入' : '覆盖') : '';
+  if (isVisual) mode = (mode ? 'VISUAL ' : '') + mode + '可视';
+  else if (!mode) mode = '普通';
+  document.getElementById('status-mode').textContent = `模式: ${mode}`;
 }
 
 // ═══════════════════════════════════════
