@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ASCII 图编辑器</title>
+<style>
+@font-face{font-family:'Sarasa Mono SC Nerd';src:url('fonts/sarasa-mono-sc-nerd-regular.ttf') format('truetype');font-weight:normal;font-style:normal}
+@font-face{font-family:'Sarasa Mono SC Nerd';src:url('fonts/sarasa-mono-sc-nerd-bold.ttf') format('truetype');font-weight:bold;font-style:normal}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Toolbar ── */
+.toolbar{background:#fff;border-bottom:1px solid #ddd;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;user-select:none;flex-shrink:0}
+.toolbar .group{display:flex;gap:2px;align-items:center}
+.toolbar .sep{width:1px;height:24px;background:#ddd;margin:0 4px}
+.toolbar button{padding:4px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.toolbar button:hover{background:#e8e8e8}
+.toolbar button.active{background:#d0e4ff;border-color:#6a9fd8}
+.toolbar button.primary{background:#4a90d9;color:#fff;border-color:#3a7bc8}
+.toolbar button.primary:hover{background:#3a7bc8}
+.toolbar label{font-size:12px;color:#666;display:flex;align-items:center;gap:3px}
+.toolbar input[type=color]{width:22px;height:22px;border:none;padding:0;cursor:pointer;vertical-align:middle}
+.toolbar input[type=number]{width:40px;padding:2px;border:1px solid #ccc;border-radius:3px;font-size:12px;text-align:center}
+.toolbar .name-input{width:100px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px}
+
+/* ── Main area ── */
+.main{display:flex;flex:1;overflow:hidden}
+.editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.preview-panel{width:50%;border-left:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+
+/* ── Grid canvas (the core) ── */
+.canvas-wrap{flex:1;overflow:auto;padding:10px;background:#e8e8e8;user-select:none;-webkit-user-select:none}
+.canvas-wrap .grid-root{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);display:inline-block;font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:16px;line-height:1.45}
+.canvas-wrap .row{display:flex;height:1.45em;align-items:stretch}
+.canvas-wrap .row-num{color:#999;font-size:11px;background:#f8f8f8;min-width:3ch;text-align:right;padding-right:4px;user-select:none;display:flex;align-items:center;justify-content:flex-end;border-right:1px solid #eee}
+.canvas-wrap .cell{height:100%;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:default;position:relative;box-sizing:content-box;flex-shrink:0;user-select:none;-webkit-user-select:none}
+.canvas-wrap .cell.w1{width:1ch}
+.canvas-wrap .cell.w2{width:2ch}
+.canvas-wrap .cell.focus{outline:2px solid #4a90d9;outline-offset:-1px;z-index:1;background:#fff8dc}
+.canvas-wrap .cell.sel{background:#d0e4ff}
+.canvas-wrap .cell.preview{outline:1px dashed #4a90d9;outline-offset:-2px;background:rgba(74,144,217,.12)}
+.canvas-wrap .cell.char{color:#333}
+
+/* ── Selection / highlight ── */
+.canvas-wrap .cell.box-preview{background:#e8f5e9}
+.canvas-wrap .cell.color-preview{opacity:.85}
+
+/* ── Color legend ── */
+.color-legend{display:flex;flex-wrap:wrap;gap:3px;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;flex-shrink:0}
+.color-legend .swatch{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 6px;border-radius:3px;cursor:pointer;border:1px solid transparent}
+.color-legend .swatch:hover{border-color:#aaa}
+.color-legend .swatch .dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+
+/* ── Preview ── */
+.preview-wrap{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center}
+.preview-wrap pre{font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;display:inline-block;font-variant-ligatures:none;font-kerning:none;background:#fff}
+.preview-wrap pre span{padding:0}
+.preview-empty{color:#999;font-size:14px;text-align:center;margin-top:40px}
+
+/* ── Status bar ── */
+.status{background:#fff;border-top:1px solid #ddd;padding:3px 10px;font-size:12px;color:#888;display:flex;gap:16px;flex-shrink:0}
+.status span{cursor:default}
+
+/* ── Tool panels ── */
+.tool-panel{display:none}
+.tool-panel.active{display:flex;align-items:center;gap:6px}
+.color-picker{display:flex;gap:2px;align-items:center}
+.color-picker .cp-btn{width:22px;height:22px;border:1px solid #ccc;border-radius:3px;cursor:pointer;position:relative}
+.color-picker .cp-btn:hover{border-color:#666}
+.color-picker .cp-btn.active{border-color:#333;outline:2px solid #4a90d9;outline-offset:1px}
+.color-picker .cp-btn .letter{position:absolute;bottom:0;right:1px;font-size:8px;color:rgba(0,0,0,.5);font-weight:bold}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);padding:20px;width:90%;max-width:900px;max-height:85vh;display:flex;flex-direction:column}
+.modal-box h3{margin:0 0 10px;font-size:16px}
+.modal-box textarea{flex:1;min-height:300px;font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:14px;line-height:1.3;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;white-space:pre;tab-size:2}
+.modal-box .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.modal-box .modal-buttons button{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px}
+.modal-box .modal-buttons .primary{background:#4a90d9;color:#fff;border:1px solid #3a7bc8}
+.modal-box .modal-buttons .primary:hover{background:#3a7bc8}
+.modal-box .modal-buttons .cancel{background:#fff;border:1px solid #ccc}
+.modal-box .modal-buttons .cancel:hover{background:#eee}
+.modal-box .hint{font-size:12px;color:#999;margin-bottom:8px}
+#diagram-list .diag-item{padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;border-bottom:1px solid #f0f0f0}
+#diagram-list .diag-item:hover{background:#e8f0ff}
+#diagram-list .diag-item .name{font-weight:bold;color:#333;margin-bottom:3px}
+#diagram-list .diag-item .preview{color:#888;font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;max-height:4.5em;line-height:1.4;font-family:'Sarasa Mono SC Nerd','Consolas',monospace}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="group">
+    <button id="tool-select" class="active" title="选择/编辑 (V)">🖱 选择</button>
+    <button id="tool-free" title="自由绘制 (F)">✏️ 自由</button>
+    <button id="tool-line" title="直线 (L)">─ 直线</button>
+    <button id="tool-box" title="矩形框 (B)">▣ 矩形</button>
+    <button id="tool-rounded" title="圆角矩形 (R)">▢ 圆角</button>
+    <button id="tool-arrow" title="箭头连线 (A)">→ 箭头</button>
+    <button id="tool-text" title="文字 (T)">T 文字</button>
+    <button id="tool-magic" title="梳子理线 (W)">🪮 梳子</button>
+    <button id="tool-move" title="移动 (M)">↕ 移动</button>
+    <button id="tool-eraser" title="橡皮擦 (E)">⌫ 擦除</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="group" id="panel-color">
+    <span style="font-size:12px;color:#666">点色着色:</span>
+    <div class="color-picker" id="color-picker"></div>
+    <label>明度 <input type="number" id="shade-input" min="1" max="6" value="3" style="width:36px"></label>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="group">
+    <label>图 <select id="diagram-select" style="max-width:150px;font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px"></select></label>
+    <label>名称 <input class="name-input" id="diagram-name" value="" placeholder="图名（导出必填）"></label>
+    <button class="primary" id="btn-export">💾 导出</button>
+    <button class="primary" id="btn-save" style="display:none" title="保存到当前 Markdown 文档">💿 保存</button>
+    <button class="primary" id="btn-refresh" style="display:none" title="从文件重新读取当前图">🔄 刷新</button>
+    <button class="primary" id="btn-import">📥 导入</button>
+    <button id="btn-clear">🗑 清空</button>
+  </div>
+  <button id="btn-shortcuts" title="快捷键" style="margin-left:auto;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:18px">⌨️</button>
+</div>
+
+<!-- 快捷键浮层 -->
+<div class="modal-overlay" id="modal-shortcuts">
+  <div class="modal-box" style="max-width:600px;font-size:14px">
+    <h3>⌨️ 快捷键一览</h3>
+    <table style="width:100%;border-collapse:collapse;line-height:2">
+      <tr><td style="padding:2px 8px"><b>V</b></td><td>选择</td><td style="padding:2px 8px"><b>Ctrl+Z</b></td><td>撤销</td></tr>
+      <tr><td style="padding:2px 8px"><b>F</b></td><td>自由绘制</td><td style="padding:2px 8px"><b>Ctrl+C</b></td><td>复制</td></tr>
+      <tr><td style="padding:2px 8px"><b>L</b></td><td>直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td>剪切</td></tr>
+      <tr><td style="padding:2px 8px"><b>B</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
+      <tr><td style="padding:2px 8px"><b>R</b></td><td>圆角矩形</td><td style="padding:2px 8px"><b>I</b></td><td>插入列</td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+R</b></td><td>圆角化当前框</td><td></td><td></td></tr>
+      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+I</b></td><td>插入行</td></tr>
+      <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td></tr>
+      <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
+      <tr><td style="padding:2px 8px"><b>M</b></td><td>移动</td><td style="padding:2px 8px"><b>Shift+色码</b></td><td>着色</td></tr>
+      <tr><td style="padding:2px 8px"><b>E</b></td><td>擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td>各颜色</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td>清空/框选删C列</td><td style="padding:2px 8px"><b>Shift+Delete</b></td><td>删除列</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td>删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Delete</b></td><td>删除行</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td>保存</td></tr>
+    </table>
+    <div class="modal-buttons">
+      <button class="primary" id="btn-close-shortcuts">关闭</button>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="editor-panel">
+    <div class="canvas-wrap" id="canvas-wrap">
+      <div class="grid-root" id="canvas"></div>
+    </div>
+    <div class="status">
+      <span id="status-pos">行: 1 列: 1</span>
+      <span id="status-size">网格: 30 × 20</span>
+      <span id="status-tool">工具: 选择</span>
+    </div>
+  </div>
+
+  <div class="preview-panel" id="preview-panel">
+    <div style="padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;font-size:13px;color:#666;display:flex;justify-content:space-between;align-items:center">
+      <span>🎨 预览</span>
+      <button id="btn-close-preview" style="background:none;border:none;cursor:pointer;font-size:16px;color:#999">✕</button>
+    </div>
+    <div class="preview-wrap" id="preview-wrap">
+      <div class="preview-empty">实时预览 🎨 开始绘制吧 ✏️</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-import">
+  <div class="modal-box">
+    <h3>📥 导入 ASCII 图</h3>
+    <div class="hint">粘贴 ASCII 图文本（支持 `<!--diagram NAME ... -->` 注释格式或纯文本）</div>
+    <textarea id="import-textarea" spellcheck="false"></textarea>
+    <div class="modal-buttons">
+      <button class="cancel" id="btn-import-cancel">取消</button>
+      <button class="primary" id="btn-import-confirm">导入</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-list">
+  <div class="modal-box" style="width:95%;max-width:1200px">
+    <h3>📂 选择要编辑的图</h3>
+    <div class="hint" id="list-hint">单击预览，确认后点「导入」：</div>
+    <div style="display:flex;flex:1;gap:12px;min-height:0">
+      <div id="diagram-list" style="flex:0 0 280px;overflow:auto;border:1px solid #ccc;border-radius:4px;padding:4px"></div>
+      <div id="diagram-preview" style="flex:1;overflow:auto;border:1px solid #eee;border-radius:4px;padding:12px;background:#fafafa;font-family:'Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;line-height:1.4;white-space:pre;color:#999">
+        单击左侧图名预览完整内容
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="primary" id="btn-list-import">导入</button>
+      <button class="cancel" id="btn-list-cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// Colors
+// ═══════════════════════════════════════
+const COLORS = {
+  m: { name: '玫红', hex: '#CC247C' },
+  r: { name: '红',   hex: '#E95351' },
+  o: { name: '橙',   hex: '#F7A24F' },
+  y: { name: '黄',   hex: '#FAE538' },
+  g: { name: '绿',   hex: '#4EA660' },
+  c: { name: '淡蓝', hex: '#79CAFB' },
+  b: { name: '蓝',   hex: '#5292F7' },
+  p: { name: '紫',   hex: '#AA77E9' },
+  e: { name: '灰',   hex: '#D9D1D1' },
+};
+const COLOR_CODES = Object.keys(COLORS);
+const BORDER_TOPS = '┌┐└┘├┤┬┴┼─│▲▼═║╔╗╚╝╠╣╦╩╬┏┓┗┛┣┫┳┻╋┃━┍┑┕┙┝┥┰┸╂';
+const BOX_CHARS = '┌┐└┘├┤┬┴┼─│';
+
+// ═══════════════════════════════════════
+// Grid State
+// ═══════════════════════════════════════
+let COLS = 120, ROWS = 50;
+let grid = []; // grid[r][c] = char or ''
+let activeTool = 'select';
+let activeColor = 'g';
+let activeShade = 3;
+let selStart = null, selEnd = null; // {r, c}
+let cursorR = 0, cursorC = 0;
+let isDragging = false;
+let drawStart = null;
+let history = []; // undo
+let historyIdx = -1;
+const MAX_HISTORY = 50;
+
+function initGrid() {
+  grid = [];
+  for (let r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (let c = 0; c < COLS; c++) grid[r][c] = '';
+  }
+}
+initGrid();
+
+// ═══════════════════════════════════════
+// Grid Rendering
+// ═══════════════════════════════════════
+
+// Character display width: CJK / arrows = 2 cells, others = 1
+function charWidth(ch) {
+  if (!ch) return 1;
+  const cp = ch.codePointAt(0);
+  if (cp >= 0x4E00 && cp <= 0x9FFF) return 2;
+  if (cp >= 0x3400 && cp <= 0x4DBF) return 2;
+  if (cp >= 0x3000 && cp <= 0x303F) return 2;
+  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
+  if (cp >= 0x2460 && cp <= 0x24FF) return 2;
+  
+  if (cp === 0x2194) return 2;
+  if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2;
+  if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
+  return 1;
+}
+
+function renderGrid() {
+  const root = document.getElementById('canvas');
+  root.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const num = document.createElement('div');
+    num.className = 'row-num';
+    num.textContent = r + 1;
+    row.appendChild(num);
+
+    let dispCol = 0;
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      const ch = grid[r][c] || '';
+      const w = charWidth(ch);
+      cell.className = 'cell char w' + w;
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.dataset.dispCol = dispCol;
+      cell.textContent = ch || ' ';
+      cell.addEventListener('mousedown', onCellMouseDown);
+      cell.addEventListener('mousemove', onCellMouseMove);
+      cell.addEventListener('mouseup', onCellMouseUp);
+      cell.addEventListener('dblclick', onCellDblClick);
+      row.appendChild(cell);
+      dispCol += w;
+    }
+    root.appendChild(row);
+  }
+  updateSelection();
+  updateStatus();
+}
+function getCell(r, c) {
+  return document.querySelector('.cell[data-r="' + r + '"][data-c="' + c + '"]');
+}
+
+function getCellText(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '';
+  return grid[r][c];
+}
+
+function setCell(r, c, ch) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+  grid[r][c] = ch;
+  const cell = getCell(r, c);
+  if (cell) {
+    cell.textContent = ch || ' ';
+    cell.className = 'cell char w' + charWidth(ch || '');
+  }
+  refreshPreview();
+}
+
+// ═══════════════════════════════════════
+// Selection & Highlight
+// ═══════════════════════════════════════
+function clearSelection() {
+  selStart = null; selEnd = null;
+  updateSelection();
+}
+
+function updateSelection() {
+  document.querySelectorAll('.cell.sel, .cell.focus').forEach(el => el.classList.remove('sel', 'focus'));
+  if (selStart && selEnd) {
+    const minR = Math.min(selStart.r, selEnd.r);
+    const maxR = Math.max(selStart.r, selEnd.r);
+    const minD = Math.min(selStart.dispCol, selEnd.dispCol);
+    const maxD = Math.max(selStart.dispCol, selEnd.dispCol);
+    for (let r = minR; r <= maxR; r++) {
+      const rowCells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+      rowCells.forEach(cell => {
+        const d = parseInt(cell.dataset.dispCol);
+        // Select cell if its display column start is within range,
+        // OR it's a double-width cell whose span overlaps the range
+        const w = cell.classList.contains('w2') ? 2 : 1;
+        if (d <= maxD && d + w - 1 >= minD) cell.classList.add('sel');
+      });
+    }
+  }
+  // Cursor focus
+  const focusCell = getCell(cursorR, cursorC);
+  if (focusCell) focusCell.classList.add('focus');
+}
+
+// ═══════════════════════════════════════
+// History (Undo)
+// ═══════════════════════════════════════
+function saveHistory() {
+  const state = grid.map(row => [...row]);
+  history = history.slice(0, historyIdx + 1);
+  history.push(state);
+  if (history.length > MAX_HISTORY) history.shift();
+  historyIdx = history.length - 1;
+}
+
+function undo() {
+  if (historyIdx > 0) {
+    historyIdx--;
+    grid = history[historyIdx].map(row => [...row]);
+    renderGrid();
+  }
+}
+
+// ═══════════════════════════════════════
+// Mouse / Drag
+// ═══════════════════════════════════════
+
+// Preview system: highlight cells during drag without modifying grid
+let previewCells = [];
+function clearPreview() {
+  previewCells.forEach(cell => {
+    if (!cell) return;
+    cell.classList.remove('preview');
+    if (cell._savedText !== undefined) {
+      cell.textContent = cell._savedText;
+      delete cell._savedText;
+    }
+  });
+  previewCells = [];
+}
+function setPreview(positions) {
+  clearPreview();
+  for (const pos of positions) {
+    const cc = findCellByDispCol(pos.r, pos.d);
+    if (cc >= 0) {
+      const cell = getCell(pos.r, cc);
+      if (cell) {
+        cell.classList.add('preview');
+        if (pos.ch !== undefined) {
+          cell._savedText = cell.textContent;
+          cell.textContent = pos.ch;
+        }
+        previewCells.push(cell);
+      }
+    }
+  }
+}
+
+let lastFreeCell = null;
+let moveDragging = false;
+let moveSelection = null; // saved selection bounds for move
+
+
+function readCell(td) {
+  return {
+    r: parseInt(td.dataset.r),
+    c: parseInt(td.dataset.c),
+    dispCol: parseInt(td.dataset.dispCol),
+  };
+}
+
+function onCellMouseDown(e) {
+  const p = readCell(e.currentTarget);
+  ensureCapacity(p.r, p.c);
+  cursorR = p.r; cursorC = p.c;
+  isDragging = true;
+  drawStart = p;
+
+  if (activeTool === 'free') {
+    saveHistory();
+    setCell(p.r, p.c, '─');
+    lastFreeCell = p;
+  } else if (activeTool === 'move') {
+    if (selStart && selEnd) {
+      const b = getSelectionBounds();
+      if (b && p.r >= b.minR && p.r <= b.maxR && p.dispCol >= b.minD && p.dispCol <= b.maxD) {
+        // Click inside selection → start moving
+        moveDragging = true;
+        moveSelection = b;
+        drawStart = p;
+      } else {
+        // Click outside → start new selection
+        clearSelection();
+        selStart = p; selEnd = p;
+        updateSelection();
+      }
+    } else { selStart = p; selEnd = p; updateSelection(); }
+  } else if (activeTool === 'select' || activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
+    selStart = p; selEnd = p;
+    updateSelection();
+  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow') {
+    // box / rounded / line / arrow: prepare drag, no selection highlight
+    clearSelection();
+    selStart = p; selEnd = p;
+    setPreview(previewPositions());
+  }
+  updateStatus();
+}
+
+function onCellMouseMove(e) {
+  if (!isDragging) return;
+  const p = readCell(e.currentTarget);
+  ensureCapacity(p.r, p.c);
+  cursorR = p.r; cursorC = p.c;
+
+  if (activeTool === 'free') {
+    if (lastFreeCell) {
+      if (p.r === lastFreeCell.r) setCell(p.r, p.c, '─');
+      else if (p.c === lastFreeCell.c) setCell(p.r, p.c, '│');
+      else setCell(p.r, p.c, '─');
+    }
+    lastFreeCell = p;
+  } else if (activeTool === 'select' || activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic' ) {
+    selEnd = p;
+    updateSelection();
+  } else if (activeTool === 'move') {
+    if (moveDragging) {
+      // Show ghost preview at target position, hide blue selection
+      document.querySelectorAll('.cell.sel').forEach(el => el.classList.remove('sel'));
+      clearPreview();
+      setPreview(previewMoveTarget(p));
+    } else {
+      selEnd = p;
+      updateSelection();
+    }
+  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow') {
+    // box / rounded / line / arrow: live preview
+    selEnd = p;
+    setPreview(previewPositions());
+  }
+  updateStatus();
+}
+
+function onCellMouseUp(e) {
+  if (!isDragging) return;
+  isDragging = false;
+  const p = readCell(e.currentTarget);
+
+  if (activeTool === 'free') {
+    lastFreeCell = null;
+  } else if (activeTool === 'line') {
+    clearPreview();
+    drawLine();
+  } else if (activeTool === 'box') {
+    clearPreview();
+    drawBox();
+  } else if (activeTool === 'rounded') {
+    clearPreview();
+    drawRoundedBox();
+  } else if (activeTool === 'arrow') {
+    clearPreview();
+    drawArrow();
+  } else if (activeTool === 'eraser') {
+    eraseSelection();
+  } else if (activeTool === 'move') {
+    if (moveDragging && moveSelection) {
+      clearPreview();
+      moveContentWithSelection(moveSelection, p, drawStart);
+      moveDragging = false;
+      moveSelection = null;
+      clearSelection();
+    }
+    // else: keep selection for next action
+  } else if (activeTool === 'magic') {
+    magicAlign();
+  }
+  // color tool already handled on mousedown (click mode)
+  updateStatus();
+}
+
+function onCellDblClick(e) {
+  const p = readCell(e.currentTarget);
+  setTool('text');
+  cursorR = p.r; cursorC = p.c;
+  selStart = p; selEnd = p;
+  updateSelection();
+  updateStatus();
+}
+
+// ═══════════════════════════════════════
+// Drawing Helpers
+// ═══════════════════════════════════════
+function findCellByDispColAny(r, dispCol) {
+  const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+  for (const cell of cells) {
+    if (parseInt(cell.dataset.dispCol) === dispCol) return parseInt(cell.dataset.c);
+  }
+  return -1;
+}
+
+function findCellByDispCol(r, dispCol) {
+  const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+  for (const cell of cells) {
+    if (cell.classList.contains('w2')) continue;
+    if (parseInt(cell.dataset.dispCol) === dispCol) return parseInt(cell.dataset.c);
+  }
+  return -1;
+}
+
+function findCellsInDispRange(r, minD, maxD) {
+  const result = [];
+  const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+  for (const cell of cells) {
+    if (cell.classList.contains('w2')) continue;
+    const d = parseInt(cell.dataset.dispCol);
+    if (d >= minD && d <= maxD) result.push({ c: parseInt(cell.dataset.c), dispCol: d });
+  }
+  return result;
+}
+
+function setCellByDisp(r, d, ch) {
+  const cc = findCellByDispCol(r, d);
+  if (cc >= 0) setCell(r, cc, ch);
+}
+
+// ── Line-character direction merging (so intersections become ├┤┬┴┼) ──
+const LINE_DIRS = {
+  '─': ['L','R'], '│': ['U','D'],
+  '┌': ['R','D'], '┐': ['L','D'], '└': ['U','R'], '┘': ['U','L'],
+  '├': ['U','D','R'], '┤': ['U','D','L'], '┬': ['L','R','D'], '┴': ['L','R','U'],
+  '┼': ['U','D','L','R'],
+};
+const DIRS_TO_CHAR = {
+  'DL': '┐', 'DR': '┌', 'DU': '│', 'LR': '─', 'LU': '┘', 'RU': '└',
+  'DLR': '┬', 'DLU': '┤', 'DRU': '├', 'LRU': '┴',
+  'DLRU': '┼',
+};
+function isLineChar(ch) { return !!LINE_DIRS[ch]; }
+function charDirs(ch) { return LINE_DIRS[ch] ? LINE_DIRS[ch].slice() : []; }
+function mergeChar(a, b) {
+  const dirs = {};
+  (LINE_DIRS[a] || []).forEach(d => dirs[d] = 1);
+  (LINE_DIRS[b] || []).forEach(d => dirs[d] = 1);
+  const sorted = Object.keys(dirs).sort();
+  const key = sorted.join('');
+  return DIRS_TO_CHAR[key] || b;
+}
+// Place a char, merging with existing line chars at intersections
+function placeChar(r, c, ch) {
+  const cur = getCellText(r, c);
+  if (cur === '' || cur === ' ') {
+    setCell(r, c, ch);
+  } else if (isLineChar(cur) && isLineChar(ch)) {
+    setCell(r, c, mergeChar(cur, ch));
+  } else if ('→←↑↓'.includes(ch)) {
+    setCell(r, c, ch); // arrow head overwrites
+  }
+  // else: don't overwrite text / other chars
+}
+
+// Does the neighbor in direction `dir` connect back to (r, d)?
+function neighborConnects(r, d, dir) {
+  let nr = r, nd = d;
+  if (dir === 'U') nr = r - 1;
+  else if (dir === 'D') nr = r + 1;
+  else if (dir === 'L') nd = d - 1;
+  else if (dir === 'R') nd = d + 1;
+  if (nr < 0 || nr >= ROWS) return false;
+  const c = findCellByDispCol(nr, nd);
+  if (c < 0) return false;
+  const ch = getCellText(nr, c);
+  if (!isLineChar(ch)) return false;
+  const opposite = { U: 'D', D: 'U', L: 'R', R: 'L' }[dir];
+  return charDirs(ch).includes(opposite);
+}
+
+// Recompute a cell's line char from its actual neighbors (endpoints → T-joints, not crossings)
+function autoConnect(r, c, d) {
+  const dirs = [];
+  if (neighborConnects(r, d, 'U')) dirs.push('U');
+  if (neighborConnects(r, d, 'D')) dirs.push('D');
+  if (neighborConnects(r, d, 'L')) dirs.push('L');
+  if (neighborConnects(r, d, 'R')) dirs.push('R');
+  if (dirs.length === 0) return getCellText(r, c);
+  dirs.sort();
+  const key = dirs.join('');
+  return DIRS_TO_CHAR[key] || getCellText(r, c);
+}
+
+// Two-phase placement: stamp all chars, then recompute each from neighbors
+function placePath(path) {
+  const placed = [];
+  for (const { r, d, ch } of path) {
+    const c = findCellByDispColAny(r, d);
+    if (c < 0) continue;
+    setCell(r, c, ch);
+    if (!'┌┐└┘→←↑↓'.includes(ch)) placed.push({ r, c });
+  }
+  // 第二阶段：重绘网格，重算所有 dispCol（双宽→单宽后宽度变化）
+  renderGrid();
+  // 第三阶段：autoConnect 用新 dispCol 合并身杆
+  for (const { r, c } of placed) {
+    const cell = getCell(r, c);
+    if (cell) {
+      const d = parseInt(cell.dataset.dispCol);
+      setCell(r, c, autoConnect(r, c, d));
+    }
+  }
+}
+
+function getSelectionBounds() {
+  if (!selStart || !selEnd) return null;
+  return {
+    minR: Math.min(selStart.r, selEnd.r),
+    maxR: Math.max(selStart.r, selEnd.r),
+    minC: Math.min(selStart.c, selEnd.c),
+    maxC: Math.max(selStart.c, selEnd.c),
+    minD: Math.min(selStart.dispCol, selEnd.dispCol),
+    maxD: Math.max(selStart.dispCol, selEnd.dispCol),
+  };
+}
+
+// ═══════════════════════════════════════
+// Preview position calculations (return [{r, d}])
+// ═══════════════════════════════════════
+function previewPositions() {
+  const b = getSelectionBounds();
+  if (!b) return [];
+  if (activeTool === 'line') return previewLine();
+  if (activeTool === 'box') return previewBox(b);
+  if (activeTool === 'rounded') return previewRoundedBox(b);
+  if (activeTool === 'arrow') return previewArrow();
+  return [];
+}
+
+function previewLine() {
+  return computeLinePath();
+}
+
+function buildBoxPath(b, c) {
+  const path = [];
+  for (let d = b.minD; d <= b.maxD; d++) {
+    path.push({ r: b.minR, d, ch: d === b.minD ? c.tl : d === b.maxD ? c.tr : '─' });
+    path.push({ r: b.maxR, d, ch: d === b.minD ? c.bl : d === b.maxD ? c.br : '─' });
+  }
+  for (let r = b.minR + 1; r < b.maxR; r++) {
+    path.push({ r, d: b.minD, ch: '│' });
+    path.push({ r, d: b.maxD, ch: '│' });
+  }
+  return path;
+}
+
+function previewBox(b) {
+  return buildBoxPath(b, { tl: '┌', tr: '┐', bl: '└', br: '┘' });
+}
+
+function previewMoveTarget(p) {
+  if (!moveSelection || !drawStart || !p) return [];
+  const dr = p.r - drawStart.r;
+  const dd = p.dispCol - drawStart.dispCol;
+  const out = [];
+  for (let r = moveSelection.minR; r <= moveSelection.maxR; r++) {
+    for (let d = moveSelection.minD; d <= moveSelection.maxD; d++) {
+      out.push({ r: r + dr, d: d + dd });
+    }
+  }
+  return out;
+}
+
+function moveContentWithSelection(b, endP, startP) {
+  const dr = endP.r - startP.r;
+  const dd = endP.dispCol - startP.dispCol;
+  if (dr === 0 && dd === 0) return;
+  // Save all cells in selection (including double-width CJK)
+  const buffer = [];
+  for (let r = b.minR; r <= b.maxR; r++) {
+    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+    cells.forEach(cell => {
+      const d = parseInt(cell.dataset.dispCol);
+      if (d >= b.minD && d <= b.maxD) {
+        const ch = getCellText(r, parseInt(cell.dataset.c));
+        if (ch) buffer.push({ r: r, dispCol: d, ch: ch });
+      }
+    });
+  }
+  // Clear original
+  for (let r = b.minR; r <= b.maxR; r++) {
+    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+    cells.forEach(cell => {
+      const d = parseInt(cell.dataset.dispCol);
+      if (d >= b.minD && d <= b.maxD) setCell(r, parseInt(cell.dataset.c), '');
+    });
+  }
+  // Write to new position (find target cell by dispCol, including w2)
+  buffer.forEach(item => {
+    const newR = item.r + dr;
+    const newD = item.dispCol + dd;
+    const cells = document.querySelectorAll('.cell[data-r="' + newR + '"]');
+    for (const cell of cells) {
+      if (parseInt(cell.dataset.dispCol) === newD) {
+        setCell(newR, parseInt(cell.dataset.c), item.ch);
+        break;
+      }
+    }
+  });
+}
+
+function previewRoundedBox(b) {
+  return buildBoxPath(b, { tl: '╭', tr: '╮', bl: '╰', br: '╯' });
+}
+
+function drawRoundedBox() {
+  const b = getSelectionBounds();
+  if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
+  const path = buildBoxPath(b, { tl: '╭', tr: '╮', bl: '╰', br: '╯' });
+  placePath(path);
+  saveHistory();
+  clearSelection();
+}
+
+function insertColumn() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  const n = b.maxC - b.minC + 1; // 选区列宽
+  saveHistory();
+  for (let r = 0; r < ROWS; r++) {
+    for (let i = 0; i < n; i++) grid[r].push('');
+  }
+  COLS += n;
+  for (let r = 0; r < ROWS; r++) {
+    for (let i = 0; i < n; i++) { grid[r].splice(b.minC, 0, ''); grid[r].pop(); }
+  }
+  renderGrid();
+  refreshPreview();
+}
+
+function insertRow() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  saveHistory();
+  grid.splice(b.minR, 0, new Array(COLS).fill(''));
+  ROWS++;
+  renderGrid();
+  refreshPreview();
+}
+
+function deleteColumn() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  const n = b.maxC - b.minC + 1;
+  saveHistory();
+  for (let r = 0; r < ROWS; r++) {
+    for (let i = 0; i < n; i++) { grid[r].splice(b.minC, 1); grid[r].push(''); }
+  }
+  for (let r = 0; r < ROWS; r++) {
+    while (grid[r].length < COLS - n) grid[r].push('');
+    while (grid[r].length > COLS - n) grid[r].pop();
+  }
+  COLS -= n;
+  renderGrid();
+  refreshPreview();
+}
+
+function deleteRow() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  saveHistory();
+  // 选区列范围内容上移：删除 minR 行，新行末尾补
+  grid.splice(b.minR, 1);
+  const newRow = new Array(COLS).fill('');
+  if (grid[b.minR]) for (let d = 0; d < COLS; d++) {
+    if (d < b.minC || d > b.maxC) newRow[d] = grid[b.minR][d] || '';
+  }
+  grid.push(newRow);
+  renderGrid();
+  refreshPreview();
+}
+
+function roundCorners() {
+  const cell = getCell(cursorR, cursorC);
+  if (!cell) return;
+  const d = parseInt(cell.dataset.dispCol);
+  const box = findBoxAt(cursorR, d);
+  if (!box) return;
+  const map = { '┌': '╭', '┐': '╮', '└': '╰', '┘': '╯' };
+  // 只改四角，不扫描内部
+  const corners = [[box.topR, box.leftD], [box.topR, box.rightD], [box.botR, box.leftD], [box.botR, box.rightD]];
+  corners.forEach(([r, d2]) => {
+    const cc = findCellByDispCol(r, d2);
+    if (cc >= 0 && map[getCellText(r, cc)]) setCell(r, cc, map[getCellText(r, cc)]);
+  });
+  saveHistory();
+}
+
+function previewArrow() {
+  return computeArrowPath();
+}
+
+// Compute the arrow path with actual characters (shared by preview & draw)
+function computeArrowPath() {
+  if (!selStart || !selEnd) return [];
+  const r1 = selStart.r, d1 = selStart.dispCol;
+  const r2 = selEnd.r, d2 = selEnd.dispCol;
+  const out = [];
+  if (r1 === r2 && d1 === d2) return out;
+  if (r1 === r2) {
+    const lo = Math.min(d1, d2), hi = Math.max(d1, d2);
+    for (let d = lo; d <= hi; d++) {
+      out.push({ r: r1, d, ch: d === d2 ? (d2 > d1 ? '→' : '←') : '─' });
+    }
+  } else if (d1 === d2) {
+    const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+    for (let r = lo; r <= hi; r++) {
+      out.push({ r, d: d1, ch: r === r2 ? (r2 > r1 ? '↓' : '↑') : '│' });
+    }
+  } else {
+    // L: horizontal then vertical, corner at (r1, d2)
+    const hDir = d2 > d1 ? 'left' : 'right';
+    const vDir = r2 > r1 ? 'down' : 'up';
+    let corner = '┐';
+    if (hDir === 'left' && vDir === 'down') corner = '┐';
+    else if (hDir === 'left' && vDir === 'up') corner = '┘';
+    else if (hDir === 'right' && vDir === 'down') corner = '┌';
+    else if (hDir === 'right' && vDir === 'up') corner = '└';
+    const loD = Math.min(d1, d2), hiD = Math.max(d1, d2);
+    for (let d = loD; d <= hiD; d++) {
+      if (d === d2) continue; // corner handled separately
+      out.push({ r: r1, d, ch: d === d1 ? null : '─' });
+    }
+    out.push({ r: r1, d: d2, ch: corner });
+    const loR = Math.min(r1, r2), hiR = Math.max(r1, r2);
+    for (let r = loR; r <= hiR; r++) {
+      if (r === r1) continue; // corner row already handled
+      out.push({ r, d: d2, ch: r === r2 ? (vDir === 'down' ? '↓' : '↑') : '│' });
+    }
+  }
+  return out;
+}
+
+// L-shaped line path (no arrow heads): reuse arrow path, replace arrows with lines
+function computeLinePath() {
+  return computeArrowPath().map(p => {
+    if (p.ch === '→' || p.ch === '←') return { ...p, ch: '─' };
+    if (p.ch === '↓' || p.ch === '↑') return { ...p, ch: '│' };
+    return p;
+  });
+}
+
+// ═══════════════════════════════════════
+// Drawing actions
+// ═══════════════════════════════════════
+function drawLine() {
+  const path = computeLinePath();
+  if (!path.length) { clearSelection(); return; }
+  placePath(path);
+  saveHistory();
+  clearSelection();
+}
+
+function drawBox() {
+  const b = getSelectionBounds();
+  if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
+  const path = buildBoxPath(b, { tl: '┌', tr: '┐', bl: '└', br: '┘' });
+  placePath(path);
+  saveHistory();
+  clearSelection();
+}
+
+function drawArrow() {
+  const path = computeArrowPath();
+  if (!path.length) { clearSelection(); return; }
+  placePath(path);
+  saveHistory();
+  clearSelection();
+}
+
+function eraseSelection() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  for (let r = b.minR; r <= b.maxR; r++) {
+    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+    cells.forEach(cell => {
+      const d = parseInt(cell.dataset.dispCol);
+      const w = cell.classList.contains('w2') ? 2 : 1;
+      if (d <= b.maxD && d + w - 1 >= b.minD) {
+        setCell(r, parseInt(cell.dataset.c), '');
+      }
+    });
+  }
+  saveHistory();
+  clearSelection();
+}
+
+// Check that the left/right walls are continuous between top and bottom edges.
+// Wall chars must connect BOTH up and down (│ ├ ┤ ┼) — corners (┌┐└┘) only connect
+// one vertical direction, so they break the wall (e.g. two stacked frames).
+function hasWalls(topR, botR, leftD, rightD) {
+  for (let r = topR + 1; r < botR; r++) {
+    const lc = findCellByDispColAny(r, leftD);
+    const rc = findCellByDispColAny(r, rightD);
+    if (lc < 0 || rc < 0) return false;
+    const ld = charDirs(getCellText(r, lc));
+    const rd = charDirs(getCellText(r, rc));
+    if (ld.length > 0 && !(ld.includes('U') && ld.includes('D'))) return false;
+    if (rd.length > 0 && !(rd.includes('U') && rd.includes('D'))) return false;
+  }
+  return true;
+}
+
+// Check that the top/bottom edges are continuous (every cell between the corners
+// connects left and right: ─ ┬ ┴ ┼). Corners/gaps break the edge.
+function hasHorizontalEdge(rowR, leftD, rightD) {
+  for (let d = leftD + 1; d < rightD; d++) {
+    const c = findCellByDispColAny(rowR, d);
+    if (c < 0) {
+      // 可能是双宽字符的第二半，检查前一个
+      var p = findCellByDispColAny(rowR, d - 1);
+      if (p >= 0 && charWidth(getCellText(rowR, p)) === 2) continue;
+      return false;
+    }
+    const dirs = charDirs(getCellText(rowR, c));
+    if (dirs.length > 0 && !(dirs.includes('L') && dirs.includes('R'))) return false;
+  }
+  return true;
+}
+
+// Find the box enclosing a click point (r, d): scan up for top edge ┌...┐,
+// then down for bottom edge └...┘ at matching display columns.
+// The cursor must be inside the box: topR <= r <= botR AND leftD <= d <= rightD.
+// Left/right walls must be continuous (rejects "fake boxes" from two separate frames).
+function findBoxAt(r, d) {
+  const isCorner = ch => ch === '┌' || ch === '╭' || ch === '┐' || ch === '╮' || ch === '└' || ch === '╰' || ch === '┘' || ch === '╯' || COLOR_CODES.includes(ch);
+  let best = null, bestArea = Infinity;
+  for (let rr = r; rr >= 0; rr--) {
+    const cells = document.querySelectorAll('.cell[data-r="' + rr + '"]');
+    let tlD = -1, trD = -1;
+    cells.forEach(cell => {
+      if (cell.classList.contains('w2')) return;
+      const dd = parseInt(cell.dataset.dispCol);
+      const cc = parseInt(cell.dataset.c);
+      const ch = getCellText(rr, cc);
+      if (isCorner(ch) && dd <= d && dd > tlD) tlD = dd;
+      if (isCorner(ch) && dd >= d && (trD < 0 || dd < trD)) trD = dd;
+    });
+    if (tlD >= 0 && trD >= 0 && tlD < trD) {
+      for (let rr2 = rr + 1; rr2 < ROWS; rr2++) {
+        const bl = findCellByDispCol(rr2, tlD);
+        const br = findCellByDispCol(rr2, trD);
+        if (bl >= 0 && br >= 0 && isCorner(getCellText(rr2, bl)) && isCorner(getCellText(rr2, br))) {
+          const hT = hasHorizontalEdge(rr, tlD, trD), hB = hasHorizontalEdge(rr2, tlD, trD), w = hasWalls(rr, rr2, tlD, trD);
+          if (rr2 >= r && tlD <= d && d <= trD && hT && hB && w) {
+            const area = (rr2 - rr) * (trD - tlD);
+            if (area < bestArea) { bestArea = area; best = { topR: rr, botR: rr2, leftD: tlD, rightD: trD }; }
+          }
+        }
+      }
+    }
+  }
+  return best;
+}
+function applyColor() {
+  // Click mode: detect the box under the click point and color its TL/BR corners
+  const box = findBoxAt(selStart.r, selStart.dispCol);
+  if (!box) { clearSelection(); return; }
+  const code = activeColor;
+  const shade = activeShade === 3 ? '' : String(activeShade);
+  const tlC = findCellByDispCol(box.topR, box.leftD);
+  const brC = findCellByDispCol(box.botR, box.rightD);
+  setCell(box.topR, tlC, code);
+  setCell(box.botR, brC, code);
+  if (shade) {
+    const nextC = findCellByDispCol(box.topR, box.leftD + 1);
+    const prevC = findCellByDispCol(box.botR, box.rightD - 1);
+    if (nextC >= 0) setCell(box.topR, nextC, shade);
+    if (prevC >= 0) setCell(box.botR, prevC, shade);
+  }
+  saveHistory();
+  clearSelection();
+}
+
+// Color the box under the current cursor position (triggered by clicking a color swatch)
+function colorAtCursor() {
+  const cell = getCell(cursorR, cursorC);
+  if (!cell) return;
+  const d = parseInt(cell.dataset.dispCol);
+  const box = findBoxAt(cursorR, d);
+  if (!box) return;
+  const tlC = findCellByDispCol(box.topR, box.leftD);
+  const brC = findCellByDispCol(box.botR, box.rightD);
+  const nextC = findCellByDispCol(box.topR, box.leftD + 1);
+  const prevC = findCellByDispCol(box.botR, box.rightD - 1);
+
+  if (activeColor === 'none') {
+    if (tlC >= 0) setCell(box.topR, tlC, (getCellText(box.topR, tlC) === '╭' || getCellText(box.topR, tlC) === '╮') ? '╭' : '┌');
+    if (brC >= 0) setCell(box.botR, brC, (getCellText(box.botR, brC) === '╯' || getCellText(box.botR, brC) === '╰') ? '╯' : '┘');
+    if (nextC >= 0 && /[1-6]/.test(getCellText(box.topR, nextC))) setCell(box.topR, nextC, '─');
+    if (prevC >= 0 && /[1-6]/.test(getCellText(box.botR, prevC))) setCell(box.botR, prevC, '─');
+  } else {
+    const code = activeColor;
+    const shade = activeShade === 3 ? '' : String(activeShade);
+    if (tlC >= 0) setCell(box.topR, tlC, code);
+    if (brC >= 0) setCell(box.botR, brC, code);
+    if (shade) {
+      if (nextC >= 0) setCell(box.topR, nextC, shade);
+      if (prevC >= 0) setCell(box.botR, prevC, shade);
+    }
+  }
+  saveHistory();
+}
+
+// ── Magic wand: align scattered horizontal/vertical lines ──
+
+// 将 items 按 groupKey 分组，选众数所在的行/列作为目标，其他迁移过去
+function alignGroup(items, groupKey, posFn, setChar) {
+  if (!items.length) return;
+  const count = {};
+  items.forEach(item => { const k = groupKey(item); count[k] = (count[k] || 0) + 1; });
+  let target = null, best = -1;
+  for (const k in count) { if (count[k] > best) { best = count[k]; target = k; } }
+  items.forEach(item => {
+    if (groupKey(item) !== target) {
+      setCellByDisp(item.r, item.d, '');
+      const pos = posFn(item, target);
+      const tc = findCellByDispCol(pos.r, pos.d);
+      if (tc >= 0) { const cur = getCellText(pos.r, tc); if (cur === '' || cur === ' ') setCellByDisp(pos.r, pos.d, setChar); }
+    }
+  });
+}
+
+function magicAlign() {
+  const b = getSelectionBounds();
+  if (!b) { clearSelection(); return; }
+  saveHistory();
+  const hLines = [];
+  const vLines = [];
+  for (let r = b.minR; r <= b.maxR; r++) {
+    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+    cells.forEach(cell => {
+      if (cell.classList.contains('w2')) return;
+      const d = parseInt(cell.dataset.dispCol);
+      const cc = parseInt(cell.dataset.c);
+      if (d < b.minD || d > b.maxD) return;
+      const ch = getCellText(r, cc);
+      if (ch === '─') hLines.push({ r, d });
+      else if (ch === '│') vLines.push({ r, d });
+    });
+  }
+  alignGroup(hLines, item => item.r, (item, tr) => ({ r: parseInt(tr), d: item.d }), '─');
+  alignGroup(vLines, item => item.d, (item, td) => ({ r: item.r, d: parseInt(td) }), '│');
+  clearSelection();
+}
+
+// ═══════════════════════════════════════
+// Clipboard (copy / cut / paste)
+// ═══════════════════════════════════════
+let clipboard = null; // 2D array of chars
+
+function copySelection() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  clipboard = [];
+  for (let r = b.minR; r <= b.maxR; r++) {
+    const row = [];
+    for (let c = b.minC; c <= b.maxC; c++) {
+      row.push(grid[r] && grid[r][c] ? grid[r][c] : '');
+    }
+    clipboard.push(row);
+  }
+  // Also write to system clipboard as text
+  const text = clipboard.map(row => row.map(ch => ch || ' ').join('')).join('\n');
+  try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) {}
+}
+
+function cutSelection() {
+  copySelection();
+  eraseSelection();
+}
+
+function pasteAtCursor() {
+  if (!clipboard) return;
+  saveHistory();
+  for (let i = 0; i < clipboard.length; i++) {
+    for (let j = 0; j < clipboard[i].length; j++) {
+      const ch = clipboard[i][j];
+      if (ch) setCell(cursorR + i, cursorC + j, ch);
+    }
+  }
+  ensureCapacity(cursorR + clipboard.length, cursorC + (clipboard[0] ? clipboard[0].length : 0));
+  renderGrid();
+}
+
+// ═══════════════════════════════════════
+// Keyboard
+// ═══════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  // Skip if user is typing in a modal input
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+  // Shift + 颜色码 (mroygcbpe)：着色光标所在框，不冲突快捷键
+  if (!e.ctrlKey && !e.metaKey && e.shiftKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') {
+    const savedColor = activeColor;
+    activeColor = e.key.toLowerCase();
+    const dcell = getCell(cursorR, cursorC);
+    if (dcell) {
+      const d = parseInt(dcell.dataset.dispCol);
+      const box = findBoxAt(cursorR, d);
+      if (box) {
+        e.preventDefault();
+        colorAtCursor();
+        activeColor = savedColor;
+        return;
+      }
+    }
+    activeColor = savedColor;
+  }
+  // Shift+color 按后不再触发工具快捷键
+  if (e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') { e.preventDefault(); return; }
+
+  // Tool shortcuts (在文字工具下输入字符时不触发快捷键)
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && !(activeTool === 'text' && e.key.length === 1)) {
+    switch (e.key) {
+      case 'r': case 'R': setTool('rounded'); e.preventDefault(); return;
+      case 'v': case 'V': setTool('select'); e.preventDefault(); return;
+      case 'f': case 'F': setTool('free'); e.preventDefault(); return;
+      case 'l': case 'L': setTool('line'); e.preventDefault(); return;
+      case 'b': case 'B': setTool('box'); e.preventDefault(); return;
+            case 'a': case 'A': setTool('arrow'); e.preventDefault(); return;
+      case 't': case 'T': setTool('text'); e.preventDefault(); return;
+      case 'w': case 'W': setTool('magic'); e.preventDefault(); return;
+      case 'm': case 'M': setTool('move'); e.preventDefault(); return;
+      case 'e': case 'E': setTool('eraser'); e.preventDefault(); return;
+    }
+  }
+
+  // Ctrl+Z undo
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    undo(); e.preventDefault(); return;
+  }
+  // Ctrl+S 保存
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveDiagram();
+    return;
+  }
+
+  // Ctrl+R 圆角化当前矩形框
+  if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+    e.preventDefault();
+    roundCorners();
+    return;
+  }
+
+
+  // Ctrl+C copy / Ctrl+X cut / Ctrl+V paste
+  if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+    copySelection(); e.preventDefault(); return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+    cutSelection(); e.preventDefault(); return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+    pasteAtCursor(); e.preventDefault(); return;
+  }
+
+  // 空格：在光标位置插入空格，右侧右移（框选时插入C列）
+  if (!e.ctrlKey && !e.metaKey && e.key === ' ' && activeTool !== 'text') {
+    e.preventDefault();
+    const hasSel = selStart && selEnd && (selStart.r !== selEnd.r || selStart.c !== selEnd.c);
+    if (hasSel) {
+      // 框选：对框选每一行，在框选起始列插入 C 列空格，右侧右移
+      const b = getSelectionBounds();
+      const width = b.maxC - b.minC + 1;
+      for (let r = b.minR; r <= b.maxR; r++) {
+        for (let c = COLS - 1; c >= b.minC + width; c--) grid[r][c] = grid[r][c - width];
+        for (let c = b.minC; c < b.minC + width; c++) grid[r][c] = '';
+      }
+      saveHistory();
+      renderGrid();
+      refreshPreview();
+      // 保留框选，刷新 dispCol 以持续操作
+      const tl = getCell(b.minR, b.minC), br = getCell(b.maxR, b.maxC);
+      selStart = { r: b.minR, c: b.minC, dispCol: tl ? parseInt(tl.dataset.dispCol) : b.minD };
+      selEnd = { r: b.maxR, c: b.maxC, dispCol: br ? parseInt(br.dataset.dispCol) : b.maxD };
+      updateSelection();
+      return;
+    }
+    // 单格：在光标位置插入一个空格，右侧右移，光标右移
+    for (let c = COLS - 1; c > cursorC; c--) grid[cursorR][c] = grid[cursorR][c - 1];
+    grid[cursorR][cursorC] = '';
+    cursorC = Math.min(COLS - 1, cursorC + 1);
+    saveHistory();
+    renderGrid();
+    refreshPreview();
+    selStart = { r: cursorR, c: cursorC };
+    selEnd = { r: cursorR, c: cursorC };
+    updateSelection();
+    updateStatus();
+    return;
+  }
+  // Insert/delete columns at cursor
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'i') {
+    if (e.shiftKey) insertRow();
+    else insertColumn();
+    e.preventDefault(); return;
+  }
+
+  // Delete/Backspace：框选→局部删C列左移；单格Backspace→删前一个左移；单格Delete→清空当前
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey) { deleteColumn(); return; }
+    if (e.ctrlKey && !e.shiftKey && !e.metaKey) { deleteRow(); return; }
+    const hasSel = selStart && selEnd && (selStart.r !== selEnd.r || selStart.c !== selEnd.c);
+    if (hasSel) {
+      // 框选：对框选每一行，删除框选列范围，右侧左移补位（框选外行不动）
+      const b = getSelectionBounds();
+      const width = b.maxC - b.minC + 1;
+      for (let r = b.minR; r <= b.maxR; r++) {
+        for (let c = b.minC; c < COLS - width; c++) grid[r][c] = grid[r][c + width];
+        for (let c = COLS - width; c < COLS; c++) grid[r][c] = '';
+      }
+      saveHistory();
+      renderGrid();
+      refreshPreview();
+      // 保留框选，刷新 dispCol 以持续操作
+      const tl = getCell(b.minR, b.minC), br = getCell(b.maxR, b.maxC);
+      selStart = { r: b.minR, c: b.minC, dispCol: tl ? parseInt(tl.dataset.dispCol) : b.minD };
+      selEnd = { r: b.maxR, c: b.maxC, dispCol: br ? parseInt(br.dataset.dispCol) : b.maxD };
+      updateSelection();
+      return;
+    }
+    // Backspace 单格：删除前一个格子，后续左移补位
+    if (e.key === 'Backspace' && cursorC > 0) {
+      for (let c = cursorC - 1; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
+      grid[cursorR][COLS - 1] = '';
+      cursorC--;
+      saveHistory();
+      renderGrid();
+      refreshPreview();
+      selStart = { r: cursorR, c: cursorC };
+      selEnd = { r: cursorR, c: cursorC };
+      updateSelection();
+      updateStatus();
+      return;
+    }
+    // Delete 单格：清空当前格子
+    setCell(cursorR, cursorC, '');
+    saveHistory();
+    return;
+  }
+
+  // Arrow keys - move cursor
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    if (activeTool === 'select' || activeTool === 'text') {
+      const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+      const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+      const nr = Math.max(0, Math.min(ROWS - 1, cursorR + dr));
+      const nc = Math.max(0, Math.min(COLS - 1, cursorC + dc));
+      cursorR = nr; cursorC = nc;
+      selStart = { r: cursorR, c: cursorC };
+      selEnd = { r: cursorR, c: cursorC };
+      updateSelection();
+      updateStatus();
+    }
+    return;
+  }
+
+    // Text input - only in text tool
+  if (e.key.length === 1 && activeTool === 'text') {
+    e.preventDefault();
+    setCell(cursorR, cursorC, e.key);
+    saveHistory();
+    // Move cursor right
+    cursorC = Math.min(COLS - 1, cursorC + 1);
+    ensureCapacity(cursorR, cursorC);
+    selStart = { r: cursorR, c: cursorC };
+    selEnd = { r: cursorR, c: cursorC };
+    updateSelection();
+    updateStatus();
+    return;
+  }
+
+
+  // Enter - new row (or stay, for our grid)
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    cursorR = Math.min(ROWS - 1, cursorR + 1);
+    selStart = { r: cursorR, c: cursorC };
+    selEnd = { r: cursorR, c: cursorC };
+    updateSelection();
+    updateStatus();
+    return;
+  }
+
+  // Tab - move right
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    cursorC = Math.min(COLS - 1, cursorC + 4);
+    selStart = { r: cursorR, c: cursorC };
+    selEnd = { r: cursorR, c: cursorC };
+    updateSelection();
+    updateStatus();
+    return;
+  }
+});
+
+// ═══════════════════════════════════════
+// Tool switching
+// ═══════════════════════════════════════
+function setTool(tool) {
+  activeTool = tool;
+  document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+  const btnMap = {
+    select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
+    arrow: 'tool-arrow', text: 'tool-text', magic: 'tool-magic', move: 'tool-move', eraser: 'tool-eraser',
+  };
+  const btn = document.getElementById(btnMap[tool]);
+  if (btn) btn.classList.add('active');
+
+  // Show/hide color panel
+  document.getElementById('panel-color').classList.toggle('active', tool === 'color');
+
+  document.getElementById('status-tool').textContent = '工具: ' +
+    ({ select: '选择', free: '自由绘制', line: '直线', box: '矩形', rounded: '圆角矩形', arrow: '箭头', text: '文字', magic: '梳子', move: '移动', eraser: '擦除' }[tool] || tool);
+  // Set cursor for move tool
+  document.getElementById('canvas-wrap').style.cursor = tool === 'move' ? 'move' : 'default';
+}
+
+document.getElementById('tool-select').addEventListener('click', () => setTool('select'));
+document.getElementById('tool-free').addEventListener('click', () => setTool('free'));
+document.getElementById('tool-line').addEventListener('click', () => setTool('line'));
+document.getElementById('tool-box').addEventListener('click', () => setTool('box'));
+document.getElementById('tool-rounded').addEventListener('click', () => setTool('rounded'));
+document.getElementById('tool-arrow').addEventListener('click', () => setTool('arrow'));
+document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
+document.getElementById('tool-magic').addEventListener('click', () => setTool('magic'));
+document.getElementById('tool-move').addEventListener('click', () => setTool('move'));
+document.getElementById('tool-eraser').addEventListener('click', () => setTool('eraser'));
+
+// ═══════════════════════════════════════
+// Color picker
+// ═══════════════════════════════════════
+function initColorPicker() {
+  const container = document.getElementById('color-picker');
+  container.innerHTML = '';
+  for (const code of COLOR_CODES) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn' + (code === activeColor ? ' active' : '');
+    btn.style.background = COLORS[code].hex;
+    const letter = document.createElement('span');
+    letter.className = 'letter';
+    letter.textContent = code;
+    btn.appendChild(letter);
+    btn.dataset.code = code;
+    btn.title = `${COLORS[code].name} (${COLORS[code].hex})`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeColor = code;
+      colorAtCursor();
+    });
+    container.appendChild(btn);
+  }
+  // 原色（无色）按钮：还原成未着色状态
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'cp-btn';
+  noneBtn.style.background = '#fff';
+  noneBtn.style.border = '2px dashed #999';
+  noneBtn.dataset.code = 'none';
+  noneBtn.title = '原色（清除着色）';
+  const noneLabel = document.createElement('span');
+  noneLabel.className = 'letter';
+  noneLabel.textContent = '原';
+  noneLabel.style.fontSize = '9px';
+  noneLabel.style.color = '#666';
+  noneBtn.appendChild(noneLabel);
+  noneBtn.addEventListener('click', () => {
+    document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
+    noneBtn.classList.add('active');
+    activeColor = 'none';
+    colorAtCursor();
+  });
+  container.appendChild(noneBtn);
+}
+
+document.getElementById('shade-input').addEventListener('change', (e) => {
+  activeShade = Math.min(6, Math.max(1, parseInt(e.target.value) || 3));
+});
+
+// ═══════════════════════════════════════
+// Color legend
+// ═══════════════════════════════════════
+function initColorLegend() {
+  const container = document.getElementById('color-legend');
+  container.innerHTML = '<span style="font-size:11px;color:#999;margin-right:4px">颜色码:</span>';
+  for (const code of COLOR_CODES) {
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = COLORS[code].hex;
+    swatch.appendChild(dot);
+    swatch.appendChild(document.createTextNode(`${code}=${COLORS[code].name}`));
+    swatch.addEventListener('click', () => {
+      activeColor = code;
+      document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.cp-btn[data-code="${code}"]`)?.classList.add('active');
+    });
+    container.appendChild(swatch);
+  }
+}
+
+// ═══════════════════════════════════════
+// Status
+// ═══════════════════════════════════════
+function updateStatus() {
+  document.getElementById('status-pos').textContent = `行: ${cursorR + 1} 列: ${cursorC + 1}`;
+  document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
+}
+
+// ═══════════════════════════════════════
+// Export
+// ═══════════════════════════════════════
+function getGridText() {
+  const lines = [];
+  let lastNonEmpty = -1;
+  for (let r = 0; r < ROWS; r++) {
+    let line = '';
+    let rowHasContent = false;
+    for (let c = 0; c < COLS; c++) {
+      line += grid[r][c] || ' ';
+      if (grid[r][c]) rowHasContent = true;
+    }
+    line = line.replace(/\s+$/, '');
+    if (rowHasContent || r <= lastNonEmpty) {
+      lines.push(line);
+      if (rowHasContent) lastNonEmpty = r;
+    }
+  }
+  return lines.join('\n');
+}
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  const name = document.getElementById('diagram-name').value.trim();
+  if (!name) {
+    alert('请先填写图名（代码块图需取名后才能导出）');
+    document.getElementById('diagram-name').focus();
+    return;
+  }
+  const text = getGridText();
+  const comment = `<!--diagram ${name}\n${text}\n-->`;
+  navigator.clipboard.writeText(comment).then(() => {
+    const btn = document.getElementById('btn-export');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => { btn.textContent = '💾 导出'; }, 1500);
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = comment;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+});
+
+// ── Import ──
+document.getElementById('btn-import').addEventListener('click', () => {
+  const ta = document.getElementById('import-textarea');
+  ta.value = '';
+  document.getElementById('modal-import').classList.add('active');
+  // Focus the textarea after the modal is fully rendered
+  requestAnimationFrame(() => { ta.focus(); ta.select(); });
+});
+document.getElementById('btn-import-cancel').addEventListener('click', () => {
+  document.getElementById('modal-import').classList.remove('active');
+});
+document.getElementById('btn-import-confirm').addEventListener('click', () => {
+  const text = document.getElementById('import-textarea').value;
+  if (!text.trim()) return;
+  importText(text);
+  document.getElementById('modal-import').classList.remove('active');
+});
+// Import modal: only close via the buttons (not on outside click)
+document.getElementById('modal-import').addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+// ═══════════════════════════════════════
+// Load from URL (?file=...) and diagram list
+// ═══════════════════════════════════════
+let diagrams = []; // extracted from the loaded Markdown
+
+function extractDiagrams(md) {
+  const list = [];
+  // 1. <!--diagram NAME ... --> comment blocks
+  const re1 = /<!--\s*diagram\s+(\S+)[\s\S]*?\n([\s\S]*?)-->/g;
+  let m;
+  while ((m = re1.exec(md)) !== null) {
+    list.push({ name: m[1], content: m[2], type: 'comment' });
+  }
+  // 2. ```code blocks``` containing box-drawing chars (legacy, no name)
+  let codeIdx = 0;
+  const re2 = /```[^\n]*\n([\s\S]*?)```/g;
+  while ((m = re2.exec(md)) !== null) {
+    const content = m[1];
+    if (/[┌┐└┘├┤┬┴┼─│]/.test(content) && content.split('\n').length > 3) {
+      codeIdx++;
+      list.push({ name: '', content, type: 'code', label: '代码块 ' + codeIdx });
+    }
+  }
+  return list;
+}
+
+function populateDiagramSelect(list) {
+  const sel = document.getElementById('diagram-select');
+  sel.innerHTML = '<option value="">— 选择图 —</option>';
+  list.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = d.name || d.label || ('图 ' + (i + 1));
+    sel.appendChild(opt);
+  });
+}
+
+let selectedIndex = -1;
+
+function selectDiagram(idx) {
+  selectedIndex = idx;
+  const d = diagrams[idx];
+  if (!d) return;
+  document.getElementById('diagram-name').value = d.name || '';
+  importText(d.content);
+}
+
+document.getElementById('diagram-select').addEventListener('change', (e) => {
+  if (e.target.value !== '') selectDiagram(parseInt(e.target.value));
+});
+
+let previewIdx = -1;
+
+function showDiagramList() {
+  const list = document.getElementById("diagram-list");
+  const preview = document.getElementById("diagram-preview");
+  list.innerHTML = "";
+  diagrams.forEach((d, i) => {
+    const item = document.createElement("div");
+    item.className = "diag-item";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "name";
+    nameSpan.textContent = (d.name || d.label || "图 " + (i + 1)) + (d.type === "code" ? "  (需取名)" : "");
+    item.appendChild(nameSpan);
+    item.addEventListener("click", () => {
+      previewIdx = i;
+      preview.textContent = d.content;
+      preview.style.color = "#333";
+      list.querySelectorAll(".diag-item").forEach(el => el.style.background = "");
+      item.style.background = "#e8f0ff";
+    });
+    item.addEventListener("dblclick", () => {
+      selectDiagram(i);
+      document.getElementById("modal-list").classList.remove("active");
+      document.getElementById("diagram-select").value = i;
+    });
+    list.appendChild(item);
+  });
+  document.getElementById("modal-list").classList.add("active");
+}
+
+document.getElementById('btn-list-import').addEventListener('click', () => {
+  if (previewIdx >= 0) {
+    selectDiagram(previewIdx);
+    document.getElementById('diagram-select').value = previewIdx;
+    document.getElementById('modal-list').classList.remove('active');
+  } else {
+    alert('请先在左侧选择一张图');
+  }
+});
+
+document.getElementById('btn-list-cancel').addEventListener('click', () => {
+  document.getElementById('modal-list').classList.remove('active');
+});
+document.getElementById('modal-list').addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+function loadFromUrl(url) {
+  // Fetch through the server's API (/?file=path) so we don't hit CORS/file:// issues
+  const apiUrl = '/?file=' + encodeURIComponent(url);
+  fetch(apiUrl)
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(md => {
+      diagrams = extractDiagrams(md);
+      if (!diagrams.length) {
+        alert('未在文件中找到 ASCII 图');
+        return;
+      }
+      populateDiagramSelect(diagrams);
+      showDiagramList();
+    })
+    .catch(err => {
+      alert('加载文件失败：' + err + '\n（可能是跨域限制，需同源或 CORS，或用导入按钮手动粘贴）');
+    });
+  saveHistory();
+}
+
+// On page load, check for ?file= parameter
+let currentFilePath = null;
+const _fileParam = new URLSearchParams(location.search).get('file');
+if (_fileParam) {
+  currentFilePath = _fileParam;
+  loadFromUrl(_fileParam);
+  document.getElementById('btn-save').style.display = '';
+  document.getElementById('btn-refresh').style.display = '';
+}
+
+// Save button: POST edited diagram back to the Markdown file
+function saveDiagram() {
+  const name = document.getElementById('diagram-name').value.trim();
+  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return; }
+  const content = getGridText();
+  const body = { file: currentFilePath, name, content };
+  if (selectedIndex >= 0) {
+    body.index = selectedIndex;
+    // 传原图类型（comment/code），服务器按原格式保存
+    if (diagrams[selectedIndex]) body.type = diagrams[selectedIndex].type;
+  }
+  fetch('/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(r => {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  }).then(data => {
+    if (data.ok) {
+      const btn = document.getElementById('btn-save');
+      btn.textContent = '✅ 已保存';
+      setTimeout(() => { btn.textContent = '💿 保存'; }, 1500);
+    }
+  }).catch(err => {
+    alert('保存失败：' + err + '\n请确认启动的是 server.py（python server.py），而非直接打开 HTML');
+  });
+}
+
+document.getElementById('btn-save').addEventListener('click', saveDiagram);
+
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  if (!currentFilePath) return;
+  fetch('/?file=' + encodeURIComponent(currentFilePath))
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(md => {
+      diagrams = extractDiagrams(md);
+      populateDiagramSelect(diagrams);
+      // 如果当前有选中图，重新加载它
+      if (selectedIndex >= 0 && diagrams[selectedIndex]) {
+        const d = diagrams[selectedIndex];
+        document.getElementById('diagram-name').value = d.name || '';
+        importText(d.content);
+      }
+    })
+    .catch(err => { alert('刷新失败：' + err); });
+});
+
+function importText(text) {
+  // Extract content from <!--diagram ... --> if present
+  let content = text;
+  const commentMatch = text.match(/<!--\s*diagram\s+\S+\s*\n([\s\S]*?)-->/);
+  if (commentMatch) {
+    content = commentMatch[1];
+    // Also extract name
+    const nameMatch = text.match(/<!--\s*diagram\s+(\S+)/);
+    if (nameMatch) document.getElementById('diagram-name').value = nameMatch[1];
+  }
+
+  const lines = content.split('\n');
+  // Determine grid size
+  let maxCols = 0;
+  for (const line of lines) {
+    if (line.length > maxCols) maxCols = line.length;
+  }
+  const numRows = Math.min(lines.length, ROWS);
+  const numCols = Math.min(maxCols, COLS);
+
+  // Adjust grid if needed (auto-expand)
+  if (lines.length > ROWS || maxCols > COLS) {
+    const newRows = Math.max(ROWS, Math.min(lines.length, 60));
+    const newCols = Math.max(COLS, Math.min(maxCols, 100));
+    resizeGrid(newRows, newCols);
+  }
+
+  // Clear grid
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) grid[r][c] = '';
+  }
+
+  // Fill grid
+  for (let r = 0; r < Math.min(lines.length, ROWS); r++) {
+    const line = lines[r];
+    for (let c = 0; c < Math.min(line.length, COLS); c++) {
+      grid[r][c] = line[c];
+    }
+  }
+
+  saveHistory();
+  renderGrid();
+  refreshPreview();
+}
+
+function resizeGrid(newRows, newCols) {
+  ROWS = newRows;
+  COLS = newCols;
+  const newGrid = [];
+  for (let r = 0; r < ROWS; r++) {
+    newGrid[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      newGrid[r][c] = (grid[r] && grid[r][c]) ? grid[r][c] : '';
+    }
+  }
+  grid = newGrid;
+  document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
+}
+
+// Auto-expand the canvas when the cursor approaches the right/bottom edge
+function ensureCapacity(r, c) {
+  let newRows = ROWS, newCols = COLS, need = false;
+  if (r >= ROWS - 4) { newRows = ROWS + 20; need = true; }
+  if (c >= COLS - 8) { newCols = COLS + 40; need = true; }
+  if (need) {
+    resizeGrid(newRows, newCols);
+    renderGrid();
+    // Re-apply live preview after re-render
+    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'arrow') {
+      setPreview(previewPositions());
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// Preview (uses render_color.js logic)
+// ═══════════════════════════════════════
+function lineCells(line) {
+  const cells = [];
+  let dispCol = 0;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    const w = charWidth(ch);
+    cells.push({ char: ch, idx: i, dispCol, width: w });
+    dispCol += w;
+  }
+  return cells;
+}
+
+function findUncoloredBoxes(dl) {
+  // Detect boxes whose corners are still ┌┐└┘ (not yet colored).
+  // Uses the ORIGINAL lines (before cleaning) so already-colored boxes (color codes) are excluded.
+  const boxes = [];
+  const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+  for (let r = 0; r < dl.length; r++) {
+    const cells = lineCells(dl[r]);
+    for (let ci = 0; ci < cells.length; ci++) {
+      const cell = cells[ci];
+      if (cell.char !== '┌' && cell.char !== '╭') continue;
+      const nextCell = cells[ci + 1];
+      if (!nextCell || nextCell.char !== '─') continue;
+      const fromDispCol = cell.dispCol;
+      let rightDispCol = -1;
+      for (let i = ci + 1; i < cells.length; i++) {
+        if (BORDER_CHARS.includes(cells[i].char)) continue;
+        if (cells[i].char === '┐' || cells[i].char === '╮') { rightDispCol = cells[i].dispCol; break; }
+        break;
+      }
+      if (rightDispCol < 0) continue;
+      for (let r2 = r + 1; r2 < dl.length; r2++) {
+        const bottomCells = lineCells(dl[r2]);
+        const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
+        if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰')) continue;
+        const rightStart = bottomCells.find(c => c.dispCol === rightDispCol);
+        if (!rightStart || (rightStart.char !== '┘' && rightStart.char !== '╯')) continue;
+        boxes.push({ fromRow: r, toRow: r2, fromCol: fromDispCol, toCol: rightDispCol + 1 });
+        break;
+      }
+    }
+  }
+  return boxes;
+}
+
+function findBoxes(dl) {
+  const boxes = [], cs = 'mroygcbpe';
+  for (let r = 0; r < dl.length; r++) {
+    const cells = lineCells(dl[r]);
+    for (let ci = 0; ci < cells.length; ci++) {
+      const cell = cells[ci];
+      if (!cs.includes(cell.char)) continue;
+      const nextCell = cells[ci + 1];
+      let shadeDigit = '';
+      let dashStartIdx = ci + 1;
+      if (nextCell && ['1','2','3','4','5','6'].includes(nextCell.char)) {
+        shadeDigit = nextCell.char;
+        dashStartIdx = ci + 2;
+      }
+      const dashCell = cells[dashStartIdx];
+      if (!dashCell || dashCell.char !== '─') continue;
+      const cl = cell.char;
+      const fromDispCol = cell.dispCol;
+      const markerWidth = shadeDigit ? 2 : 1;
+
+      const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+      let rightDispCol = -1;
+      for (let i = dashStartIdx; i < cells.length; i++) {
+        if (BORDER_CHARS.includes(cells[i].char)) continue;
+        if (cells[i].char === '┐' || cells[i].char === '┛' || cells[i].char === '╗') {
+          rightDispCol = cells[i].dispCol;
+          break;
+        }
+        break;
+      }
+      if (rightDispCol < 0) continue;
+
+      for (let r2 = r + 1; r2 < dl.length; r2++) {
+        const bottomCells = lineCells(dl[r2]);
+        const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
+        if (!leftChar || leftChar.char !== '└') continue;
+        const rightStart = bottomCells.find(c => c.dispCol === rightDispCol - markerWidth + 1);
+        if (!rightStart || rightStart.char !== cl) continue;
+        let hex = '#ccc';
+        if (COLORS[cl]) hex = adjustColor(COLORS[cl].hex, shadeDigit || '3');
+        boxes.push({
+          color: cl, fromRow: r, toRow: r2,
+          fromCol: fromDispCol, toCol: rightDispCol + 1,
+          hex
+        });
+        break;
+      }
+    }
+  }
+  return boxes;
+}
+
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255;
+  let g = parseInt(hex.slice(3, 5), 16) / 255;
+  let b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function hslToHex({ h, s, l }) {
+  h /= 360; s /= 100; l /= 100;
+  const fn = (p, q, t) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const r = Math.round(fn(p, q, h + 1/3) * 255);
+  const g = Math.round(fn(p, q, h) * 255);
+  const b = Math.round(fn(p, q, h - 1/3) * 255);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+function adjustColor(hex, digit) {
+  const hsl = hexToHsl(hex);
+  const level = parseInt(digit) || 3;
+  const factor = 1.35 + (level - 3) * 0.1;
+  // Low-saturation (gray) colors: don't brighten — would become invisible white
+  if (hsl.s < 10) {
+    hsl.l = Math.min(85, Math.max(10, hsl.l * (1 + (level - 3) * 0.05)));
+  } else {
+    hsl.l = Math.min(85, Math.max(10, hsl.l * factor));
+    hsl.s = Math.min(90, Math.max(10, hsl.s * 1.2));
+  }
+  return hslToHex(hsl);
+}
+
+function renderPreview(text) {
+  const lines = text.split('\n');
+  const boxes = findBoxes(lines);
+  const uncoloredBoxes = findUncoloredBoxes(lines);
+
+  // Clean color markers -> box-drawing chars (preserves display width)
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  let clean = text;
+  clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗])`, 'g'), '┌─$3$4');
+  clean = clean.replace(new RegExp(`([mroygcbpe])([${BORDER}]*)([┐┛╗])`, 'g'), '┌$2$3');
+  clean = clean.replace(new RegExp(`([└╚┗])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), '$1$2─┘');
+  clean = clean.replace(new RegExp(`([└╚┗])([${BORDER}]*)([mroygcbpe])`, 'g'), '$1$2┘');
+  const cleanLines = clean.split('\n');
+
+  let html = '';
+  for (let r = 0; r < cleanLines.length; r++) {
+    const line = cleanLines[r];
+    const cells = lineCells(line);
+
+    // Color/rainbow markup ranges (take priority over underline)
+    const colorRanges = [];
+    const rainbowRanges = [];
+    const C_RE = /_([mroygcbpe])_([^_]+)_\1_/g;
+    let cm;
+    while ((cm = C_RE.exec(line)) !== null) colorRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1, hex: COLORS[cm[1]]?.hex || '#ccc' });
+    const R_RE = /_!_([^_]+)_!_/g;
+    while ((cm = R_RE.exec(line)) !== null) rainbowRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
+
+    // underline ranges (___text___)
+    const ulRanges = [];
+    const ulRe = /___([^_]+)___/g;
+    while ((cm = ulRe.exec(line)) !== null) {
+      ulRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
+    }
+    const isUlContent = (idx) => ulRanges.some(r => idx > r.start + 2 && idx < r.end - 2);
+    const isUlMarker = (idx) => ulRanges.some(r => (idx >= r.start && idx <= r.start + 2) || (idx >= r.end - 2 && idx <= r.end));
+    const boldRanges = [];
+    const boldRe = /\*([^*]+)\*/g;
+    while ((cm = boldRe.exec(line)) !== null) boldRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
+    const isBoldContent = (idx) => boldRanges.some(r => idx > r.start && idx < r.end);
+    const isBoldMarker = (idx) => boldRanges.some(r => idx === r.start || idx === r.end);
+
+    const RAINBOW_COLORS = ['#CC247C','#E95351','#F7A24F','#FAE538','#4EA660','#79CAFB','#5292F7','#AA77E9','#D9D1D1'];
+    const inRanges = (idx, ranges) => ranges.some(r => idx >= r.start && idx <= r.end);
+    const rangesContent = (idx, ranges) => ranges.some(r => idx > r.start + 2 && idx < r.end - 2);
+    const isColorMarker = (idx) => !rangesContent(idx, colorRanges) && inRanges(idx, colorRanges);
+    const isRainbowMarker = (idx) => !rangesContent(idx, rainbowRanges) && inRanges(idx, rainbowRanges);
+    const isColorContent = (idx) => rangesContent(idx, colorRanges);
+    const isRainbowContent = (idx) => rangesContent(idx, rainbowRanges);
+    const getColor = (idx) => { for (const r of colorRanges) { if (idx > r.start + 2 && idx < r.end - 2) return r.hex; } return null; };
+    const getRainbowColor = (idx) => { for (const r of rainbowRanges) { if (idx > r.start + 2 && idx < r.end - 2) return RAINBOW_COLORS[(idx - r.start - 3) % RAINBOW_COLORS.length]; } return null; };
+
+    let lineHtml = '';
+    let curBg = null, curUl = false, curBold = false, curColor = null, curRainbow = false;
+    for (const cell of cells) {
+      const ch = cell.char;
+      let cellBg = null, cellBox = null;
+      let leftWall = -1, rightWall = -1;
+      // Pick the SMALLEST box containing this cell (innermost wins, so nested boxes keep their own color)
+      let bestArea = Infinity;
+      for (const b of boxes) {
+        if (r > b.fromRow && r < b.toRow && cell.dispCol > b.fromCol && cell.dispCol < b.toCol - 1) {
+          const area = (b.toRow - b.fromRow) * (b.toCol - b.fromCol);
+          if (area < bestArea) {
+            bestArea = area;
+            cellBg = b.hex; cellBox = b;
+            leftWall = b.fromCol; rightWall = b.toCol - 1;
+          }
+        }
+      }
+      // If a SMALLER uncolored box encloses this cell AND there's a colored outer box,
+      // paint the cell white (covers the outer color). When the outer box is uncolored
+      // (no colored box), cellBg stays null → transparent (restores on uncolor).
+      if (cellBg) {
+        let bestUncolored = null, bestUncoloredArea = Infinity;
+        for (const u of uncoloredBoxes) {
+          if (r > u.fromRow && r < u.toRow && cell.dispCol > u.fromCol && cell.dispCol < u.toCol - 1) {
+            const uArea = (u.toRow - u.fromRow) * (u.toCol - u.fromCol);
+            if (uArea < bestUncoloredArea) { bestUncoloredArea = uArea; bestUncolored = u; }
+          }
+        }
+        if (bestUncolored && bestUncoloredArea < bestArea) {
+          cellBg = '#ffffff'; cellBox = bestUncolored;
+          leftWall = bestUncolored.fromCol; rightWall = bestUncolored.toCol - 1;
+        }
+      }
+      const isWall = cell.dispCol === leftWall || cell.dispCol === rightWall;
+      const insideBox = cellBg && !isWall;
+      const needUl = isUlContent(cell.idx);
+      const needBold = isBoldContent(cell.idx);
+      const needColor = isColorContent(cell.idx);
+      const needRainbow = isRainbowContent(cell.idx);
+      const textColor = needColor ? getColor(cell.idx) : needRainbow ? getRainbowColor(cell.idx) : null;
+      const isMarker = isUlMarker(cell.idx) || isBoldMarker(cell.idx) || isColorMarker(cell.idx) || isRainbowMarker(cell.idx);
+      let outCh = ch;
+      if (isMarker) outCh = ' ';
+      else if (ch === '&') outCh = '&amp;';
+      else if (ch === '<') outCh = '&lt;';
+      else if (ch === '>') outCh = '&gt;';
+      if (insideBox || needUl || needColor || needRainbow) {
+        if (curBg !== cellBg || curUl !== needUl || curBold !== needBold || curColor !== textColor || curRainbow !== needRainbow) {
+          if (curBg || curUl || curBold || curColor || curRainbow) lineHtml += '</span>';
+          let styles = [];
+          if (cellBg) {
+            let padding = '0';
+            let zindex = 1;
+            if (cellBox) {
+              const firstRow = cellBox.fromRow + 1;
+              const lastRow = cellBox.toRow - 1;
+              if (r === firstRow) padding = '6px 0';
+              else if (r === lastRow) padding = '0 0 6px 0';
+              // Smaller (inner) boxes get higher z-index (kept positive so content stays visible)
+              const area = (cellBox.toRow - cellBox.fromRow) * (cellBox.toCol - cellBox.fromCol);
+              zindex = Math.max(1, 1000 - area);
+            }
+            styles.push('background:' + cellBg + ';padding:' + padding + ';position:relative;z-index:' + zindex);
+          }
+          if (needUl) styles.push('text-decoration:underline;text-decoration-color:red;text-decoration-thickness:1.5px;text-underline-offset:3px');
+          if (needBold) styles.push('font-weight:bold');
+          if (textColor) styles.push('color:' + textColor);
+          lineHtml += '<span style="' + styles.join(';') + '">';
+          curBg = cellBg; curUl = needUl; curBold = needBold; curColor = textColor; curRainbow = needRainbow;
+        }
+        lineHtml += outCh;
+      } else {
+        if (curBg || curUl || curBold || curColor || curRainbow) { lineHtml += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; }
+        lineHtml += outCh;
+      }
+    }
+    if (curBg || curUl || curBold || curColor || curRainbow) lineHtml += '</span>';
+    lineHtml = lineHtml.replace(/\s+$/, '');
+    html += lineHtml + '\n';
+  }
+  return '<pre>' + html + '</pre>';
+}
+
+// Real-time preview: debounced refresh after every edit
+let previewTimer = null;
+function refreshPreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    const text = getGridText();
+    const wrap = document.getElementById('preview-wrap');
+    if (!text.trim()) {
+      wrap.innerHTML = '<div class="preview-empty">图表为空，开始绘制吧 ✏️</div>';
+      return;
+    }
+    wrap.innerHTML = renderPreview(text);
+  }, 150);
+}
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (!confirm('确定清空所有内容？')) return;
+  saveHistory();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) grid[r][c] = '';
+  }
+  renderGrid();
+});
+
+// 快捷键浮层
+document.getElementById('btn-shortcuts').addEventListener('click', () => {
+  document.getElementById('modal-shortcuts').classList.add('active');
+});
+document.getElementById('btn-close-shortcuts').addEventListener('click', () => {
+  document.getElementById('modal-shortcuts').classList.remove('active');
+});
+document.getElementById('modal-shortcuts').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.target.classList.remove('active');
+});
+
+// ═══════════════════════════════════════
+// Init
+// ═══════════════════════════════════════
+initColorPicker();
+renderGrid();
+refreshPreview();
+setTool('select');
+
+// 点击网格空白处取消选择
+document.getElementById('canvas-wrap').addEventListener('mousedown', (e) => {
+  if (!e.target.classList.contains('cell')) clearSelection();
+});
+console.log('ASCII 图编辑器已加载');
+console.log('快捷键: V=选择, F=自由, L=直线, B=矩形, A=箭头, T=文字, W=梳子, E=擦除, Ctrl+Z=撤销, Ctrl+C/X/V=复制剪切粘贴');
+</script>
+</body>
+</html>
