@@ -1,4 +1,5 @@
 # MD ASCII Diagram
+## Motivation
 
 When writing technical proposals in Markdown with Claude Code, it can generate ASCII diagrams. However, when sharing these documents with others, the ASCII art often gets misaligned due to different fonts, editors, or platforms.
 
