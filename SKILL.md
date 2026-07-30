@@ -124,6 +124,146 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `W` | 梳子理线（对齐散落的横线/竖线） |
 | `E` | 擦除 |
 | `I` | 插入列（全画面所有行） |
+| `Ctrl+Shift+I` | 插入行 |
+| `Space` | 插入空格，右侧右移 |
+| `Backspace` | 删除前一个格子，右侧左移 |
+| `Delete` | 清空当前格子 |
+| `框选 + Delete/Backspace` | 对框选行删 C 列，右侧左移 |
+| `框选 + Space` | 对框选行插 C 列空格，右侧右移 |
+| `Shift+Delete` | 删除列（全画面） |
+| `Ctrl+Delete` | 删除行 |
+| `Ctrl+S` | 保存到当前 Markdown 文档 |
+| `Ctrl+Z` / `u` | 撤销 |
+| `Ctrl+r` | 重做 |
+| `x` / `X` | 删当前/前一个格子 |
+| `dd` | 删当前行 |
+| `yy` / `p` | 复制行 / 粘贴 |
+| `0` / `---
+name: md-ascii-diagram
+description: "Markdown ASCII 图表工具。用法: /md-ascii-diagram edit <文档.md>  打开编辑器编辑文档中的图；/md-ascii-diagram gen <文档.md>  批量渲染所有图为彩色 PNG。支持 9 种颜色、6 级明度、嵌套框、连接符自动合并、四边墙连续性检测。"
+metadata:
+  type: skill
+  version: "2.0.0"
+---
+
+# md-ascii-diagram — Markdown ASCII 图表编辑器与渲染
+
+## 概述
+
+本技能包含两个工具：
+1. **可视化编辑器** — 网格化编辑 ASCII 图，支持框选、画线、画框、箭头、着色、线条理顺等
+2. **批量渲染器** — 将 Markdown 文档中的 ASCII 图渲染为彩色 PNG 图片，保留注释格式供后续修改
+
+---
+
+## 文件清单
+
+技能包路径：`~/.claude/skills/md-ascii-diagram/`
+
+| 文件 | 说明 |
+|------|------|
+| `ascii-editor.html` | 可视化编辑器（单 HTML 文件，浏览器直接打开） |
+| `render_color.js` | 批量渲染脚本（Node.js + Playwright） |
+| `render_color.backup.js` | 渲染脚本备份 |
+| `convert_diagrams.js` | 旧格式转换脚本（将 ``` 代码块转为注释格式） |
+
+---
+
+## 命令一：md-ascii-diagram-edit
+
+打开编辑器，加载 Markdown 文档中的 ASCII 图进行编辑，编辑后可直接保存回文档。
+
+### 启动服务器
+
+编辑器必须通过 HTTP 服务器运行，才能读取和写入 Markdown 文件：
+
+```bash
+# Bash
+cd ~/.claude/skills/md-ascii-diagram/
+python3 server.py [端口]
+# 默认端口 8000
+```
+
+```powershell
+# PowerShell
+cd ~\.claude\skills\md-ascii-diagram\
+python server.py [端口]
+```
+
+### 连接 Markdown 文档
+
+服务器启动后，在浏览器打开：
+
+```
+http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
+```
+
+编辑器会自动：
+1. `fetch` Markdown 文件内容（通过 `/?file=` API）
+2. 提取所有 ASCII 图（`<!--diagram NAME-->` 注释块 和 ``` 代码块）
+3. 弹出图列表供选择
+4. 选择后加载到网格编辑
+
+### 编辑与保存
+
+- **编辑完成** → 点击 **💿 保存** → 通过 `POST /save` API 写回原 Markdown 文件
+- 已有名字的图 → 在文档中更新 `<!--diagram NAME-->` 注释块内容
+- 新图 → 追加到文档末尾
+- 保存后 VSCode 自动检测文件变化，无需手动复制粘贴
+- 也支持 **💾 导出** 复制 `<!--diagram NAME-->` 格式到剪贴板（手动粘贴）
+
+### 文件清单补充
+
+| 文件 | 说明 |
+|------|------|
+| `server.py` | HTTP 服务器 + `/save` API（Python3） |
+
+### 支持的图格式
+
+| 格式 | 示例 | 名称 |
+|------|------|------|
+| 注释块 | `<!--diagram p1\n...\n-->` | 有名字（如 p1） |
+| 代码块 | ``` ``` ``` | 无名字（需取名后导出） |
+
+### 颜色码
+
+| 码 | 名称 | 色值 | 效果 |
+|----|------|------|------|
+| `m` | 玫红 | `#CC247C` | |
+| `r` | 红 | `#E95351` | |
+| `o` | 橙 | `#F7A24F` | |
+| `y` | 黄 | `#FAE538` | |
+| `g` | 绿 | `#4EA660` | |
+| `c` | 淡蓝 | `#79CAFB` | |
+| `b` | 蓝 | `#5292F7` | |
+| `p` | 紫 | `#AA77E9` | |
+| `e` | 灰 | `#D9D1D1` | |
+
+### 文字颜色标记
+
+在文字前后加标记可以给文字上色或加下划线，支持预览和 PNG 渲染：
+
+| 语法 | 效果 |
+|------|------|
+| `___文字___` | 红色波浪下划线 |
+| `_g_文字_g_` | 绿色文字（色码 m/r/o/y/g/c/b/p/e） |
+| `_!_文字_!_` | 🌈 彩虹色文字（红橙黄绿蓝紫循环） |
+
+示例：`___重要___` 下划线，`_r_错误_r_` 红色，`_!_恭喜_!_` 彩虹
+
+### 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `V` | 选择 |
+| `F` | 自由绘制（横─竖│） |
+| `L` | 直线（支持 L 型拐弯） |
+| `B` | 矩形框 |
+| `A` | 箭头连线（L 型 + 方向箭头） |
+| `T` | 文字输入 |
+| `W` | 梳子理线（对齐散落的横线/竖线） |
+| `E` | 擦除 |
+| `I` | 插入列（全画面所有行） |
 | `Shift+I` | 插入行 |
 | `Space` | 插入空格，右侧右移 |
 | `Backspace` | 删除前一个格子，右侧左移 |
@@ -133,10 +273,10 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `Shift+Delete` | 删除列（全画面） |
 | `Ctrl+Delete` | 删除行 |
 | `Ctrl+S` | 保存到当前 Markdown 文档 |
-| `Ctrl+Z` | 撤销 |
+ | 行首 / 行尾 |
 | `Ctrl+C/X/V` | 复制/剪切/粘贴 |
 | `Shift+色码`（如 `Shift+G`） | 着色光标所在框 |
-| `Ctrl+R` | 圆角化当前矩形框 |
+| `Ctrl+Shift+R` | 圆角化当前矩形框 |
 | 原色按钮（原） | 还原着色为未着色状态 |
 
 ---
