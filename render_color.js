@@ -204,7 +204,7 @@ function findUncoloredBoxes(dl) {
       for (let r2 = r + 1; r2 < dl.length; r2++) {
         const bottomCells = lineCells(dl[r2]);
         const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
-        if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰')) continue;
+        if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰' && leftChar.char !== '╰')) continue;
         const rightStart = bottomCells.find(c => c.dispCol === rightDispCol);
         if (!rightStart || (rightStart.char !== '┘' && rightStart.char !== '╯')) continue;
         boxes.push({ fromRow: r, toRow: r2, fromCol: fromDispCol, toCol: rightDispCol + 1 });
@@ -240,7 +240,7 @@ function findBoxes(dl) {
       let rightDispCol = -1;
       for (let i = dashStartIdx; i < cells.length; i++) {
         if (BORDER_CHARS.includes(cells[i].char)) continue;
-        if (cells[i].char === '┐' || cells[i].char === '┛' || cells[i].char === '╗') {
+        if (cells[i].char === '┐' || cells[i].char === '┛' || cells[i].char === '╗' || cells[i].char === '╮') {
           rightDispCol = cells[i].dispCol;
           break;
         }
@@ -251,7 +251,7 @@ function findBoxes(dl) {
       for (let r2 = r + 1; r2 < dl.length; r2++) {
         const bottomCells = lineCells(dl[r2]).cells;
         const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
-        if (!leftChar || leftChar.char !== '└') continue;
+        if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰')) continue;
         const rightStart = bottomCells.find(c => c.dispCol === rightDispCol - markerWidth + 1);
         if (!rightStart || rightStart.char !== cl) continue;
         if (markerWidth > 1) {
@@ -291,10 +291,10 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     // Clean: replace color markers at corners
     const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
     let clean = raw.join('\n');
-    clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗])`, 'g'), '┌─$3$4');
-    clean = clean.replace(new RegExp(`([mroygcbpe])([${BORDER}]*)([┐┛╗])`, 'g'), '┌$2$3');
-    clean = clean.replace(new RegExp(`([└╚┗])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), '$1$2─┘');
-    clean = clean.replace(new RegExp(`([└╚┗])([${BORDER}]*)([mroygcbpe])`, 'g'), '$1$2┘');
+    clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,s,d,r)=>((r==='╮'?'╭':'┌')+'─'+d+r));
+    clean = clean.replace(new RegExp(`([mroygcbpe])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,d,r)=>((r==='╮'?'╭':'┌')+d+r));
+    clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+'─'+((l==='╰'?'╯':'┘'))));
+    clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])`, 'g'), (m,l,d,c)=>((l==='╰'?'╰':l)+d+((l==='╰'?'╯':'┘'))));
     const lines = clean.split('\n');
 
         // Build HTML: color all non-border content inside boxes with uniform background
