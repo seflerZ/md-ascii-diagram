@@ -2139,15 +2139,15 @@ function renderPreview(text) {
     // Color/rainbow markup ranges (take priority over underline)
     const colorRanges = [];
     const rainbowRanges = [];
-    const C_RE = /_([mroygcbpe])_([^_]+)_\1_/g;
+    const C_RE = /_([mroygcbpe])_(.+?)_\1_/g;
     let cm;
     while ((cm = C_RE.exec(line)) !== null) colorRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1, hex: COLORS[cm[1]]?.hex || '#ccc' });
-    const R_RE = /_!_([^_]+)_!_/g;
+    const R_RE = /_!_(.+?)_!_/g;
     while ((cm = R_RE.exec(line)) !== null) rainbowRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
 
     // underline ranges (___text___)
     const ulRanges = [];
-    const ulRe = /___([^_]+)___/g;
+    const ulRe = /___(.+?)___/g;
     while ((cm = ulRe.exec(line)) !== null) {
       ulRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
     }

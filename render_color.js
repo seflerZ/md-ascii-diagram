@@ -163,14 +163,18 @@ function charWidth(c) {
   if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
   if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2;
   if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
+  if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
+  if (cp >= 0x2600 && cp <= 0x27BF) return 2; // Misc symbols
+  if (cp >= 0x231A && cp <= 0x23FF) return 2; // Misc technical
   return 1;
 }
 
 function lineCells(line) {
   const cells = [];
   let dispCol = 0;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
+  const chars = Array.from(line);
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
     const w = charWidth(c);
     cells.push({ char: c, idx: i, dispCol, width: w });
     dispCol += w;
@@ -302,15 +306,15 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       // Color/rainbow markup ranges (take priority over underline)
       const colorRanges = [];
       const rainbowRanges = [];
-      const C_RE = /_([mroygcbpe])_([^_]+)_\1_/g;
+      const C_RE = /_([mroygcbpe])_(.+?)_\1_/g;
       let cm;
       while ((cm = C_RE.exec(lines[r])) !== null) colorRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1, hex: COLORS[cm[1]] || '#ccc' });
-      const R_RE = /_!_([^_]+)_!_/g;
+      const R_RE = /_!_(.+?)_!_/g;
       while ((cm = R_RE.exec(lines[r])) !== null) rainbowRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
 
       // underline ranges (___text___)
       const ulRanges = [];
-      const ulRe = /___([^_]+)___/g;
+      const ulRe = /___(.+?)___/g;
       while ((cm = ulRe.exec(lines[r])) !== null) {
         ulRanges.push({ start: cm.index, end: cm.index + cm[0].length - 1 });
       }
@@ -441,7 +445,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_REG}') format('truetype');font-weight:normal;font-style:normal}
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_BOLD}') format('truetype');font-weight:bold;font-style:normal}
 *{margin:0;padding:0}body{background:#fff;display:inline-block}
-pre{font-family:'Sarasa Mono SC Nerd','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
+pre{font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
 pre span{padding:0}
 </style>
 </head><body><pre>${html}</pre></body></html>`;
