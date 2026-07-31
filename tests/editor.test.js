@@ -265,6 +265,52 @@ const SUITES = [
       return results;
     },
   },
+
+  // ═══════ Emoji 缩放（数字前缀 2-9 → 0.5×n 倍，不占空间）═══════
+  {
+    name: 'Emoji缩放',
+    fn: () => {
+      const results = [];
+      const render = () => renderPreview(getGridText());
+
+      initGrid(); grid[0][0] = '4'; grid[0][1] = '📦'; grid[0][2] = 'A'; renderGrid();
+      let html = render();
+      results.push({ name: '4📦→scale(3)', ok: html.includes('transform:scale(3)') && html.includes('📦') && !/>4</.test(html) });
+
+      initGrid(); grid[0][0] = '2'; grid[0][1] = '📦'; renderGrid();
+      html = render();
+      results.push({ name: '2📦→scale(2)', ok: html.includes('transform:scale(2)') });
+
+      initGrid(); grid[0][0] = '6'; grid[0][1] = '📦'; renderGrid();
+      html = render();
+      results.push({ name: '6📦→scale(4)', ok: html.includes('transform:scale(4)') });
+
+      initGrid(); grid[0][0] = '9'; grid[0][1] = '📦'; renderGrid();
+      html = render();
+      results.push({ name: '9📦→scale(5.5)', ok: html.includes('transform:scale(5.5)') });
+
+      initGrid(); grid[0][0] = '4'; grid[0][1] = 'A'; renderGrid();
+      html = render();
+      results.push({ name: '4A不触发', ok: html.includes('4') && !html.includes('transform:scale') });
+
+      initGrid(); grid[0][0] = '4'; grid[0][1] = '中'; renderGrid();
+      html = render();
+      results.push({ name: '4中不触发', ok: html.includes('4') && !html.includes('transform:scale') });
+
+      initGrid(); grid[0][0] = '📦'; renderGrid();
+      html = render();
+      results.push({ name: '裸Emoji不缩放', ok: html.includes('📦') && !html.includes('transform:scale') });
+
+      // ZWJ 序列（如 👩‍🦰）整体缩放，不打断成多个 Emoji
+      initGrid(); grid[0][0] = '2'; grid[0][1] = '👩'; grid[0][2] = '‍'; grid[0][3] = '🦰'; renderGrid();
+      html = render();
+      const iW = html.indexOf('👩'), iR = html.indexOf('🦰');
+      const between = iW >= 0 && iR >= 0 ? html.slice(iW, iR + 1) : '';
+      results.push({ name: '2👩ZWJ🦰 序列不打断', ok: html.includes('transform:scale(2)') && between.includes('‍') && !between.includes('</span>') });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──

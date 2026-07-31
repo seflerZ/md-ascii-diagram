@@ -150,6 +150,13 @@ for (let i = 0; i < mdLines.length; i++) {
   }
 }
 
+// Emoji 字符判断（U+1F300-1F9FF）
+function isEmojiChar(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  return cp >= 0x1F300 && cp <= 0x1F9FF;
+}
+
 // Display width
 function charWidth(c) {
   const cp = c.codePointAt(0);
@@ -173,9 +180,13 @@ function lineCells(line) {
   const cells = [];
   let dispCol = 0;
   const chars = Array.from(line);
+  let afterZwj = false;  // 上一个字符是 ZWJ（零宽连接符）：后续 Emoji 并入序列不占位
   for (let i = 0; i < chars.length; i++) {
     const c = chars[i];
-    const w = charWidth(c);
+    let w = charWidth(c);
+    if (c === '‍') { w = 0; afterZwj = true; }
+    else if (afterZwj && isEmojiChar(c)) { w = 0; afterZwj = false; }
+    else { afterZwj = false; }
     cells.push({ char: c, idx: i, dispCol, width: w });
     dispCol += w;
   }
@@ -347,8 +358,13 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       let curBold = false;
       let curColor = null;
       let curRainbow = false;
-      for (const cell of cells) {
+      let curScale = null;       // 当前 span 的 emoji 缩放倍数
+      let pendingScale = null;   // 上一格数字标记的 emoji 缩放
+      for (let ci = 0; ci < cells.length; ci++) {
+        const cell = cells[ci];
         const ch = cell.char;
+        const emojiScale = pendingScale;  // 当前格（Emoji）由数字标记的缩放
+        pendingScale = null;
         // Find the SMALLEST box containing this display position (innermost wins for nested boxes)
         let cellBg = null;
         let cellBox = null;
@@ -392,16 +408,34 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
         const textColor = needColor ? getColor(cell.idx) : needRainbow ? getRainbowColor(cell.idx) : null;
         const isMarker = isUlMarker(cell.idx) || isBoldMarker(cell.idx) || isColorMarker(cell.idx) || isRainbowMarker(cell.idx);
 
+        // Emoji 缩放标记：数字(2-9) + Emoji → Emoji 放大 0.5×数字 倍，数字格隐藏
+        let isScaleMarker = false;
+        if (emojiScale === null && ch >= '2' && ch <= '9') {
+          const next = cells[ci + 1];
+          if (next && isEmojiChar(next.char)) {
+            pendingScale = 1 + (ch.charCodeAt(0) - 48) * 0.5;  // 基础1倍 + 0.5×数字
+            isScaleMarker = true;
+          }
+        }
+        // ZWJ 序列延续：Emoji(缩放) + ZWJ + Emoji... 整体缩放，避免序列被打断成多个 Emoji
+        if (emojiScale !== null) {
+          const next = cells[ci + 1];
+          if (next && ((isEmojiChar(ch) && next.char === '‍') || (ch === '‍' && isEmojiChar(next.char)))) {
+            pendingScale = emojiScale;
+          }
+        }
+
         // Escape HTML special chars, hide _ markers
         let outCh = ch;
+        if (isScaleMarker) outCh = ' ';
         if (isMarker) outCh = ' ';
         else if (ch === '&') outCh = '&amp;';
         else if (ch === '<') outCh = '&lt;';
         else if (ch === '>') outCh = '&gt;';
 
-        if (insideBox || needUl || needColor || needRainbow) {
-          if (curBg !== cellBg || curUl !== needUl || curBold !== needBold || curColor !== textColor || curRainbow !== needRainbow) {
-            if (curBg || curUl || curBold || curColor || curRainbow) line += '</span>';
+        if (insideBox || needUl || needColor || needRainbow || emojiScale) {
+          if (curBg !== cellBg || curUl !== needUl || curBold !== needBold || curColor !== textColor || curRainbow !== needRainbow || curScale !== emojiScale) {
+            if (curBg || curUl || curBold || curColor || curRainbow || curScale) line += '</span>';
             let styles = [];
             if (cellBg) {
               let padding = '0';
@@ -420,20 +454,22 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
             if (needUl) styles.push('text-decoration:underline;text-decoration-color:red;text-decoration-thickness:1.5px;text-underline-offset:3px');
             if (needBold) styles.push('font-weight:bold');
             if (textColor) styles.push('color:' + textColor);
+            if (emojiScale) styles.push(`display:inline-block;transform:scale(${emojiScale});transform-origin:center`);
             line += `<span style="${styles.join(';')}">`;
             curBg = cellBg;
             curUl = needUl;
             curBold = needBold;
             curColor = textColor;
             curRainbow = needRainbow;
+            curScale = emojiScale;
           }
           line += outCh;
         } else {
-          if (curBg || curUl || curBold || curColor || curRainbow) { line += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; }
+          if (curBg || curUl || curBold || curColor || curRainbow || curScale) { line += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; curScale = null; }
           line += outCh;
         }
       }
-      if (curBg || curUl || curBold || curColor || curRainbow) line += '</span>';
+      if (curBg || curUl || curBold || curColor || curRainbow || curScale) line += '</span>';
       line = line.replace(/\s+$/, '');
       html += line + '\n';
     }
