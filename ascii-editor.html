@@ -476,6 +476,7 @@ function setPreview(positions) {
 }
 
 let lastFreeCell = null;
+let freePlaced = []; // 本次自由绘制绘制的格子（用于绘制结束后合并连接符）
 let moveDragging = false;
 let moveSelection = null; // saved selection bounds for move
 
@@ -497,7 +498,9 @@ function onCellMouseDown(e) {
 
   if (activeTool === 'free') {
     saveHistory();
+    freePlaced = [];
     setCell(p.r, p.c, '─');
+    freePlaced.push({ r: p.r, c: p.c });
     lastFreeCell = p;
   } else if (activeTool === 'move') {
     if (selStart && selEnd) {
@@ -552,6 +555,7 @@ function onCellMouseMove(e) {
       if (p.r === lastFreeCell.r) setCell(p.r, p.c, '─');
       else if (p.c === lastFreeCell.c) setCell(p.r, p.c, '│');
       else setCell(p.r, p.c, '─');
+      freePlaced.push({ r: p.r, c: p.c });
     }
     lastFreeCell = p;
   } else if (activeTool === 'select') {
@@ -589,6 +593,15 @@ function onCellMouseUp(e) {
 
   if (activeTool === 'free') {
     lastFreeCell = null;
+    // 自由绘制后合并连接符（两阶段：重绘网格 → autoConnect）
+    if (freePlaced.length) {
+      renderGrid();
+      for (const cell of freePlaced) {
+        const el = getCell(cell.r, cell.c);
+        if (el) setCell(cell.r, cell.c, autoConnect(cell.r, cell.c, parseInt(el.dataset.dispCol)));
+      }
+      freePlaced = [];
+    }
   } else if (activeTool === 'line') {
     clearPreview();
     drawLine();
@@ -683,8 +696,10 @@ function setCellByDisp(r, d, ch) {
 // ── Line-character direction merging (so intersections become ├┤┬┴┼) ──
 // ═══ Line Character Connection Table ═══
 const LINE_DIRS = {
+  '-': ['L','R'], '|': ['U','D'],   // ASCII 线字符也纳入连接
   '─': ['L','R'], '│': ['U','D'],
   '┌': ['R','D'], '┐': ['L','D'], '└': ['U','R'], '┘': ['U','L'],
+  '╭': ['R','D'], '╮': ['L','D'], '╰': ['U','R'], '╯': ['U','L'],
   '├': ['U','D','R'], '┤': ['U','D','L'], '┬': ['L','R','D'], '┴': ['L','R','U'],
   '┼': ['U','D','L','R'],
 };
@@ -727,6 +742,8 @@ function neighborConnects(r, d, dir) {
   const c = findCellByDispCol(nr, nd);
   if (c < 0) return false;
   const ch = getCellText(nr, c);
+  // 色码标记（着色框的角/边）：视为可连接的线，横遇竖即可合并成三通/四通
+  if (ch && ch !== ' ' && 'mroygcbpe'.includes(ch)) return true;
   if (!isLineChar(ch)) return false;
   const opposite = { U: 'D', D: 'U', L: 'R', R: 'L' }[dir];
   return charDirs(ch).includes(opposite);
@@ -735,15 +752,23 @@ function neighborConnects(r, d, dir) {
 // Recompute a cell's line char from its actual neighbors (endpoints → T-joints, not crossings)
 // autoConnect(r, c, d) — recompute cell char from 4-neighbor connections
 function autoConnect(r, c, d) {
+  const cur = getCellText(r, c);
   const dirs = [];
   if (neighborConnects(r, d, 'U')) dirs.push('U');
   if (neighborConnects(r, d, 'D')) dirs.push('D');
   if (neighborConnects(r, d, 'L')) dirs.push('L');
   if (neighborConnects(r, d, 'R')) dirs.push('R');
-  if (dirs.length === 0) return getCellText(r, c);
+  if (dirs.length === 0) return cur;
   dirs.sort();
   const key = dirs.join('');
-  return DIRS_TO_CHAR[key] || getCellText(r, c);
+  const target = DIRS_TO_CHAR[key];
+  if (!target) return cur;
+  // 圆角框的角保持圆角样式（如 ┌→╭）
+  if (cur === '╭' || cur === '╮' || cur === '╰' || cur === '╯') {
+    const ROUNDED = { '┌': '╭', '┐': '╮', '└': '╰', '┘': '╯' };
+    return ROUNDED[target] || target;
+  }
+  return target;
 }
 
 // Two-phase placement: stamp all chars, then recompute each from neighbors
@@ -1007,11 +1032,11 @@ function computeArrowPath() {
   return out;
 }
 
-// L-shaped line path (no arrow heads): reuse arrow path, replace arrows with lines
+// L-shaped line path (no arrow heads): reuse arrow path, replace all arrow types with lines
 function computeLinePath() {
   return computeArrowPath().map(p => {
-    if (p.ch === '→' || p.ch === '←') return { ...p, ch: '─' };
-    if (p.ch === '↓' || p.ch === '↑') return { ...p, ch: '│' };
+    if ('→←▶◀▷◁'.includes(p.ch)) return { ...p, ch: '─' };
+    if ('↑↓▲▼△▽'.includes(p.ch)) return { ...p, ch: '│' };
     return p;
   });
 }
@@ -1076,6 +1101,14 @@ function deleteCellShiftLeft() {
   for (let c = cursorC; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
   grid[cursorR][COLS - 1] = '';
   renderGrid(); refreshPreview();
+}
+
+// 删除指定格；若删除的是双宽字符，重绘网格重算 dispCol（避免后续内容错位）
+function eraseCell(r, c) {
+  const w = charWidth(getCellText(r, c));
+  setCell(r, c, '');
+  saveHistory();
+  if (w > 1) { renderGrid(); refreshPreview(); }
 }
 
 // 删除选区并左移补位（Visual 模式 d 键）
@@ -1382,9 +1415,9 @@ document.addEventListener('keydown', (e) => {
     switch (e.key) {
       case 'd': deleteCellShiftLeft(); e.preventDefault(); return;  // 删除光标处字符，右侧左移补位
       case 'u': undo(); e.preventDefault(); return;
-      case 'x': setCell(cursorR, cursorC, ''); saveHistory(); e.preventDefault(); return;
+      case 'x': eraseCell(cursorR, cursorC); e.preventDefault(); return;
       case 'X':
-        if (cursorC > 0) { setCell(cursorR, cursorC - 1, ''); saveHistory(); }
+        if (cursorC > 0) { eraseCell(cursorR, cursorC - 1); }
         e.preventDefault(); return;
       case 'p': pasteAtCursor(); e.preventDefault(); return;
       case '0':
@@ -1510,8 +1543,7 @@ document.addEventListener('keydown', (e) => {
       return;
     }
     // Delete 单格：清空当前格子
-    setCell(cursorR, cursorC, '');
-    saveHistory();
+    eraseCell(cursorR, cursorC);
     return;
   }
 
