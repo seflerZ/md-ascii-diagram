@@ -13,7 +13,7 @@ import http.server
 import urllib.parse
 import json
 import re
-import sys
+import sys, os, subprocess
 
 
 def find_all_diagrams(md):
@@ -109,6 +109,48 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({'ok': True}).encode('utf-8'))
             except Exception as e:
                 self.send_error(500, f'保存失败: {e}')
+        elif self.path == '/generate':
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode('utf-8')
+            data = json.loads(body)
+            filepath = data.get('file')
+            name = data.get('name')
+            content = data.get('content')
+            if not filepath or not name:
+                self.send_error(400, '缺少 file 或 name 参数')
+                return
+            try:
+                # 1. 先把当前内容保存到文件
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    md = f.read()
+                new_block = f'<!--diagram {name}\n{content}\n-->'
+                pattern = r'(<!--\s*diagram\s+' + re.escape(name) + r'\s*\n)[\s\S]*?(-->)'
+                if re.search(pattern, md):
+                    new_md = re.sub(pattern, lambda m: m.group(1) + content + '\n' + m.group(2), md)
+                else:
+                    new_md = md.rstrip() + '\n\n' + new_block + '\n'
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(new_md)
+
+                # 2. 运行 render_color.js 生成 PNG
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                render_js = os.path.join(script_dir, 'render_color.js')
+                file_dir = os.path.dirname(os.path.abspath(filepath))
+                out_dir = os.path.join(file_dir, 'diagrams_out')
+                result = subprocess.run(
+                    ['node', render_js, filepath, out_dir, '--only=' + name],
+                    capture_output=True, text=True, timeout=60,
+                    cwd=script_dir
+                )
+                ok = result.returncode == 0
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                resp = {'ok': ok, 'output': result.stdout, 'error': result.stderr if result.stderr else None}
+                self.wfile.write(json.dumps(resp).encode('utf-8'))
+            except Exception as e:
+                self.send_error(500, f'生成失败: {e}')
         else:
             self.send_error(404)
 

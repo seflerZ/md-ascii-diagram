@@ -131,6 +131,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="primary" id="btn-export">💾 导出</button>
     <button class="primary" id="btn-save" style="display:none" title="保存到当前 Markdown 文档">💿 保存</button>
     <button class="primary" id="btn-refresh" style="display:none" title="从文件重新读取当前图">🔄 刷新</button>
+    <button class="primary" id="btn-generate" title="🖼 生成 PNG 图片（需通过 server.py 访问）">🖼 生成</button>
     <button class="primary" id="btn-import">📥 导入</button>
     <button id="btn-clear">🗑 清空</button>
   </div>
@@ -1027,6 +1028,32 @@ function eraseSelection() {
   clearSelection();
 }
 
+// 删除选区列范围内容，右侧同行内容左移补位（核心移位，不动 DOM/选区）
+function shiftSelectionLeft(b) {
+  const width = b.maxC - b.minC + 1;
+  for (let r = b.minR; r <= b.maxR; r++) {
+    for (let c = b.minC; c < COLS - width; c++) grid[r][c] = grid[r][c + width];
+    for (let c = COLS - width; c < COLS; c++) grid[r][c] = '';
+  }
+}
+
+// 删除光标处字符，右侧同行字符左移补位（普通模式 d 键）
+function deleteCellShiftLeft() {
+  saveHistory();
+  for (let c = cursorC; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
+  grid[cursorR][COLS - 1] = '';
+  renderGrid(); refreshPreview();
+}
+
+// 删除选区并左移补位（Visual 模式 d 键）
+function deleteSelectionShiftLeft() {
+  const b = getSelectionBounds();
+  if (!b) return;
+  saveHistory();
+  shiftSelectionLeft(b);
+  renderGrid(); refreshPreview();
+}
+
 // Check that the left/right walls are continuous between top and bottom edges.
 // Wall chars must connect BOTH up and down (│ ├ ┤ ┼) — corners (┌┐└┘) only connect
 // one vertical direction, so they break the wall (e.g. two stacked frames).
@@ -1150,19 +1177,24 @@ function colorAtCursor() {
 
 // ── Magic wand: align scattered horizontal/vertical lines ──
 
-// 将 items 按 groupKey 分组，选众数所在的行/列作为目标，其他迁移过去
-function alignGroup(items, groupKey, posFn, setChar) {
+// 横线族：横线 / 粗横 / 双横 / 虚线横 + 横向箭头
+const H_LINE_CHARS = '─━═╌→←↔';
+// 竖线族：竖线 / 粗竖 / 双竖 / 虚线竖 + 纵向箭头
+const V_LINE_CHARS = '│┃║╎↑↓↕';
+
+// 将 items 按 groupKey 分组，选众数所在的行/列作为目标，其他迁移过去（保留原字符）
+function alignGroup(items, groupKey, posFn) {
   if (!items.length) return;
   const count = {};
   items.forEach(item => { const k = groupKey(item); count[k] = (count[k] || 0) + 1; });
   let target = null, best = -1;
-  for (const k in count) { if (count[k] > best) { best = count[k]; target = k; } }
+  for (const k in count) { if (count[k] > best) { best = count[k]; target = parseInt(k); } }
   items.forEach(item => {
     if (groupKey(item) !== target) {
       setCellByDisp(item.r, item.d, '');
       const pos = posFn(item, target);
       const tc = findCellByDispCol(pos.r, pos.d);
-      if (tc >= 0) { const cur = getCellText(pos.r, tc); if (cur === '' || cur === ' ') setCellByDisp(pos.r, pos.d, setChar); }
+      if (tc >= 0) { const cur = getCellText(pos.r, tc); if (cur === '' || cur === ' ') setCellByDisp(pos.r, pos.d, item.ch); }
     }
   });
 }
@@ -1181,12 +1213,12 @@ function magicAlign() {
       const cc = parseInt(cell.dataset.c);
       if (d < b.minD || d > b.maxD) return;
       const ch = getCellText(r, cc);
-      if (ch === '─') hLines.push({ r, d });
-      else if (ch === '│') vLines.push({ r, d });
+      if (H_LINE_CHARS.includes(ch)) hLines.push({ r, d, ch });
+      else if (V_LINE_CHARS.includes(ch)) vLines.push({ r, d, ch });
     });
   }
-  alignGroup(hLines, item => item.r, (item, tr) => ({ r: parseInt(tr), d: item.d }), '─');
-  alignGroup(vLines, item => item.d, (item, td) => ({ r: item.r, d: parseInt(td) }), '│');
+  alignGroup(hLines, item => item.r, (item, tr) => ({ r: parseInt(tr), d: item.d }));
+  alignGroup(vLines, item => item.d, (item, td) => ({ r: item.r, d: parseInt(td) }));
   clearSelection();
 }
 
@@ -1277,23 +1309,39 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
+  // Visual 模式：y/d/x 作用于选区、p 粘贴（Vim yank/delete/paste）
+  if (isVisual && !e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
+    switch (e.key) {
+      case 'y':
+        copySelection();
+        isVisual = false; clearSelection(); updateStatus();
+        e.preventDefault(); return;
+      case 'd':
+        deleteSelectionShiftLeft();
+        isVisual = false; clearSelection(); updateStatus();
+        e.preventDefault(); return;
+      case 'x':
+        eraseSelection();
+        isVisual = false; clearSelection(); updateStatus();
+        e.preventDefault(); return;
+      case 'p':
+        pasteAtCursor();
+        isVisual = false; clearSelection(); updateStatus();
+        e.preventDefault(); return;
+    }
+  }
+
   // Vim 风格编辑操作（非文字模式）
   if (!e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
-    // dd 删当前行 / yy 复制当前行（双键）
-    if (lastVimKey === 'd' && e.key === 'd') {
-      saveHistory();
-      for (let c = 0; c < COLS; c++) grid[cursorR][c] = '';
-      renderGrid(); refreshPreview();
-      lastVimKey = null; e.preventDefault(); return;
-    }
+    // yy 复制当前行（双键）
     if (lastVimKey === 'y' && e.key === 'y') {
       clipboard = [grid[cursorR].map(ch => ch || '')];
       lastVimKey = null; e.preventDefault(); return;
     }
-    if (e.key === 'd') { lastVimKey = 'd'; e.preventDefault(); return; }
     if (e.key === 'y') { lastVimKey = 'y'; e.preventDefault(); return; }
     lastVimKey = null;
     switch (e.key) {
+      case 'd': deleteCellShiftLeft(); e.preventDefault(); return;  // 删除光标处字符，右侧左移补位
       case 'u': undo(); e.preventDefault(); return;
       case 'x': setCell(cursorR, cursorC, ''); saveHistory(); e.preventDefault(); return;
       case 'X':
@@ -1397,12 +1445,8 @@ document.addEventListener('keydown', (e) => {
     if (hasSel) {
       // 框选：对框选每一行，删除框选列范围，右侧左移补位（框选外行不动）
       const b = getSelectionBounds();
-      const width = b.maxC - b.minC + 1;
-      for (let r = b.minR; r <= b.maxR; r++) {
-        for (let c = b.minC; c < COLS - width; c++) grid[r][c] = grid[r][c + width];
-        for (let c = COLS - width; c < COLS; c++) grid[r][c] = '';
-      }
       saveHistory();
+      shiftSelectionLeft(b);
       renderGrid();
       refreshPreview();
       // 保留框选，刷新 dispCol 以持续操作
@@ -1928,6 +1972,41 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
       }
     })
     .catch(err => { alert('刷新失败：' + err); });
+});
+
+document.getElementById('btn-generate').addEventListener('click', () => {
+  const name = document.getElementById('diagram-name').value.trim();
+  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return; }
+  if (!currentFilePath) { alert('请通过 ?file= 参数打开文档才能生成 PNG。直接用浏览器打开 HTML 不支持生成。'); return; }
+  const content = getGridText();
+  if (!content.trim()) { alert('图表为空，没什么好生成的'); return; }
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+  fetch('/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: currentFilePath, name, content })
+  }).then(r => {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  }).then(data => {
+    if (data.ok) {
+      btn.textContent = '✅ 已生成';
+      // 刷新预览以显示最新的 PNG 引用
+      if (document.getElementById('btn-refresh').style.display !== 'none') {
+        document.getElementById('btn-refresh').click();
+      }
+    } else {
+      btn.textContent = '❌ 失败';
+      alert('生成失败：' + (data.error || data.output || '未知错误'));
+    }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '🖼 生成'; }, 2000);
+  }).catch(err => {
+    btn.disabled = false;
+    btn.textContent = '🖼 生成';
+    alert('生成失败：' + err + '\n请确认已启动 server.py（python server.py）');
+  });
 });
 
 function importText(text) {
