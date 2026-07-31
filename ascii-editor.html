@@ -32,7 +32,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Grid canvas (the core) ── */
 .canvas-wrap{flex:1;overflow:auto;padding:10px;background:#e8e8e8;user-select:none;-webkit-user-select:none}
-.canvas-wrap .grid-root{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);display:inline-block;font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.45}
+.canvas-wrap .grid-root{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);display:inline-block;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.45}
 .canvas-wrap .row{display:flex;height:1.45em;align-items:stretch}
 .canvas-wrap .row-num{color:#999;font-size:11px;background:#f8f8f8;min-width:3ch;text-align:right;padding-right:4px;user-select:none;display:flex;align-items:center;justify-content:flex-end;border-right:1px solid #eee}
 .canvas-wrap .cell{height:100%;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;cursor:default;position:relative;box-sizing:content-box;flex-shrink:0;user-select:none;-webkit-user-select:none}
@@ -55,7 +55,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Preview ── */
 .preview-wrap{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center}
-.preview-wrap pre{font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;display:inline-block;font-variant-ligatures:none;font-kerning:none;background:#fff}
+.preview-wrap pre{font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;display:inline-block;font-variant-ligatures:none;font-kerning:none;background:#fff}
 .preview-wrap pre span{padding:0}
 .preview-empty{color:#999;font-size:14px;text-align:center;margin-top:40px}
 
@@ -77,7 +77,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-overlay.active{display:flex}
 .modal-box{background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);padding:20px;width:90%;max-width:900px;max-height:85vh;display:flex;flex-direction:column}
 .modal-box h3{margin:0 0 10px;font-size:16px}
-.modal-box textarea{flex:1;min-height:300px;font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:14px;line-height:1.3;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;white-space:pre;tab-size:2}
+.modal-box textarea{flex:1;min-height:300px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:14px;line-height:1.3;padding:10px;border:1px solid #ccc;border-radius:4px;resize:vertical;white-space:pre;tab-size:2}
 .modal-box .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .modal-box .modal-buttons button{padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px}
 .modal-box .modal-buttons .primary{background:#4a90d9;color:#fff;border:1px solid #3a7bc8}
@@ -85,10 +85,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-box .modal-buttons .cancel{background:#fff;border:1px solid #ccc}
 .modal-box .modal-buttons .cancel:hover{background:#eee}
 .modal-box .hint{font-size:12px;color:#999;margin-bottom:8px}
-#diagram-list .diag-item{padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;border-bottom:1px solid #f0f0f0}
+#diagram-list .diag-item{padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;border-bottom:1px solid #f0f0f0}
 #diagram-list .diag-item:hover{background:#e8f0ff}
 #diagram-list .diag-item .name{font-weight:bold;color:#333;margin-bottom:3px}
-#diagram-list .diag-item .preview{color:#888;font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;max-height:4.5em;line-height:1.4;font-family:'Sarasa Mono SC Nerd','Consolas',monospace}
+#diagram-list .diag-item .preview{color:#888;font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;max-height:4.5em;line-height:1.4;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace}
 </style>
 </head>
 <body>
@@ -114,6 +114,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <span style="font-size:12px;color:#666">点色着色:</span>
     <div class="color-picker" id="color-picker"></div>
     <label>明度 <input type="number" id="shade-input" min="1" max="6" value="3" style="width:36px"></label>
+    <label>字体 <select id="font-select" style="font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px">
+      <option value="'更纱终端书呆黑体-简','更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace" selected>更纱终端书呆黑体-简</option>
+      <option value="'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace">Sarasa Mono SC Nerd</option>
+      <option value="'Cascadia Code','Consolas','Courier New',monospace">Cascadia Code</option>
+      <option value="'Cascadia Mono','Consolas','Courier New',monospace">Cascadia Mono</option>
+      <option value="Consolas,'Courier New',monospace">Consolas</option>
+    </select></label>
   </div>
 
   <div class="sep"></div>
@@ -203,7 +210,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="hint" id="list-hint">单击预览，确认后点「导入」：</div>
     <div style="display:flex;flex:1;gap:12px;min-height:0">
       <div id="diagram-list" style="flex:0 0 280px;overflow:auto;border:1px solid #ccc;border-radius:4px;padding:4px"></div>
-      <div id="diagram-preview" style="flex:1;overflow:auto;border:1px solid #eee;border-radius:4px;padding:12px;background:#fafafa;font-family:'Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;line-height:1.4;white-space:pre;color:#999">
+      <div id="diagram-preview" style="flex:1;overflow:auto;border:1px solid #eee;border-radius:4px;padding:12px;background:#fafafa;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;line-height:1.4;white-space:pre;color:#999">
         单击左侧图名预览完整内容
       </div>
     </div>
@@ -246,6 +253,20 @@ let activeShade = 3;
 let textMode = 'insert'; // text editing mode // 'insert' 或 'replace'，文字输入模式
 let isVisual = false; // Vim Visual mode // Visual 模式（v 键切换）
 let lastVimKey = null; // for dd / yy two-key commands // Vim 双键命令（dd/yy）的状态记忆
+let ambiguousDouble = true; // 当前字体下 ▲▼◄► 是否为双宽
+
+function measureAmbiguousWidth() {
+  try {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    var el = document.getElementById('canvas');
+    var font = el ? getComputedStyle(el).fontFamily : 'monospace';
+    ctx.font = '16px ' + font;
+    var zero = ctx.measureText('0').width || 8;
+    var down = ctx.measureText('▼').width || 8;
+    ambiguousDouble = (down / zero) >= 1.5;
+  } catch(e) { ambiguousDouble = true; }
+}
 let selStart = null, selEnd = null; // {r, c}
 let cursorR = 0, cursorC = 0;
 let isDragging = false;
@@ -275,20 +296,20 @@ function charWidth(ch) {
   if (cp >= 0x3400 && cp <= 0x4DBF) return 2;
   if (cp >= 0x3000 && cp <= 0x303F) return 2;
   if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
-  if (cp >= 0x2460 && cp <= 0x24FF) return 2;
+  if (cp >= 0x2460 && cp <= 0x24FF) return ambiguousDouble ? 2 : 1; // ①②③ 等按当前字体动态
   
-  if (cp === 0x2194) return 2;
-  if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
-  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2; // ▼▲◄► 在 Sarasa 中均为双宽
-  if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
+  if (cp === 0x2194 || (cp >= 0x2190 && cp <= 0x2193)) return ambiguousDouble ? 2 : 1; // →←↑↓↔ 动态
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return ambiguousDouble ? 2 : 1; // ▼▲◄►▽△◁▷ 动态
+  if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return ambiguousDouble ? 2 : 1; // —…… 动态
   if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
-  if (cp >= 0x2600 && cp <= 0x27BF) return 2; // Misc symbols
-  if (cp >= 0x231A && cp <= 0x23FF) return 2; // Misc technical
+  if (cp >= 0x2600 && cp <= 0x27BF) return ambiguousDouble ? 2 : 1; // ☀★◆✓✗ 等动态
+  if (cp >= 0x231A && cp <= 0x23FF) return ambiguousDouble ? 2 : 1; // ⌚⌛⏰ 等动态
   return 1;
 }
 
 // ═══ Render Grid from array → DOM ═══
 function renderGrid() {
+  measureAmbiguousWidth();
   const root = document.getElementById('canvas');
   root.innerHTML = '';
   for (let r = 0; r < ROWS; r++) {
@@ -1616,6 +1637,16 @@ function initColorPicker() {
 document.getElementById('shade-input').addEventListener('change', (e) => {
   activeShade = Math.min(6, Math.max(1, parseInt(e.target.value) || 3));
 });
+document.getElementById('font-select').addEventListener('change', () => {
+  const font = document.getElementById('font-select').value;
+  localStorage.setItem('ascii-editor-font', font);
+  document.getElementById('canvas').style.fontFamily = font;
+  document.querySelector('.preview-wrap pre').style.fontFamily = font;
+  measureAmbiguousWidth();
+  // renderGrid needed because changed char widths may affect dispCol grid layout
+  renderGrid();
+  refreshPreview();
+});
 
 // ═══════════════════════════════════════
 // Color legend
@@ -2303,6 +2334,19 @@ initColorPicker();
 renderGrid();
 refreshPreview();
 setTool('select');
+
+// 恢复上次保存的字体并测量
+;(() => {
+  const saved = localStorage.getItem('ascii-editor-font');
+  if (saved) {
+    document.getElementById('font-select').value = saved;
+    document.getElementById('canvas').style.fontFamily = saved;
+    document.querySelector('.preview-wrap pre').style.fontFamily = saved;
+    document.getElementById('diagram-list').style.fontFamily = saved;
+    document.getElementById('diagram-preview').style.fontFamily = saved;
+  }
+  measureAmbiguousWidth();
+})();
 
 // 点击网格空白处取消选择
 document.getElementById('canvas-wrap').addEventListener('mousedown', (e) => {

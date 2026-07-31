@@ -157,15 +157,15 @@ function charWidth(c) {
   if (cp >= 0x3400 && cp <= 0x4DBF) return 2;
   if (cp >= 0x3000 && cp <= 0x303F) return 2;
   if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
-  if (cp >= 0x2460 && cp <= 0x24FF) return 2;
+  if (cp >= 0x2460 && cp <= 0x24FF) return 1; // ①②③ 在新字体下为单宽
   
-  if (cp === 0x2194) return 2;
-  if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
-  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2; // ▼▲◄► 在 Sarasa 中均为双宽
-  if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
+  if (cp === 0x2194) return 1;
+  // →←↑↓↔▼▲◄►▽△◁▷—…… 在新字体下为单宽
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return 1;
+  if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 1;
   if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
-  if (cp >= 0x2600 && cp <= 0x27BF) return 2; // Misc symbols
-  if (cp >= 0x231A && cp <= 0x23FF) return 2; // Misc technical
+  if (cp >= 0x2600 && cp <= 0x27BF) return 1; // ☀★◆✓✗ 等在新字体下单宽
+  if (cp >= 0x231A && cp <= 0x23FF) return 1; // ⌚⌛⏰ 等在新字体下单宽
   return 1;
 }
 
@@ -445,7 +445,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_REG}') format('truetype');font-weight:normal;font-style:normal}
 @font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_BOLD}') format('truetype');font-weight:bold;font-style:normal}
 *{margin:0;padding:0}body{background:#fff;display:inline-block}
-pre{font-family:'Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
+pre{font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
 pre span{padding:0}
 </style>
 </head><body><pre>${html}</pre></body></html>`;
