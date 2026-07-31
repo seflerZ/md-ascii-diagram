@@ -3,5 +3,7 @@ fonts/
 *.backup.*
 *.swp
 .oh-my-coder
-
+.specs
 .claude/
+
+.specs/
