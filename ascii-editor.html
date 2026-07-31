@@ -25,6 +25,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toolbar input[type=number]{width:40px;padding:2px;border:1px solid #ccc;border-radius:3px;font-size:12px;text-align:center}
 .toolbar .name-input{width:100px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px}
 
+/* ── Arrow tool dropdown ── */
+.tool-arrow-wrap{position:relative;display:inline-flex}
+.tool-arrow-wrap .arrow-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;min-width:130px;padding:2px}
+.tool-arrow-wrap:hover .arrow-dropdown{display:block}
+.arrow-dropdown .arrow-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
+.arrow-dropdown .arrow-opt:hover{background:#e8f0ff}
+.arrow-dropdown .arrow-opt.active{background:#d0e4ff;font-weight:bold}
+
 /* ── Main area ── */
 .main{display:flex;flex:1;overflow:hidden}
 .editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -101,7 +109,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button id="tool-line" title="直线 (L)">─ 直线</button>
     <button id="tool-box" title="矩形框 (B)">▣ 矩形</button>
     <button id="tool-rounded" title="圆角矩形 (R)">▢ 圆角</button>
-    <button id="tool-arrow" title="箭头连线 (A)">→ 箭头</button>
+    <div class="tool-arrow-wrap">
+      <button id="tool-arrow" title="箭头连线 (A)，进入后按 1/2/3 切换类型">→ 箭头</button>
+      <div class="arrow-dropdown" id="arrow-dropdown">
+        <div class="arrow-opt active" data-type="1">→ ← 细箭头</div>
+        <div class="arrow-opt" data-type="2">▶ ◀ 实心</div>
+        <div class="arrow-opt" data-type="3">▷ ◁ 空心</div>
+      </div>
+    </div>
     <button id="tool-text" title="文字 (T)">T 文字</button>
     <button id="tool-magic" title="梳子理线 (W)">🪮 梳子</button>
     <button id="tool-move" title="移动 (M)">↕ 移动</button>
@@ -300,7 +315,7 @@ function charWidth(ch) {
   if (cp >= 0x2460 && cp <= 0x24FF) return ambiguousDouble ? 2 : 1; // ①②③ 等按当前字体动态
   
   if (cp === 0x2194 || (cp >= 0x2190 && cp <= 0x2193)) return ambiguousDouble ? 2 : 1; // →←↑↓↔ 动态
-  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return ambiguousDouble ? 2 : 1; // ▼▲◄►▽△◁▷ 动态
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25B6 || cp === 0x25C0 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return ambiguousDouble ? 2 : 1; // ▼▲▶◀◄►▽△◁▷ 动态
   if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return ambiguousDouble ? 2 : 1; // —…… 动态
   if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
   if (cp >= 0x2600 && cp <= 0x27BF) return ambiguousDouble ? 2 : 1; // ☀★◆✓✗ 等动态
@@ -695,7 +710,7 @@ function placeChar(r, c, ch) {
     setCell(r, c, ch);
   } else if (isLineChar(cur) && isLineChar(ch)) {
     setCell(r, c, mergeChar(cur, ch));
-  } else if ('→←↑↓'.includes(ch)) {
+  } else if (ARROW_HEAD_CHARS.includes(ch)) {
     setCell(r, c, ch); // arrow head overwrites
   }
   // else: don't overwrite text / other chars
@@ -739,7 +754,7 @@ function placePath(path) {
     const c = findCellByDispColAny(r, d);
     if (c < 0) continue;
     setCell(r, c, ch);
-    if (!'┌┐└┘→←↑↓'.includes(ch)) placed.push({ r, c });
+    if (!'┌┐└┘'.includes(ch) && !ARROW_HEAD_CHARS.includes(ch)) placed.push({ r, c });
   }
   // 第二阶段：重绘网格，重算所有 dispCol（双宽→单宽后宽度变化）
   renderGrid();
@@ -933,9 +948,27 @@ function previewArrow() {
   return computeArrowPath();
 }
 
+// 箭头类型：1=细(→←↑↓) 2=实心(▶◀▲▼) 3=空心(▷◁△▽)
+let arrowType = 1;
+const ARROW_HEADS = {
+  1: { r: '→', l: '←', d: '↓', u: '↑' },
+  2: { r: '▶', l: '◀', d: '▼', u: '▲' },
+  3: { r: '▷', l: '◁', d: '▽', u: '△' },
+};
+const ARROW_HEAD_CHARS = '→←↑↓▶◀▲▼▷◁△▽';
+
+// 切换箭头类型并更新按钮/下拉高亮
+function setArrowType(t) {
+  arrowType = t;
+  document.querySelectorAll('.arrow-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+  const btn = document.getElementById('tool-arrow');
+  if (btn && ARROW_HEADS[t]) btn.textContent = ARROW_HEADS[t].r + ' 箭头';
+}
+
 // Compute the arrow path with actual characters (shared by preview & draw)
 function computeArrowPath() {
   if (!selStart || !selEnd) return [];
+  const heads = ARROW_HEADS[arrowType];
   const r1 = selStart.r, d1 = selStart.dispCol;
   const r2 = selEnd.r, d2 = selEnd.dispCol;
   const out = [];
@@ -943,12 +976,12 @@ function computeArrowPath() {
   if (r1 === r2) {
     const lo = Math.min(d1, d2), hi = Math.max(d1, d2);
     for (let d = lo; d <= hi; d++) {
-      out.push({ r: r1, d, ch: d === d2 ? (d2 > d1 ? '→' : '←') : '─' });
+      out.push({ r: r1, d, ch: d === d2 ? (d2 > d1 ? heads.r : heads.l) : '─' });
     }
   } else if (d1 === d2) {
     const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
     for (let r = lo; r <= hi; r++) {
-      out.push({ r, d: d1, ch: r === r2 ? (r2 > r1 ? '↓' : '↑') : '│' });
+      out.push({ r, d: d1, ch: r === r2 ? (r2 > r1 ? heads.d : heads.u) : '│' });
     }
   } else {
     // L: horizontal then vertical, corner at (r1, d2)
@@ -968,7 +1001,7 @@ function computeArrowPath() {
     const loR = Math.min(r1, r2), hiR = Math.max(r1, r2);
     for (let r = loR; r <= hiR; r++) {
       if (r === r1) continue; // corner row already handled
-      out.push({ r, d: d2, ch: r === r2 ? (vDir === 'down' ? '↓' : '↑') : '│' });
+      out.push({ r, d: d2, ch: r === r2 ? (vDir === 'down' ? heads.d : heads.u) : '│' });
     }
   }
   return out;
@@ -1309,6 +1342,12 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
+  // 箭头工具下：1/2/3 切换箭头类型
+  if (activeTool === 'arrow' && !e.ctrlKey && !e.metaKey && !e.altKey && '123'.includes(e.key)) {
+    setArrowType(parseInt(e.key));
+    e.preventDefault(); return;
+  }
+
   // Visual 模式：y/d/x 作用于选区、p 粘贴（Vim yank/delete/paste）
   if (isVisual && !e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
     switch (e.key) {
@@ -1627,6 +1666,14 @@ document.getElementById('tool-line').addEventListener('click', () => setTool('li
 document.getElementById('tool-box').addEventListener('click', () => setTool('box'));
 document.getElementById('tool-rounded').addEventListener('click', () => setTool('rounded'));
 document.getElementById('tool-arrow').addEventListener('click', () => setTool('arrow'));
+document.querySelectorAll('.arrow-opt').forEach(o => {
+  o.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setArrowType(parseInt(o.dataset.type));
+    setTool('arrow');
+  });
+});
+setArrowType(1); // 初始化按钮文字为当前类型
 document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
 document.getElementById('tool-magic').addEventListener('click', () => setTool('magic'));
 document.getElementById('tool-move').addEventListener('click', () => setTool('move'));

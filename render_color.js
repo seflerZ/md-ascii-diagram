@@ -161,7 +161,7 @@ function charWidth(c) {
   
   if (cp === 0x2194) return 1;
   // →←↑↓↔▼▲◄►▽△◁▷—…… 在新字体下为单宽
-  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return 1;
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25B6 || cp === 0x25C0 || cp === 0x25C4 || cp === 0x25BA || cp === 0x25BD || cp === 0x25B3 || cp === 0x25C1 || cp === 0x25B7) return 1;
   if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 1;
   if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
   if (cp >= 0x2600 && cp <= 0x27BF) return 1; // ☀★◆✓✗ 等在新字体下单宽
