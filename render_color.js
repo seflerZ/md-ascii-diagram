@@ -161,7 +161,7 @@ function charWidth(c) {
   
   if (cp === 0x2194) return 2;
   if (cp >= 0x2190 && cp <= 0x2193) return 2; // ←↑→↓ CJK 字体按双宽渲染
-  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2;
+  if (cp === 0x25BC || cp === 0x25B2 || cp === 0x25C4 || cp === 0x25BA) return 2; // ▼▲◄► 在 Sarasa 中均为双宽
   if (cp === 0x2014 || cp === 0x2015 || cp === 0x2026) return 2;
   if (cp >= 0x1F300 && cp <= 0x1F9FF) return 2; // Emoji
   if (cp >= 0x2600 && cp <= 0x27BF) return 2; // Misc symbols
