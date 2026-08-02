@@ -411,6 +411,55 @@ const SUITES = [
       return results;
     },
   },
+
+  // ═══════ 键盘绘制（箭头/直线：方向键扩展 + Enter 确认 + Esc 取消）═══════
+  {
+    name: '键盘绘制',
+    fn: () => {
+      const results = [];
+      const dispatchKey = (key) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      const textAt = (r, c) => {
+        const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+        return cell ? cell.textContent : '(none)';
+      };
+
+      // 1. 箭头工具：右→下→Enter → L 形箭头（起点固定，终点扩展）
+      arrowType = 1;  // 细箭头，避免前套件残留类型
+      initGrid(); renderGrid(); setTool('arrow');
+      cursorR = 2; cursorC = 2;
+      dispatchKey('ArrowRight'); dispatchKey('ArrowDown'); dispatchKey('Enter');
+      results.push({
+        name: '箭头 右→下→Enter L形',
+        ok: textAt(2,2) === '─' && textAt(2,3) === '┐' && textAt(3,3) === '↓',
+      });
+
+      // 2. 直线工具：右×3→Enter → 水平线
+      initGrid(); renderGrid(); setTool('line');
+      cursorR = 5; cursorC = 1;
+      dispatchKey('ArrowRight'); dispatchKey('ArrowRight'); dispatchKey('ArrowRight'); dispatchKey('Enter');
+      results.push({
+        name: '直线 右×3→Enter 水平线',
+        ok: textAt(5,1) === '─' && textAt(5,2) === '─' && textAt(5,3) === '─' && textAt(5,4) === '─',
+      });
+
+      // 3. Esc 取消路径：光标回到起点，留在工具可重画
+      arrowType = 1;
+      initGrid(); renderGrid(); setTool('arrow');
+      cursorR = 7; cursorC = 1;
+      dispatchKey('ArrowRight'); dispatchKey('ArrowRight');
+      const hasPreview = document.querySelectorAll('.preview').length > 0;
+      dispatchKey('Escape');
+      const cursorReset = cursorR === 7 && cursorC === 1;
+      const stillArrow = activeTool === 'arrow';
+      dispatchKey('ArrowDown'); dispatchKey('ArrowDown'); dispatchKey('Enter');
+      results.push({
+        name: 'Esc取消→光标回起点→重画竖线',
+        ok: hasPreview && cursorReset && stillArrow && textAt(8,1) === '│' && textAt(9,1) === '↓',
+      });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──

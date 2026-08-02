@@ -1604,6 +1604,14 @@ document.addEventListener('keydown', (e) => {
   // Esc 回到 Normal 模式（选择工具，取消 Visual）
   if (e.key === 'Escape') {
     if (isVisual) { isVisual = false; clearSelection(); }
+    else if ((activeTool === 'arrow' || activeTool === 'line') && selStart) {
+      // 箭头/直线键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
+      cursorR = selStart.r; cursorC = selStart.c;
+      clearPreview();
+      clearSelection();
+      updateStatus();
+      e.preventDefault(); return;
+    }
     if (activeTool !== 'select') { setTool('select'); }
     updateSelection(); updateStatus();
     e.preventDefault(); return;
@@ -1628,6 +1636,28 @@ document.addEventListener('keydown', (e) => {
         updateSelection();
         updateStatus();
       }
+      return;
+    }
+    // 箭头/直线工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
+    if (activeTool === 'arrow' || activeTool === 'line') {
+      e.preventDefault();
+      const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+      const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+      // 首次按键：固定起点为当前光标所在格
+      if (!selStart) {
+        const sc = getCell(cursorR, cursorC);
+        selStart = { r: cursorR, c: cursorC, dispCol: sc ? parseInt(sc.dataset.dispCol) : 0 };
+      }
+      // 终点向方向移动一格（dispCol 坐标）
+      const cur = selEnd || selStart;
+      const nr = Math.max(0, cur.r + dr);
+      const nd = Math.max(0, (cur.dispCol || 0) + dc);
+      ensureCapacity(nr, nd);
+      const nc = findCellByDispColAny(nr, nd);
+      selEnd = { r: nr, c: nc >= 0 ? nc : 0, dispCol: nd };
+      cursorR = nr; cursorC = nc >= 0 ? nc : 0;
+      setPreview(previewPositions());
+      updateStatus();
       return;
     }
     if (activeTool === 'select' || activeTool === 'text') {
@@ -1689,6 +1719,13 @@ document.addEventListener('keydown', (e) => {
   // Enter - new row (or stay, for our grid)
   if (e.key === 'Enter') {
     e.preventDefault();
+    // 箭头/直线工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
+    if ((activeTool === 'arrow' || activeTool === 'line') && selStart && selEnd) {
+      clearPreview();
+      if (activeTool === 'arrow') drawArrow(); else drawLine();
+      updateStatus();
+      return;
+    }
     cursorR = Math.min(ROWS - 1, cursorR + 1);
     selStart = { r: cursorR, c: cursorC };
     selEnd = { r: cursorR, c: cursorC };
@@ -1715,6 +1752,11 @@ document.addEventListener('keydown', (e) => {
 function setTool(tool) {
   activeTool = tool;
   isVisual = false;
+  // 切到绘制类工具：清掉残留的框选/路径选区，键盘绘制从当前光标起算
+  if (tool === 'arrow' || tool === 'line' || tool === 'box' || tool === 'rounded' || tool === 'free') {
+    clearSelection();
+    clearPreview();
+  }
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
   const btnMap = {
     select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
