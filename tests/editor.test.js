@@ -360,6 +360,16 @@ const SUITES = [
       const ov = html.match(/<path[^>]*fill="([^"]*)"/);
       results.push({ name: '着色框SVG染色', ok: !!ov && ov[1] === '#4EA660' });
 
+      // 描边图标（fill="none"）→ 保持空心不强制填充，描边纯黑
+      shapes[1] = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="10" cy="5" rx="7" ry="2.5"/></svg>';
+      initGrid();
+      grid[0][0]='g'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='1'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='g';
+      renderGrid();
+      html = renderPreview(getGridText());
+      results.push({ name: '描边图标fill none保持', ok: html.includes('fill="none"') && html.includes('stroke="#000000"') && !html.includes('fill="#4EA660"') });
+
       // 形状框内文字叠加到 SVG 上 + 颜色判断（无着色 → 深字）
       initGrid();
       grid[0][0]='┌'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
