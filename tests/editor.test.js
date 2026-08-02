@@ -111,6 +111,17 @@ const SUITES = [
       cursorR = 0; isVisual = false; dispatchKey('y'); dispatchKey('y');
       results.push({ name: 'yy 复制行回归', ok: clipboard && clipboard[0][0] === 'X' && clipboard[0][2] === 'Z' });
 
+      // y 单按复制当前格
+      initGrid(); grid[0][5] = 'X'; renderGrid();
+      cursorR = 0; cursorC = 5; isVisual = false; dispatchKey('y');
+      results.push({ name: 'y 复制当前格', ok: clipboard && clipboard[0][0] === 'X' && clipboard[0].length === 1 });
+
+      // Ctrl+C 无选区复制光标格
+      initGrid(); grid[0][7] = 'Y'; renderGrid();
+      cursorR = 0; cursorC = 7; isVisual = false;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true }));
+      results.push({ name: 'Ctrl+C无选区复制格', ok: clipboard && clipboard[0][0] === 'Y' && clipboard[0].length === 1 });
+
       // u 撤销回归
       initGrid(); setStr(0, 'AB'); renderGrid(); saveHistory(); setCell(0, 0, 'X'); saveHistory();
       isVisual = false; dispatchKey('u');

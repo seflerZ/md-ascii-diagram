@@ -287,6 +287,7 @@ let activeShade = 3;
 let textMode = 'insert'; // text editing mode // 'insert' 或 'replace'，文字输入模式
 let isVisual = false; // Vim Visual mode // Visual 模式（v 键切换）
 let lastVimKey = null; // for dd / yy two-key commands // Vim 双键命令（dd/yy）的状态记忆
+let vimTimer = null; // yy 延迟判断计时器（300ms 内连按两次 y = 复制行）
 let ambiguousDouble = true; // 当前字体下 ▲▼◄► 是否为双宽
 
 function measureAmbiguousWidth() {
@@ -1313,7 +1314,13 @@ let clipboard = null; // 2D array of chars
 
 function copySelection() {
   const b = getSelectionBounds();
-  if (!b) return;
+  if (!b) {
+    // 无选区：复制光标所在格
+    const ch = (grid[cursorR] && grid[cursorR][cursorC]) || '';
+    clipboard = [[ch]];
+    try { navigator.clipboard && navigator.clipboard.writeText(ch); } catch (e) {}
+    return;
+  }
   clipboard = [];
   for (let r = b.minR; r <= b.maxR; r++) {
     const row = [];
@@ -1332,8 +1339,15 @@ function cutSelection() {
   eraseSelection();
 }
 
-function pasteAtCursor() {
-  if (!clipboard) return;
+async function pasteAtCursor() {
+  if (!clipboard) {
+    // 内部剪贴板为空：尝试系统剪贴板（支持从外部复制文字后粘贴）
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) clipboard = text.split('\n').map(l => Array.from(l));
+    } catch (e) { /* 无权限/为空则忽略 */ }
+    if (!clipboard) return;
+  }
   saveHistory();
   for (let i = 0; i < clipboard.length; i++) {
     for (let j = 0; j < clipboard[i].length; j++) {
@@ -1423,12 +1437,20 @@ document.addEventListener('keydown', (e) => {
 
   // Vim 风格编辑操作（非文字模式）
   if (!e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
-    // yy 复制当前行（双键）
+    // yy 复制当前行（300ms 内连按两次 y）/ y 单键复制当前格
     if (lastVimKey === 'y' && e.key === 'y') {
+      clearTimeout(vimTimer);
       clipboard = [grid[cursorR].map(ch => ch || '')];
       lastVimKey = null; e.preventDefault(); return;
     }
-    if (e.key === 'y') { lastVimKey = 'y'; e.preventDefault(); return; }
+    if (e.key === 'y') {
+      clearTimeout(vimTimer);
+      lastVimKey = 'y';
+      const ch = (grid[cursorR] && grid[cursorR][cursorC]) || '';
+      clipboard = [[ch]];
+      vimTimer = setTimeout(() => { lastVimKey = null; }, 300);
+      e.preventDefault(); return;
+    }
     lastVimKey = null;
     switch (e.key) {
       case 'd': deleteCellShiftLeft(); e.preventDefault(); return;  // 删除光标处字符，右侧左移补位
