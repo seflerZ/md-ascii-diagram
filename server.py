@@ -36,6 +36,9 @@ def find_all_diagrams(md):
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
+# 自定义形状库（贴纸），与 server.py 同目录
+SHAPES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shapes.json')
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
@@ -54,11 +57,40 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(content.encode('utf-8'))
             except Exception as e:
                 self.send_error(500, f'读取文件失败: {e}')
+        elif parsed.path == '/shapes':
+            # 读取自定义形状库（shapes.json）
+            content = '{}'
+            try:
+                if os.path.exists(SHAPES_FILE):
+                    with open(SHAPES_FILE, 'r', encoding='utf-8') as f:
+                        content = f.read()
+            except Exception:
+                content = '{}'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(content.encode('utf-8'))
         else:
             super().do_GET()
 
     def do_POST(self):
-        if self.path == '/save':
+        if self.path == '/shapes':
+            # 保存自定义形状库（shapes.json）
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode('utf-8')
+            try:
+                shapes = json.loads(body)
+                with open(SHAPES_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(shapes, f, ensure_ascii=False, indent=2)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({'ok': True}).encode('utf-8'))
+            except Exception as e:
+                self.send_error(500, f'shapes 保存失败: {e}')
+        elif self.path == '/save':
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length).decode('utf-8')
             data = json.loads(body)

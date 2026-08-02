@@ -147,6 +147,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="primary" id="btn-save" style="display:none" title="保存到当前 Markdown 文档">💿 保存</button>
     <button class="primary" id="btn-refresh" style="display:none" title="从文件重新读取当前图">🔄 刷新</button>
     <button class="primary" id="btn-generate" title="🖼 生成 PNG 图片（需通过 server.py 访问）">🖼 生成</button>
+    <button class="primary" id="btn-shapes" title="🧩 自定义形状库（框角 /d:编号 引用）">🧩 形状</button>
     <button class="primary" id="btn-import">📥 导入</button>
     <button id="btn-clear">🗑 清空</button>
   </div>
@@ -181,6 +182,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </table>
     <div class="modal-buttons">
       <button class="primary" id="btn-close-shortcuts">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 形状库浮层 -->
+<div class="modal-overlay" id="modal-shapes">
+  <div class="modal-box" style="max-width:720px">
+    <h3>🧩 自定义形状库</h3>
+    <div class="hint">粘贴 SVG 代码添加贴纸；渲染时在框<b>左上角</b>写 <b>/d:编号</b>，即可把整个框替换成该形状（大小自适应框）。</div>
+    <div id="shapes-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:260px;overflow:auto;align-items:flex-start"></div>
+    <textarea id="shapes-input" placeholder="粘贴 SVG 代码，如 &lt;svg viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='40' fill='#4EA660'/&gt;&lt;/svg&gt;" style="width:100%;height:120px;font-family:monospace;font-size:12px;box-sizing:border-box"></textarea>
+    <div class="modal-buttons">
+      <button class="primary" id="btn-add-shape">➕ 添加形状</button>
+      <button class="cancel" id="btn-close-shapes">关闭</button>
     </div>
   </div>
 </div>
@@ -2053,6 +2068,61 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
     .catch(err => { alert('刷新失败：' + err); });
 });
 
+// ═══ 形状库（自定义贴纸）═══
+let shapes = {};  // {"编号": "<svg>..."}
+
+function loadShapes() {
+  return fetch('/shapes').then(r => r.json()).then(d => { shapes = d || {}; renderShapesList(); }).catch(() => { shapes = {}; });
+}
+
+function saveShapes() {
+  return fetch('/shapes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(shapes) });
+}
+
+function renderShapesList() {
+  const list = document.getElementById('shapes-list');
+  if (!list) return;
+  const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
+  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">暂无形状，粘贴 SVG 添加第一个吧</div>'; return; }
+  list.innerHTML = ids.map(id => `
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px">
+      <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
+      <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${shapes[id]}</div>
+      <div style="font-size:11px;color:#999;margin-top:4px;cursor:pointer" onclick="removeShape('${id}')">🗑 删除</div>
+    </div>`).join('');
+}
+
+function addShape() {
+  const svg = document.getElementById('shapes-input').value.trim();
+  if (!svg) { alert('请粘贴 SVG 代码'); return; }
+  if (!/^<svg[\s>]/i.test(svg)) { alert('看起来不是 SVG 代码（应以 <svg 开头）'); return; }
+  const ids = Object.keys(shapes).map(Number);
+  const nextId = ids.length ? Math.max(...ids) + 1 : 1;
+  shapes[nextId] = svg;
+  saveShapes().then(() => { document.getElementById('shapes-input').value = ''; renderShapesList(); })
+    .catch(() => alert('保存失败（请确认通过 server.py 访问）'));
+}
+
+function removeShape(id) {
+  delete shapes[id];
+  saveShapes().then(renderShapesList).catch(() => alert('保存失败'));
+}
+
+document.getElementById('btn-shapes').addEventListener('click', () => {
+  document.getElementById('modal-shapes').classList.add('active');
+  loadShapes();
+});
+document.getElementById('btn-close-shapes').addEventListener('click', () => {
+  document.getElementById('modal-shapes').classList.remove('active');
+});
+document.getElementById('btn-add-shape').addEventListener('click', addShape);
+document.getElementById('modal-shapes').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.target.classList.remove('active');
+});
+
+// 页面加载时拉取形状库（供渲染使用）
+loadShapes();
+
 document.getElementById('btn-generate').addEventListener('click', () => {
   const name = document.getElementById('diagram-name').value.trim();
   if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return; }
@@ -2324,11 +2394,100 @@ function isEmojiChar(ch) {
   return cp >= 0x1F300 && cp <= 0x1F9FF;
 }
 
+// 检测形状框：框左下角有 d:N 标记（替换了 └），该框渲染时替换成形状 SVG
+function detectShapeBoxes(lines, boxes) {
+  const result = [];
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  for (let r = 0; r < lines.length; r++) {
+    const m = lines[r].match(/d:(\d+)/);
+    if (!m) continue;
+    const id = m[1];
+    const col = m.index;
+    if (!shapes[id]) continue;
+    // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
+    const bottomCells = lineCells(lines[r]);
+    let toCol = -1;
+    for (const cell of bottomCells) {
+      if (cell.dispCol < col + m[0].length) continue;
+      if (BORDER.includes(cell.char)) continue;
+      if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
+      break;
+    }
+    if (toCol < 0) continue;
+    // 顶边：向上找 ┌/╭/色码 在标记列
+    let fromRow = -1;
+    for (let tr = r - 1; tr >= 0; tr--) {
+      const c = lineCells(lines[tr]).find(cell => cell.dispCol === col);
+      if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
+    }
+    if (fromRow < 0) continue;
+    // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
+    const topRight = lineCells(lines[fromRow]).find(cell => cell.dispCol === toCol);
+    if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
+    const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
+    // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
+    let hex = null;
+    const tl = lineCells(lines[fromRow]).find(c => c.dispCol === col);
+    if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
+    if (!hex) {
+      const br = bottomCells.find(c => c.dispCol === toCol);
+      if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
+    }
+    if (hex) box.hex = hex;
+    result.push({ id, box, svg: shapes[id] });
+  }
+  return result;
+}
+
+// 判断 hex 是否为亮色（WCAG 相对亮度，决定文字用深色/浅色）
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) > 0.5;
+}
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// 提取形状框内的文字（保留原位置），供叠加到 SVG 上
+function extractShapeText(lines, box) {
+  const texts = [];
+  for (let r = box.fromRow + 1; r < box.toRow; r++) {
+    const cells = lineCells(lines[r]);
+    let text = '', startDisp = -1;
+    for (const cell of cells) {
+      if (cell.dispCol <= box.fromCol || cell.dispCol >= box.toCol - 1) continue;
+      if (cell.char && cell.char !== ' ') {
+        if (text === '') startDisp = cell.dispCol;
+        text += cell.char;
+      } else {
+        if (text) { texts.push({ r, dispCol: startDisp, text }); text = ''; }
+      }
+    }
+    if (text) texts.push({ r, dispCol: startDisp, text });
+  }
+  return texts;
+}
+// 测量预览当前字体的实际字符宽与行高（SVG 定位用，保证与字符精确对齐）
+function measurePreviewMetrics() {
+  const pre = document.querySelector('.preview-wrap pre');
+  const family = pre ? getComputedStyle(pre).fontFamily : 'monospace';
+  const size = pre ? (parseFloat(getComputedStyle(pre).fontSize) || 16) : 16;
+  const probe = document.createElement('span');
+  probe.style.cssText = `font-family:${family};font-size:${size}px;position:absolute;visibility:hidden;white-space:pre`;
+  probe.textContent = '0';
+  document.body.appendChild(probe);
+  const charW = probe.getBoundingClientRect().width || size * 0.6;
+  document.body.removeChild(probe);
+  const lineH = pre ? (parseFloat(getComputedStyle(pre).lineHeight) || size * 1.25) : size * 1.25;
+  return { charW, lineH };
+}
+
 // ═══ Preview Panel (colored box rendering + text markup) ═══
 function renderPreview(text) {
   const lines = text.split('\n');
   const boxes = findBoxes(lines);
   const uncoloredBoxes = findUncoloredBoxes(lines);
+  const shapeBoxes = detectShapeBoxes(lines, boxes);
+  const metrics = measurePreviewMetrics();
+  const charW = metrics.charW, lineH = metrics.lineH;
 
   // Clean color markers -> box-drawing chars (preserves display width)
   const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
@@ -2386,6 +2545,13 @@ function renderPreview(text) {
       const ch = cell.char;
       const emojiScale = pendingScale;  // 当前格（Emoji）由数字标记的缩放
       pendingScale = null;
+      // 标记框：整个框替换成形状 SVG（空格占位，SVG 覆盖层统一在行末叠加）
+      const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol <= s.box.toCol);
+      if (shapeBox) {
+        if (curBg || curUl || curBold || curColor || curRainbow || curScale) { lineHtml += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; curScale = null; }
+        lineHtml += ' ';
+        continue;
+      }
       let cellBg = null, cellBox = null;
       let leftWall = -1, rightWall = -1;
       // Pick the SMALLEST box containing this cell (innermost wins, so nested boxes keep their own color)
@@ -2482,7 +2648,23 @@ function renderPreview(text) {
     lineHtml = lineHtml.replace(/\s+$/, '');
     html += lineHtml + '\n';
   }
-  return '<pre>' + html + '</pre>';
+  // 标记框的 SVG 覆盖层（绝对定位到框区域）
+  const overlays = shapeBoxes.map(s => {
+    const b = s.box;
+    let svg = s.svg;
+    if (b.hex) svg = svg.replace(/fill="[^"]*"/g, `fill="${b.hex}"`);
+    const style = `position:absolute;left:${20 + b.fromCol * charW}px;top:${20 + b.fromRow * lineH}px;width:${(b.toCol - b.fromCol) * charW}px;height:${(b.toRow - b.fromRow + 1) * lineH}px`;
+    return svg.replace(/<svg/i, `<svg style="${style}"`);
+  }).join('');
+  // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）
+  const textOverlays = [];
+  for (const s of shapeBoxes) {
+    const color = s.box.hex ? (isLightColor(s.box.hex) ? '#1a1a1a' : '#ffffff') : '#1a1a1a';
+    for (const t of extractShapeText(lines, s.box)) {
+      textOverlays.push(`<span style="position:absolute;left:${20 + t.dispCol * charW}px;top:${20 + t.r * lineH}px;color:${color};font-size:16px;z-index:20;white-space:pre">${escapeHtml(t.text)}</span>`);
+    }
+  }
+  return `<pre style="position:relative;display:inline-block">${html}${overlays}${textOverlays.join('')}</pre>`;
 }
 
 // Real-time preview: debounced refresh after every edit

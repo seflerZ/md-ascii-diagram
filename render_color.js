@@ -3,6 +3,13 @@ const path = require('path');
 const fs = require('fs');
 const url = require('url');
 
+// 自定义形状库（shapes.json，与脚本同目录）
+let shapes = {};
+try {
+  const shapesFile = path.join(__dirname, 'shapes.json');
+  if (fs.existsSync(shapesFile)) shapes = JSON.parse(fs.readFileSync(shapesFile, 'utf8'));
+} catch (e) { shapes = {}; }
+
 // 技能包内字体（绝对 file:// 路径，供生成的独立 HTML 引用）
 const FONT_DIR = path.join(__dirname, 'fonts');
 const FONT_REG = url.pathToFileURL(path.join(FONT_DIR, 'sarasa-mono-sc-nerd-regular.ttf')).href;
@@ -157,6 +164,78 @@ function isEmojiChar(ch) {
   return cp >= 0x1F300 && cp <= 0x1F9FF;
 }
 
+// 检测形状框：框左下角有 d:N 标记（替换了 └），该框渲染时替换成形状 SVG
+function detectShapeBoxes(lines, boxes) {
+  const result = [];
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  for (let r = 0; r < lines.length; r++) {
+    const m = lines[r].match(/d:(\d+)/);
+    if (!m) continue;
+    const id = m[1];
+    const col = m.index;
+    if (!shapes[id]) continue;
+    // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
+    const bottomCells = lineCells(lines[r]).cells;
+    let toCol = -1;
+    for (const cell of bottomCells) {
+      if (cell.dispCol < col + m[0].length) continue;
+      if (BORDER.includes(cell.char)) continue;
+      if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
+      break;
+    }
+    if (toCol < 0) continue;
+    // 顶边：向上找 ┌/╭/色码 在标记列
+    let fromRow = -1;
+    for (let tr = r - 1; tr >= 0; tr--) {
+      const c = lineCells(lines[tr]).cells.find(cell => cell.dispCol === col);
+      if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
+    }
+    if (fromRow < 0) continue;
+    // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
+    const topRight = lineCells(lines[fromRow]).cells.find(cell => cell.dispCol === toCol);
+    if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
+    const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
+    // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
+    let hex = null;
+    const tl = lineCells(lines[fromRow]).cells.find(c => c.dispCol === col);
+    if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
+    if (!hex) {
+      const br = bottomCells.find(c => c.dispCol === toCol);
+      if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
+    }
+    if (hex) box.hex = hex;
+    result.push({ id, box, svg: shapes[id] });
+  }
+  return result;
+}
+
+// 判断 hex 是否为亮色（WCAG 相对亮度，决定文字用深色/浅色）
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) > 0.5;
+}
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// 提取形状框内的文字（保留原位置），供叠加到 SVG 上
+function extractShapeText(lines, box) {
+  const texts = [];
+  for (let r = box.fromRow + 1; r < box.toRow; r++) {
+    const cells = lineCells(lines[r]).cells;
+    let text = '', startDisp = -1;
+    for (const cell of cells) {
+      if (cell.dispCol <= box.fromCol || cell.dispCol >= box.toCol - 1) continue;
+      if (cell.char && cell.char !== ' ') {
+        if (text === '') startDisp = cell.dispCol;
+        text += cell.char;
+      } else {
+        if (text) { texts.push({ r, dispCol: startDisp, text }); text = ''; }
+      }
+    }
+    if (text) texts.push({ r, dispCol: startDisp, text });
+  }
+  return texts;
+}
+
 // Display width
 function charWidth(c) {
   const cp = c.codePointAt(0);
@@ -198,7 +277,7 @@ function findUncoloredBoxes(dl) {
   const boxes = [];
   const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
   for (let r = 0; r < dl.length; r++) {
-    const cells = lineCells(dl[r]);
+    const { cells } = lineCells(dl[r]);
     for (let ci = 0; ci < cells.length; ci++) {
       const cell = cells[ci];
       if (cell.char !== '┌' && cell.char !== '╭') continue;
@@ -213,7 +292,7 @@ function findUncoloredBoxes(dl) {
       }
       if (rightDispCol < 0) continue;
       for (let r2 = r + 1; r2 < dl.length; r2++) {
-        const bottomCells = lineCells(dl[r2]);
+        const { cells: bottomCells } = lineCells(dl[r2]);
         const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
         if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰' && leftChar.char !== '╰')) continue;
         const rightStart = bottomCells.find(c => c.dispCol === rightDispCol);
@@ -307,6 +386,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+'─'+((l==='╰'?'╯':'┘'))));
     clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])`, 'g'), (m,l,d,c)=>((l==='╰'?'╰':l)+d+((l==='╰'?'╯':'┘'))));
     const lines = clean.split('\n');
+    const shapeBoxes = detectShapeBoxes(lines, boxes);
 
         // Build HTML: color all non-border content inside boxes with uniform background
     let html = '';
@@ -365,6 +445,13 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
         const ch = cell.char;
         const emojiScale = pendingScale;  // 当前格（Emoji）由数字标记的缩放
         pendingScale = null;
+        // 标记框：整个框替换成形状 SVG（空格占位，SVG 覆盖层统一叠加）
+        const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol <= s.box.toCol);
+        if (shapeBox) {
+          if (curBg || curUl || curBold || curColor || curRainbow || curScale) { line += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; curScale = null; }
+          line += ' ';
+          continue;
+        }
         // Find the SMALLEST box containing this display position (innermost wins for nested boxes)
         let cellBg = null;
         let cellBox = null;
@@ -475,6 +562,24 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     }
     html = html.replace(/\n+$/, '');
 
+    // 标记框的 SVG 覆盖层（绝对定位到框区域）
+    const overlays = shapeBoxes.map(s => {
+      const b = s.box;
+      let svg = s.svg;
+      if (b.hex) svg = svg.replace(/fill="[^"]*"/g, `fill="${b.hex}"`);
+      const wc = b.toCol - b.fromCol, hc = b.toRow - b.fromRow + 1;
+      return svg.replace(/<svg/i, `<svg data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0"`);
+    }).join('');
+
+    // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）
+    const textOverlays = [];
+    for (const s of shapeBoxes) {
+      const color = s.box.hex ? (isLightColor(s.box.hex) ? '#1a1a1a' : '#ffffff') : '#1a1a1a';
+      for (const t of extractShapeText(lines, s.box)) {
+        textOverlays.push(`<span data-text="${t.dispCol},${t.r}" style="position:absolute;left:0;top:0;color:${color};font-size:16px;z-index:20;white-space:pre">${escapeHtml(t.text)}</span>`);
+      }
+    }
+
     const htmlPage = `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -484,7 +589,30 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 pre{font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
 pre span{padding:0}
 </style>
-</head><body><pre>${html}</pre></body></html>`;
+</head><body><pre style="position:relative;display:inline-block">${html}${overlays}${textOverlays.join('')}</pre><script>
+(function(){
+  var pre=document.querySelector('pre');
+  var probe=document.createElement('span');
+  probe.style.cssText='font-family:inherit;font-size:16px;position:absolute;visibility:hidden;white-space:pre';
+  probe.textContent='0';
+  document.body.appendChild(probe);
+  var cw=probe.getBoundingClientRect().width;
+  document.body.removeChild(probe);
+  var lh=parseFloat(getComputedStyle(pre).lineHeight)||20;
+  document.querySelectorAll('svg[data-shape]').forEach(function(svg){
+    var p=svg.getAttribute('data-shape').split(',');
+    svg.style.left=(20+(+p[0])*cw)+'px';
+    svg.style.top=(20+(+p[1])*lh)+'px';
+    svg.style.width=(+p[2])*cw+'px';
+    svg.style.height=(+p[3])*lh+'px';
+  });
+  document.querySelectorAll('span[data-text]').forEach(function(sp){
+    var p=sp.getAttribute('data-text').split(',');
+    sp.style.left=(20+(+p[0])*cw)+'px';
+    sp.style.top=(20+(+p[1])*lh)+'px';
+  });
+})();
+</script></body></html>`;
 
     const htmlPath = path.join(OUT, `${name}.html`);
     fs.writeFileSync(htmlPath, htmlPage, 'utf8');
