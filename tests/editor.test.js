@@ -311,6 +311,75 @@ const SUITES = [
       return results;
     },
   },
+
+  // ═══════ 形状替换（框左下角 d:N 标记 → SVG 贴纸）═══════
+  {
+    name: '形状替换',
+    fn: () => {
+      const results = [];
+      const S = '<svg viewBox="0 0 1024 1024"><path d="M512 0L1024 512 512 1024 0 512Z" fill="#272636"></path></svg>';
+      shapes[1] = S;
+
+      // 标记框（左下角 d:1）→ 替换成 SVG（框线/标记隐藏，覆盖层生成）
+      initGrid();
+      grid[0][0]='┌'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='1'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='┘';
+      renderGrid();
+      let html = renderPreview(getGridText());
+      results.push({ name: '标记框→SVG替换', ok: html.includes('position:absolute') && !html.includes('d:1') && !html.includes('┌') });
+
+      // 着色框（左上g右下g，左下d:1）→ SVG 染成框色
+      initGrid();
+      grid[0][0]='g'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='1'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='g';
+      renderGrid();
+      html = renderPreview(getGridText());
+      const ov = html.match(/<path[^>]*fill="([^"]*)"/);
+      results.push({ name: '着色框SVG染色', ok: !!ov && ov[1] === '#4EA660' });
+
+      // 形状框内文字叠加到 SVG 上 + 颜色判断（无着色 → 深字）
+      initGrid();
+      grid[0][0]='┌'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][2]='标'; grid[1][3]='签'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='1'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='┘';
+      renderGrid();
+      html = renderPreview(getGridText());
+      const ts = html.match(/<span style="position:absolute[^>]*color:([^;"]*)[^>]*z-index:20[^>]*>([^<]*)<\/span>/);
+      results.push({ name: '框内文字叠加', ok: !!ts && ts[2] === '标签' && ts[1] === '#1a1a1a' });
+
+      // 绿色框 → 白字（深背景）
+      initGrid();
+      grid[0][0]='g'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][2]='标'; grid[1][3]='签'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='1'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='g';
+      renderGrid();
+      html = renderPreview(getGridText());
+      const ts2 = html.match(/<span style="position:absolute[^>]*color:([^;"]*)[^>]*z-index:20[^>]*>/);
+      results.push({ name: '绿色框白字', ok: !!ts2 && ts2[1] === '#ffffff' });
+
+      // 无标记框正常渲染
+      initGrid();
+      grid[0][0]='┌'; grid[0][1]='─'; grid[0][2]='┐';
+      grid[1][0]='│'; grid[1][2]='│';
+      grid[2][0]='└'; grid[2][1]='─'; grid[2][2]='┘';
+      renderGrid();
+      html = renderPreview(getGridText());
+      results.push({ name: '无标记框正常', ok: html.includes('┌') && !html.includes('position:absolute') });
+
+      // 形状不存在（d:99）→ 不替换
+      initGrid();
+      grid[0][0]='┌'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='9'; grid[2][3]='9'; for (let c=4;c<=6;c++) grid[2][c]='─'; grid[2][7]='┘';
+      renderGrid();
+      html = renderPreview(getGridText());
+      results.push({ name: '形状不存在不替换', ok: !html.includes('position:absolute') && html.includes('┌') });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──
