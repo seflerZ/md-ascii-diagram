@@ -2104,16 +2104,22 @@ function saveShapes() {
   return fetch('/shapes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(shapes) });
 }
 
+// 点击已有形状 → 把 SVG 填充到输入框，便于编辑后同名覆盖
+function editShape(id) {
+  document.getElementById('shapes-name').value = id;
+  document.getElementById('shapes-input').value = shapes[id] || '';
+}
+
 function renderShapesList() {
   const list = document.getElementById('shapes-list');
   if (!list) return;
   const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
   if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">暂无形状，粘贴 SVG 添加第一个吧</div>'; return; }
   list.innerHTML = ids.map(id => `
-    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px">
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="editShape('${id}')" title="点击编辑该形状">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
       <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${shapes[id]}</div>
-      <div style="font-size:11px;color:#999;margin-top:4px;cursor:pointer" onclick="removeShape('${id}')">🗑 删除</div>
+      <div style="font-size:11px;color:#999;margin-top:4px" onclick="event.stopPropagation();removeShape('${id}')">🗑 删除</div>
     </div>`).join('');
 }
 
@@ -2125,8 +2131,7 @@ function addShape() {
   let id;
   if (nameInput) {
     if (!/^[a-zA-Z0-9]{1,3}$/.test(nameInput)) { alert('名字需为 1-3 个字母或数字'); return; }
-    if (shapes[nameInput]) { alert('名字 ' + nameInput + ' 已存在'); return; }
-    id = nameInput;
+    id = nameInput;  // 同名直接覆盖（更新形状）
   } else {
     // 数字递增：找最大数字 ID +1
     const nums = Object.keys(shapes).filter(k => /^\d+$/.test(k)).map(Number);
@@ -2684,7 +2689,18 @@ function renderPreview(text) {
   const overlays = shapeBoxes.map(s => {
     const b = s.box;
     let svg = s.svg;
-    if (b.hex) svg = svg.replace(/fill="[^"]*"/g, `fill="${b.hex}"`);
+    if (b.hex) {
+      // 填充用框色（fill="none" 或原本无 fill 的不强加，保持原样）
+      svg = svg.replace(/fill="([^"]*)"/g, (m, c) => c === 'none' ? m : `fill="${b.hex}"`);
+      if (svg.includes('stroke="')) svg = svg.replace(/stroke="[^"]*"/g, 'stroke="#000000"');
+      // 描边类 ellipse（无 fill 或 fill="none"）移到末尾，避免下边框被后面 path 覆盖；有实际填充色的不动
+      const ellipseLayers = [];
+      svg = svg.replace(/<ellipse([^>]*?)\/>/g, (m, attrs) => {
+        if (!/fill=/.test(attrs) || /fill="none"/.test(attrs)) { ellipseLayers.push(m); return ''; }
+        return m;
+      });
+      if (ellipseLayers.length) svg = svg.replace(/<\/svg>/, ellipseLayers.join('') + '</svg>');
+    }
     const style = `position:absolute;left:${20 + b.fromCol * charW}px;top:${20 + b.fromRow * lineH}px;width:${(b.toCol - b.fromCol) * charW}px;height:${(b.toRow - b.fromRow + 1) * lineH}px`;
     return svg.replace(/<svg/i, `<svg style="${style}"`);
   }).join('');
@@ -2748,7 +2764,8 @@ setTool('select');
   if (saved) {
     document.getElementById('font-select').value = saved;
     document.getElementById('canvas').style.fontFamily = saved;
-    document.querySelector('.preview-wrap pre').style.fontFamily = saved;
+    const previewPre = document.querySelector('.preview-wrap pre');
+    if (previewPre) previewPre.style.fontFamily = saved;
     document.getElementById('diagram-list').style.fontFamily = saved;
     document.getElementById('diagram-preview').style.fontFamily = saved;
   }
