@@ -329,6 +329,16 @@ const SUITES = [
       let html = renderPreview(getGridText());
       results.push({ name: '标记框→SVG替换', ok: html.includes('position:absolute') && !html.includes('d:1') && !html.includes('┌') });
 
+      // 自定义名字标记 d:a（≤3字符）
+      shapes['a'] = S;
+      initGrid();
+      grid[0][0]='┌'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';
+      grid[1][0]='│'; grid[1][7]='│';
+      grid[2][0]='d'; grid[2][1]=':'; grid[2][2]='a'; for (let c=3;c<=6;c++) grid[2][c]='─'; grid[2][7]='┘';
+      renderGrid();
+      html = renderPreview(getGridText());
+      results.push({ name: '自定义名字 d:a', ok: html.includes('position:absolute') && !html.includes('d:a') });
+
       // 着色框（左上g右下g，左下d:1）→ SVG 染成框色
       initGrid();
       grid[0][0]='g'; for (let c=1;c<=6;c++) grid[0][c]='─'; grid[0][7]='┐';

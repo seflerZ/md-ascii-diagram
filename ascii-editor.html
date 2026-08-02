@@ -190,8 +190,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="modal-shapes">
   <div class="modal-box" style="max-width:720px">
     <h3>🧩 自定义形状库</h3>
-    <div class="hint">粘贴 SVG 代码添加贴纸；渲染时在框<b>左上角</b>写 <b>/d:编号</b>，即可把整个框替换成该形状（大小自适应框）。</div>
+    <div class="hint">粘贴 SVG 代码添加贴纸；渲染时在框<b>左下角</b>写 <b>d:编号/名字</b>，即可把整个框替换成该形状（大小自适应框）。</div>
     <div id="shapes-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:260px;overflow:auto;align-items:flex-start"></div>
+    <div style="margin-bottom:8px;display:flex;gap:6px;align-items:center">
+      <label style="font-size:13px;color:#666">名字 <input id="shapes-name" maxlength="3" placeholder="留空自动编号" style="width:90px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
+    </div>
     <textarea id="shapes-input" placeholder="粘贴 SVG 代码，如 &lt;svg viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='40' fill='#4EA660'/&gt;&lt;/svg&gt;" style="width:100%;height:120px;font-family:monospace;font-size:12px;box-sizing:border-box"></textarea>
     <div class="modal-buttons">
       <button class="primary" id="btn-add-shape">➕ 添加形状</button>
@@ -2096,10 +2099,19 @@ function addShape() {
   const svg = document.getElementById('shapes-input').value.trim();
   if (!svg) { alert('请粘贴 SVG 代码'); return; }
   if (!/^<svg[\s>]/i.test(svg)) { alert('看起来不是 SVG 代码（应以 <svg 开头）'); return; }
-  const ids = Object.keys(shapes).map(Number);
-  const nextId = ids.length ? Math.max(...ids) + 1 : 1;
-  shapes[nextId] = svg;
-  saveShapes().then(() => { document.getElementById('shapes-input').value = ''; renderShapesList(); })
+  const nameInput = document.getElementById('shapes-name').value.trim();
+  let id;
+  if (nameInput) {
+    if (!/^[a-zA-Z0-9]{1,3}$/.test(nameInput)) { alert('名字需为 1-3 个字母或数字'); return; }
+    if (shapes[nameInput]) { alert('名字 ' + nameInput + ' 已存在'); return; }
+    id = nameInput;
+  } else {
+    // 数字递增：找最大数字 ID +1
+    const nums = Object.keys(shapes).filter(k => /^\d+$/.test(k)).map(Number);
+    id = String(nums.length ? Math.max(...nums) + 1 : 1);
+  }
+  shapes[id] = svg;
+  saveShapes().then(() => { document.getElementById('shapes-input').value = ''; document.getElementById('shapes-name').value = ''; renderShapesList(); })
     .catch(() => alert('保存失败（请确认通过 server.py 访问）'));
 }
 
@@ -2116,9 +2128,7 @@ document.getElementById('btn-close-shapes').addEventListener('click', () => {
   document.getElementById('modal-shapes').classList.remove('active');
 });
 document.getElementById('btn-add-shape').addEventListener('click', addShape);
-document.getElementById('modal-shapes').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.target.classList.remove('active');
-});
+// 形状弹窗含输入框，点击窗外不关闭（避免误触丢失输入）
 
 // 页面加载时拉取形状库（供渲染使用）
 loadShapes();
@@ -2399,7 +2409,7 @@ function detectShapeBoxes(lines, boxes) {
   const result = [];
   const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
   for (let r = 0; r < lines.length; r++) {
-    const m = lines[r].match(/d:(\d+)/);
+    const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
     if (!m) continue;
     const id = m[1];
     const col = m.index;

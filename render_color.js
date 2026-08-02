@@ -169,7 +169,7 @@ function detectShapeBoxes(lines, boxes) {
   const result = [];
   const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
   for (let r = 0; r < lines.length; r++) {
-    const m = lines[r].match(/d:(\d+)/);
+    const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
     if (!m) continue;
     const id = m[1];
     const col = m.index;
