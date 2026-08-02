@@ -11,6 +11,9 @@ This tool solves the problem by:
 
 The result: AI can edit the diagram, and when you share the document or upload it to a server, the diagram always looks perfect.
 
+<img width="642" height="642" alt="image" src="https://github.com/user-attachments/assets/c04dd6b7-bd50-481e-9db1-fb216a095f5f" />
+
+
 ## How to install
 
 ### 1. Install as a Claude Code skill
