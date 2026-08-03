@@ -13,7 +13,7 @@ import http.server
 import urllib.parse
 import json
 import re
-import sys, os, subprocess
+import sys, os, subprocess, shutil
 
 
 def find_all_diagrams(md):
@@ -38,6 +38,7 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
 # 自定义形状库（贴纸），与 server.py 同目录
 SHAPES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shapes.json')
+SHAPES_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shapes.default.json')
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -59,8 +60,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(500, f'读取文件失败: {e}')
         elif parsed.path == '/shapes':
             # 读取自定义形状库（shapes.json）
+            # 首次访问时，若 shapes.json 不存在，从 shapes.default.json 复制一份作为种子
             content = '{}'
             try:
+                if not os.path.exists(SHAPES_FILE) and os.path.exists(SHAPES_DEFAULT):
+                    shutil.copy2(SHAPES_DEFAULT, SHAPES_FILE)
                 if os.path.exists(SHAPES_FILE):
                     with open(SHAPES_FILE, 'r', encoding='utf-8') as f:
                         content = f.read()
