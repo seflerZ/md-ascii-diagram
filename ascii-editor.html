@@ -672,9 +672,13 @@ function onCellMouseUp(e) {
     moveContentByGrid(b, dr, dc);
     moveDragging = false;
     moveSelection = null;
-    const c1 = getCell(b.minR + dr, b.minC + dc), c2 = getCell(b.maxR + dr, b.maxC + dc);
-    selStart = { r: b.minR + dr, c: b.minC + dc, dispCol: c1 ? parseInt(c1.dataset.dispCol) : 0 };
-    selEnd = { r: b.maxR + dr, c: b.maxC + dc, dispCol: c2 ? parseInt(c2.dataset.dispCol) : 0 };
+    // 选区跟随：用 dispCol 定位（同键盘 move 路径，避免 minC+dc 单位错配扩选区）
+    const nMinD = b.minD + dc, nMaxD = b.maxD + dc;
+    const c1 = findCellByDispColAny(b.minR + dr, nMinD);
+    const c2 = findCellByDispColAny(b.maxR + dr, nMaxD);
+    selStart = { r: b.minR + dr, c: c1 >= 0 ? c1 : 0, dispCol: nMinD };
+    selEnd = { r: b.maxR + dr, c: c2 >= 0 ? c2 : 0, dispCol: nMaxD };
+    cursorR = b.maxR + dr; cursorC = c2 >= 0 ? c2 : 0;   // 光标跟到选区终点
     isVisual = true;
     updateSelection(); updateStatus();
   } else if (activeTool === 'magic') {
@@ -941,31 +945,86 @@ function previewMoveTarget(p) {
   return out;
 }
 
-// 按网格行列偏移移动选区内容（grid 数组级别操作，双字节安全）
-// ═══ Content Move (grid-array based, safe for double-width chars) ═══
+// 按 dispCol 槽位偏移移动选区内容（视觉矩形级操作，双宽字符安全）
+// ═══ Content Move (dispCol-slot based, safe for double-width chars) ═══
+// 核心：move 是"视觉矩形搬运"。选区外字符（如左右墙）必须按原 dispCol 钉住，
+// 否则选区内宽字符的增删会让选区外字符的 dispCol 漂移（源行收缩墙左移、目标行撑开墙右移）。
+// 修法：重建受影响行——遍历 dispCol，目标选区填新内容、源选区填空格、选区外按原字符原 dispCol 落格。
 function moveContentByGrid(b, dr, dc) {
   if (dr === 0 && dc === 0) return;
-  const rows = b.maxR - b.minR + 1;
-  const cols = b.maxC - b.minC + 1;
-  // 保存选区切片
+  const width = b.maxD - b.minD + 1;   // 视觉宽度（dispCol 槽位数）
+  // 1. 切片：按 dispCol 逐槽取格，宽字符第二半占 null（同 copySelection）
   const slice = [];
   for (let r = b.minR; r <= b.maxR; r++) {
-    const row = [];
-    for (let c = b.minC; c <= b.maxC; c++) row.push(grid[r][c] || '');
+    const row = new Array(width).fill(null);
+    for (let d = b.minD; d <= b.maxD; d++) {
+      const cc = findCellByDispColAny(r, d);
+      if (cc < 0) continue;
+      const ch = (grid[r] && grid[r][cc]) || '';
+      const cellDisp = parseInt(getCell(r, cc).dataset.dispCol);
+      if (cellDisp !== d) continue;   // 跳过 w2 第二半，避免重复取
+      const w = charWidth(ch);
+      const idx = d - b.minD;
+      row[idx] = ch || '';
+      if (w === 2 && idx + 1 < width) row[idx + 1] = null;  // w2 第二半占位
+    }
     slice.push(row);
   }
-  // 清空原区域
-  for (let r = b.minR; r <= b.maxR; r++)
-    for (let c = b.minC; c <= b.maxC; c++) grid[r][c] = '';
-  // 写入新位置
-  for (let i = 0; i < rows; i++)
-    for (let j = 0; j < cols; j++) {
-      const ch = slice[i][j];
-      if (ch) {
-        const nr = b.minR + i + dr, nc = b.minC + j + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) grid[nr][nc] = ch;
+  // 2. 记录受影响行的选区外字符（按原 dispCol，起始格）
+  //    受影响行 = 源行 [minR,maxR] ∪ 目标行 [minR+dr, maxR+dr]
+  const srcMinD = b.minD, srcMaxD = b.maxD;
+  const tgtMinD = b.minD + dc, tgtMaxD = b.maxD + dc;
+  const affected = new Set();
+  for (let r = b.minR; r <= b.maxR; r++) { affected.add(r); affected.add(r + dr); }
+  const outsideMap = new Map();   // r -> Map<dispCol, {ch, width}>
+  for (const r of affected) {
+    if (r < 0 || r >= ROWS) continue;
+    const m = new Map();
+    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
+    cells.forEach(cell => {
+      if (cell.classList.contains('w2')) return;   // 只记起始格
+      const d = parseInt(cell.dataset.dispCol);
+      const c = parseInt(cell.dataset.c);
+      const ch = (grid[r] && grid[r][c]) || '';
+      if (!ch) return;
+      // 选区外：字符整体不在源选区 [srcMinD, srcMaxD] 内
+      const w = charWidth(ch);
+      if (d + w - 1 < srcMinD || d > srcMaxD) m.set(d, { ch, width: w });
+    });
+    outsideMap.set(r, m);
+  }
+  // 3. 重建每行：遍历 dispCol，按角色填字符，用 gridColByDisp 落格
+  for (const r of affected) {
+    if (r < 0 || r >= ROWS) continue;
+    const isSrc = r >= b.minR && r <= b.maxR;
+    const isTgt = r >= b.minR + dr && r <= b.maxR + dr;
+    const tgtRow = isTgt ? slice[r - (b.minR + dr)] : null;
+    const outside = outsideMap.get(r) || new Map();
+    // 确定要重建的 dispCol 上界
+    let maxD = Math.max(srcMaxD, tgtMaxD);
+    for (const d of outside.keys()) if (d > maxD) maxD = d;
+    // 清空该行 grid
+    for (let c = 0; c < COLS; c++) grid[r][c] = '';
+    let d = 0;
+    while (d <= maxD) {
+      let ch = '', w = 1;
+      if (isTgt && d >= tgtMinD && d <= tgtMaxD && tgtRow) {
+        const slot = tgtRow[d - tgtMinD];
+        if (slot === null) { d++; continue; }   // w2 第二半，已被前一字覆盖
+        ch = slot; w = charWidth(ch);
+      } else if (isSrc && d >= srcMinD && d <= srcMaxD) {
+        ch = ''; w = 1;   // 源选区清空
+      } else if (outside.has(d)) {
+        ch = outside.get(d).ch; w = outside.get(d).width;   // 选区外原字符钉住
       }
+      const cc = gridColByDisp(r, d);
+      if (cc >= 0 && cc < COLS) {
+        grid[r][cc] = ch;
+        if (w === 2 && cc + 1 < COLS) grid[r][cc + 1] = '';   // 清第二半残留
+      }
+      d += w;
     }
+  }
   renderGrid();
   refreshPreview();
   saveHistory();
@@ -1859,12 +1918,14 @@ document.addEventListener('keydown', (e) => {
         const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
         const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
         moveContentByGrid(b, dr, dc);
-        // 更新选区跟随移动后的位置
+        // 选区跟随：用 dispCol 定位（grid 列因宽字符撑开会重排，minC+dc 单位错配会扩选区）
         const nMinR = b.minR + dr, nMaxR = b.maxR + dr;
-        const nMinC = b.minC + dc, nMaxC = b.maxC + dc;
-        const c1 = getCell(nMinR, nMinC), c2 = getCell(nMaxR, nMaxC);
-        selStart = { r: nMinR, c: nMinC, dispCol: c1 ? parseInt(c1.dataset.dispCol) : 0 };
-        selEnd = { r: nMaxR, c: nMaxC, dispCol: c2 ? parseInt(c2.dataset.dispCol) : 0 };
+        const nMinD = b.minD + dc, nMaxD = b.maxD + dc;
+        const c1 = findCellByDispColAny(nMinR, nMinD);
+        const c2 = findCellByDispColAny(nMaxR, nMaxD);
+        selStart = { r: nMinR, c: c1 >= 0 ? c1 : 0, dispCol: nMinD };
+        selEnd = { r: nMaxR, c: c2 >= 0 ? c2 : 0, dispCol: nMaxD };
+        cursorR = nMaxR; cursorC = c2 >= 0 ? c2 : 0;   // 光标跟到选区终点
         updateSelection();
         updateStatus();
       }

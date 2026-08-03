@@ -460,6 +460,106 @@ const SUITES = [
       return results;
     },
   },
+
+  // ═══════ 移动工具（宽字符 dispCol 安全）═══════
+  {
+    name: '移动工具',
+    fn: () => {
+      const results = [];
+      const dispColOf = (r, c) => {
+        const el = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+        return el ? parseInt(el.dataset.dispCol) : null;
+      };
+
+      // Bug1 核心：多行宽字符框下移一格。旧实现按 grid 列切片/清空，
+      //   maxC-minC+1(6) < maxD-minD+1(8) → r0 残留 ──、r1 框顶缺 ── → 整体乱。
+      initGrid();
+      grid[0][0] = '┌'; for (let c = 1; c <= 7; c++) grid[0][c] = '─'; grid[0][8] = '┐';
+      grid[1][0] = '│'; grid[1][1] = '中'; grid[1][2] = '文'; grid[1][3] = 'A'; grid[1][4] = 'B'; grid[1][5] = '│';
+      renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 1, c: 5, dispCol: 7 };
+      moveContentByGrid(getSelectionBounds(), 1, 0);
+      results.push({ name: '宽字符框下移-原区域清空无残留', ok:
+        grid[0][0] === '' && grid[0][6] === '' && grid[0][7] === '' });
+      results.push({ name: '宽字符框下移-选区外右角保留', ok: grid[0][8] === '┐' });
+      results.push({ name: '宽字符框下移-框顶完整下移', ok:
+        grid[1][0] === '┌' && grid[1][6] === '─' && grid[1][7] === '─' });
+      results.push({ name: '宽字符框下移-宽字符行保真', ok:
+        grid[2][0] === '│' && grid[2][1] === '中' && grid[2][2] === '文' &&
+        grid[2][3] === 'A' && grid[2][4] === 'B' && grid[2][5] === '│' });
+      results.push({ name: '宽字符框下移-dispCol对齐', ok:
+        dispColOf(2, 1) === 1 && dispColOf(2, 2) === 3 });
+
+      // Bug2：宽字符行右移一格，dc(dispCol偏移)不能当 grid 列偏移用
+      initGrid();
+      grid[0][0] = '│'; grid[0][1] = '中'; grid[0][2] = '│';
+      renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 0, c: 2, dispCol: 3 };
+      moveContentByGrid(getSelectionBounds(), 0, 1);
+      results.push({ name: '宽字符行右移一格保真', ok:
+        grid[0][0] === '' && grid[0][1] === '│' && grid[0][2] === '中' && grid[0][3] === '│' &&
+        dispColOf(0, 2) === 2 });
+
+      // 回归：纯 ASCII 下移不能因改范式而坏
+      initGrid();
+      grid[0][0] = 'A'; grid[0][1] = 'B'; grid[0][2] = 'C';
+      renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 0, c: 2, dispCol: 2 };
+      moveContentByGrid(getSelectionBounds(), 1, 0);
+      results.push({ name: '纯ASCII下移回归', ok:
+        grid[0][0] === '' && grid[1][0] === 'A' && grid[1][1] === 'B' && grid[1][2] === 'C' });
+
+      // d26 真实场景：22 视觉宽框，各行右墙 grid 列不同但 dispCol=21（宽字符撑开）
+      // 框选「向」到「B」下移一格，墙必须钉在原 dispCol，不能因源收缩/目标撑开而漂移
+      initGrid();
+      grid[0][0]='e'; for (let c=1;c<=20;c++) grid[0][c]='─'; grid[0][21]='╮';
+      grid[1][0]='│'; grid[1][1]=' '; grid[1][2]='向'; grid[1][3]='量'; grid[1][4]='库';
+      for (let c=5;c<=17;c++) grid[1][c]=' '; grid[1][18]='│';
+      const s='pgvector / LanceDB'; for (let i=0;i<s.length;i++) grid[2][2+i]=s[i];
+      grid[2][0]='│'; grid[2][1]=' '; grid[2][20]=' '; grid[2][21]='│';
+      grid[3][0]='│'; for (let c=1;c<=20;c++) grid[3][c]=' '; grid[3][21]='│';
+      grid[4][0]='╰'; for (let c=1;c<=20;c++) grid[4][c]='─'; grid[4][21]='e';
+      renderGrid();
+      selStart = { r:1, c:2, dispCol:2 }; selEnd = { r:2, c:19, dispCol:19 };
+      moveContentByGrid(getSelectionBounds(), 1, 0);
+      // 三行右墙 dispCol 全钉 d21（grid 列因撑开不同：r1/r3 在 c21，r2 在 c18，但视觉对齐）
+      const wallAt = (r, d) => { const cc = findCellByDispColAny(r, d); return cc >= 0 ? grid[r][cc] : null; };
+      results.push({ name: 'd26框选向→B下移-三行右墙全钉d21', ok:
+        wallAt(1, 21) === '│' && wallAt(2, 21) === '│' && wallAt(3, 21) === '│' });
+      results.push({ name: 'd26框选向→B下移-向量库到r2', ok:
+        grid[2][2] === '向' && grid[2][3] === '量' && grid[2][4] === '库' });
+      results.push({ name: 'd26框选向→B下移-pgvector到r3', ok: grid[3][2] === 'p' });
+
+      // 键盘 move 后选区/光标跟随：选区起点不在宽字符起始格（旧实现会扩选区、光标不跟）
+      initGrid();
+      grid[0][0]='│'; grid[0][2]='向'; grid[0][3]='量'; grid[0][4]='库'; grid[0][21]='│';
+      renderGrid();
+      setTool('move');
+      // 选区从 c5(d8，空格) 到 c21(d22，右墙) —— 起点不在宽字符起始格
+      selStart = { r:0, c:5, dispCol:8 }; selEnd = { r:0, c:21, dispCol:22 };
+      isVisual = true; cursorR = 0; cursorC = 21; updateSelection();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', bubbles:true, cancelable:true }));
+      const b2 = getSelectionBounds();
+      results.push({ name: '键盘move下移-选区不扩大', ok:
+        b2.minD === 8 && b2.maxD === 22 && b2.minR === 1 && b2.maxR === 1 });
+      results.push({ name: '键盘move下移-光标跟到selEnd', ok:
+        cursorR === 1 && parseInt(document.querySelector(`.cell[data-r="${cursorR}"][data-c="${cursorC}"]`).dataset.dispCol) === 22 });
+
+      // 键盘 move 横向：选区平移不扩大，光标跟到新 selEnd
+      initGrid();
+      grid[0][0]='│'; grid[0][2]='向'; grid[0][3]='量'; grid[0][4]='库'; grid[0][6]='│';
+      renderGrid(); setTool('move');
+      selStart = { r:0, c:0, dispCol:0 }; selEnd = { r:0, c:6, dispCol:6 };
+      isVisual = true; cursorR = 0; cursorC = 6; updateSelection();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowRight', bubbles:true, cancelable:true }));
+      const b3 = getSelectionBounds();
+      results.push({ name: '键盘move右移-选区平移不扩大', ok: b3.minD === 1 && b3.maxD === 7 });
+      results.push({ name: '键盘move右移-光标跟到selEnd', ok:
+        cursorR === 0 && parseInt(document.querySelector(`.cell[data-r="${cursorR}"][data-c="${cursorC}"]`).dataset.dispCol) === 7 });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──
