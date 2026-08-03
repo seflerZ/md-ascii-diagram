@@ -446,6 +446,9 @@ function undo() {
   if (historyIdx > 0) {
     historyIdx--;
     grid = history[historyIdx].map(row => [...row]);
+    // 恢复尺寸：历史快照可能保存于 resize（insertRow/deleteColumn 等）之前
+    ROWS = grid.length;
+    COLS = grid[0] ? grid[0].length : COLS;
     renderGrid();
     refreshPreview();
   }
@@ -454,6 +457,8 @@ function redo() {
   if (historyIdx < history.length - 1) {
     historyIdx++;
     grid = history[historyIdx].map(row => [...row]);
+    ROWS = grid.length;
+    COLS = grid[0] ? grid[0].length : COLS;
     renderGrid();
     refreshPreview();
   }
@@ -740,8 +745,15 @@ const DIRS_TO_CHAR = {
   'DLR': '┬', 'DLU': '┤', 'DRU': '├', 'LRU': '┴',
   'DLRU': '┼',
 };
-function isLineChar(ch) { return !!LINE_DIRS[ch]; }
-function charDirs(ch) { return LINE_DIRS[ch] ? LINE_DIRS[ch].slice() : []; }
+// 箭头头也提供线方向（纵向箭头=U/D，横向箭头=L/R），使紧贴的横线/竖线能正确合并成 ┬┴ 等
+const ARROW_DIRS = {
+  '→': ['L','R'], '←': ['L','R'], '↔': ['L','R'],
+  '▶': ['L','R'], '◀': ['L','R'], '▷': ['L','R'], '◁': ['L','R'],
+  '↓': ['U','D'], '↑': ['U','D'], '↕': ['U','D'],
+  '▼': ['U','D'], '▲': ['U','D'], '▽': ['U','D'], '△': ['U','D'],
+};
+function isLineChar(ch) { return !!LINE_DIRS[ch] || !!ARROW_DIRS[ch]; }
+function charDirs(ch) { return LINE_DIRS[ch] ? LINE_DIRS[ch].slice() : (ARROW_DIRS[ch] ? ARROW_DIRS[ch].slice() : []); }
 function mergeChar(a, b) {
   const dirs = {};
   (LINE_DIRS[a] || []).forEach(d => dirs[d] = 1);
@@ -1141,6 +1153,14 @@ function deleteCellShiftLeft() {
   saveHistory();
   for (let c = cursorC; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
   grid[cursorR][COLS - 1] = '';
+  renderGrid(); refreshPreview();
+}
+
+// 删除光标所在整行，下方行上移、底部补空行（dd 双键）
+function deleteCurrentRow() {
+  saveHistory();
+  grid.splice(cursorR, 1);
+  grid.push(new Array(COLS).fill(''));
   renderGrid(); refreshPreview();
 }
 
@@ -1573,9 +1593,21 @@ document.addEventListener('keydown', (e) => {
       vimTimer = setTimeout(() => { lastVimKey = null; }, 300);
       e.preventDefault(); return;
     }
+    // dd 删除整行（300ms 内连按两次 d）/ d 单键删除光标字符+左移
+    if (lastVimKey === 'd' && e.key === 'd') {
+      clearTimeout(vimTimer);
+      deleteCurrentRow();
+      lastVimKey = null; e.preventDefault(); return;
+    }
+    if (e.key === 'd') {
+      clearTimeout(vimTimer);
+      lastVimKey = 'd';
+      deleteCellShiftLeft();
+      vimTimer = setTimeout(() => { lastVimKey = null; }, 300);
+      e.preventDefault(); return;
+    }
     lastVimKey = null;
     switch (e.key) {
-      case 'd': deleteCellShiftLeft(); e.preventDefault(); return;  // 删除光标处字符，右侧左移补位
       case 'u': undo(); e.preventDefault(); return;
       case 'x': eraseCell(cursorR, cursorC); e.preventDefault(); return;
       case 'X':
@@ -1782,7 +1814,7 @@ document.addEventListener('keydown', (e) => {
       updateStatus();
       return;
     }
-    if (activeTool === 'select' || activeTool === 'text') {
+    if (activeTool === 'select' || activeTool === 'text' || activeTool === 'magic') {
       const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
       const nr = Math.max(0, Math.min(ROWS - 1, cursorR + dr));
