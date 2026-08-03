@@ -179,7 +179,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <tr><td style="padding:2px 8px"><b>B</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
       <tr><td style="padding:2px 8px"><b>R</b></td><td>圆角矩形</td><td style="padding:2px 8px"><b>I</b></td><td>插入列</td></tr>
       <tr><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>圆角化当前框</td><td></td><td></td></tr>
-      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Ctrl+Shift+I</b></td><td>插入行</td></tr>
+      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td>插入行</td></tr>
       <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Insert</b></td><td>切换插入/覆盖</td></tr>
       <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
       <tr><td style="padding:2px 8px"><b>M</b></td><td>移动</td><td style="padding:2px 8px"><b>Shift+色码</b></td><td>着色</td></tr>
@@ -301,6 +301,7 @@ let activeShade = 3;
 let textMode = 'insert'; // text editing mode // 'insert' 或 'replace'，文字输入模式
 let isVisual = false; // Vim Visual mode // Visual 模式（v 键切换）
 let lastVimKey = null; // for dd / yy two-key commands // Vim 双键命令（dd/yy）的状态记忆
+let vimDeleteRow = null; // dd 时记录首次按 d 的原始行（避免先删字符后丢内容）
 let vimTimer = null; // yy 延迟判断计时器（300ms 内连按两次 y = 复制行）
 let ambiguousDouble = true; // 当前字体下 ▲▼◄► 是否为双宽
 
@@ -985,15 +986,15 @@ function drawRoundedBox() {
 
 function insertColumn() {
   const b = getSelectionBounds();
-  if (!b) return;
-  const n = b.maxC - b.minC + 1; // 选区列宽
+  const minC = b ? b.minC : cursorC;
+  const n = b ? (b.maxC - b.minC + 1) : 1; // 选区列宽（无选区时插入 1 列于光标处）
   saveHistory();
   for (let r = 0; r < ROWS; r++) {
     for (let i = 0; i < n; i++) grid[r].push('');
   }
   COLS += n;
   for (let r = 0; r < ROWS; r++) {
-    for (let i = 0; i < n; i++) { grid[r].splice(b.minC, 0, ''); grid[r].pop(); }
+    for (let i = 0; i < n; i++) { grid[r].splice(minC, 0, ''); grid[r].pop(); }
   }
   renderGrid();
   refreshPreview();
@@ -1001,9 +1002,9 @@ function insertColumn() {
 
 function insertRow() {
   const b = getSelectionBounds();
-  if (!b) return;
+  const insertR = b ? b.minR : cursorR; // 无选区时在光标行插入
   saveHistory();
-  grid.splice(b.minR, 0, new Array(COLS).fill(''));
+  grid.splice(insertR, 0, new Array(COLS).fill(''));
   ROWS++;
   renderGrid();
   refreshPreview();
@@ -1198,6 +1199,8 @@ function shiftSelectionLeft(b) {
 
 // 删除光标处字符，右侧同行字符左移补位（普通模式 d 键）
 function deleteCellShiftLeft() {
+  const ch = getCellText(cursorR, cursorC);
+  clipboard = [[{ char: ch, width: charWidth(ch) }]];  // 删除字符写入剪贴板（Vim：d → 寄存器）
   saveHistory();
   for (let c = cursorC; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
   grid[cursorR][COLS - 1] = '';
@@ -1205,7 +1208,9 @@ function deleteCellShiftLeft() {
 }
 
 // 删除光标所在整行，下方行上移、底部补空行（dd 双键）
-function deleteCurrentRow() {
+// prevRow：首次按 d 记录的原始行快照（可选），用于剪贴板保真
+function deleteCurrentRow(prevRow) {
+  clipboard = [prevRow || rowToClip(cursorR)];  // 整行写入剪贴板（Vim：dd 删除行 → 寄存器）
   saveHistory();
   grid.splice(cursorR, 1);
   grid.push(new Array(COLS).fill(''));
@@ -1214,7 +1219,9 @@ function deleteCurrentRow() {
 
 // 删除指定格；若删除的是双宽字符，重绘网格重算 dispCol（避免后续内容错位）
 function eraseCell(r, c) {
-  const w = charWidth(getCellText(r, c));
+  const ch = getCellText(r, c);
+  clipboard = [[{ char: ch, width: charWidth(ch) }]];  // 删除字符写入剪贴板（Vim：x → 寄存器）
+  const w = charWidth(ch);
   setCell(r, c, '');
   saveHistory();
   if (w > 1) { renderGrid(); refreshPreview(); }
@@ -1448,6 +1455,19 @@ function magicAlign() {
 // ═══════════════════════════════════════
 let clipboard = null; // 2D array of {char, width} | null（按 dispCol 槽位）
 
+// 把 grid 第 r 行转成剪贴板行结构（w2 占两槽位），供 yy 复制 / dd 删除共用
+function rowToClip(r) {
+  const row = [];
+  for (let c = 0; c < COLS; c++) {
+    const ch = grid[r][c] || '';
+    if (!ch) { row.push(null); continue; }
+    const w = charWidth(ch);
+    row.push({ char: ch, width: w });
+    if (w === 2) row.push(null);
+  }
+  return row;
+}
+
 function copySelection() {
   const b = getSelectionBounds();
   if (!b) {
@@ -1547,6 +1567,8 @@ async function pasteAtCursor() {
 document.addEventListener('keydown', (e) => {
   // Skip if user is typing in a modal input
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  // 跳过 IME 组合态（拼音/选词中间键，含 Enter/Space）——中文由 compositionend 提交
+  if (e.isComposing) return;
 
   // Shift + 颜色码 (mroygcbpe)：着色光标所在框，不冲突快捷键
   if (!e.ctrlKey && !e.metaKey && e.shiftKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') {
@@ -1650,14 +1672,16 @@ document.addEventListener('keydown', (e) => {
     // dd 删除整行（300ms 内连按两次 d）/ d 单键删除光标字符+左移
     if (lastVimKey === 'd' && e.key === 'd') {
       clearTimeout(vimTimer);
-      deleteCurrentRow();
+      deleteCurrentRow(vimDeleteRow);  // 用首次按 d 记录的原始行存剪贴板
+      vimDeleteRow = null;
       lastVimKey = null; e.preventDefault(); return;
     }
     if (e.key === 'd') {
       clearTimeout(vimTimer);
       lastVimKey = 'd';
+      vimDeleteRow = rowToClip(cursorR);  // 记录原始行（供 dd 存剪贴板）
       deleteCellShiftLeft();
-      vimTimer = setTimeout(() => { lastVimKey = null; }, 300);
+      vimTimer = setTimeout(() => { lastVimKey = null; vimDeleteRow = null; }, 300);
       e.preventDefault(); return;
     }
     lastVimKey = null;
@@ -1747,8 +1771,8 @@ document.addEventListener('keydown', (e) => {
     updateStatus();
     return;
   }
-  // Ctrl+Shift+I 插入行
-  if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+  // Shift+H 插入整行
+  if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'H') {
     insertRow(); e.preventDefault(); return;
   }
   // I 插入列
@@ -1896,6 +1920,7 @@ document.addEventListener('keydown', (e) => {
 
     // Text input - only in text tool (支持 Emoji 等多码元字符)
   if (e.key.length >= 1 && activeTool === 'text' && !e.ctrlKey && !e.metaKey && !e.altKey
+      && e.key !== 'Process' && e.key !== 'Unidentified'
       && !['Backspace','Delete','Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) {
     // Insert 键切换 insert/replace 模式
     if (e.key === 'Insert') {
@@ -1952,6 +1977,28 @@ document.addEventListener('keydown', (e) => {
     updateStatus();
     return;
   }
+});
+
+// 中文输入法（IME）：compositionend 提交最终文字，text 工具下写入光标（支持多字符）
+document.addEventListener('compositionend', (e) => {
+  if (activeTool !== 'text' || !e.data) return;
+  for (const ch of Array.from(e.data)) {
+    if (!ch || ch === '\n') continue;
+    const nxc = cursorC + 1;
+    if (textMode === 'insert') {
+      ensureCapacity(cursorR, nxc);
+      for (let c = COLS - 1; c > cursorC; c--) grid[cursorR][c] = grid[cursorR][c - 1];
+    }
+    grid[cursorR][cursorC] = ch;
+    cursorC = Math.min(COLS - 1, nxc);
+  }
+  saveHistory();
+  renderGrid();
+  refreshPreview();
+  selStart = { r: cursorR, c: cursorC };
+  selEnd = { r: cursorR, c: cursorC };
+  updateSelection();
+  updateStatus();
 });
 
 // ═══════════════════════════════════════
@@ -2109,19 +2156,15 @@ function updateStatus() {
 // ═══════════════════════════════════════
 function getGridText() {
   const lines = [];
+  // 先找最后非空行，再输出 0..lastNonEmpty 的所有行（含中间空行，裁掉网格末尾自然空白）
   let lastNonEmpty = -1;
   for (let r = 0; r < ROWS; r++) {
+    if ((grid[r] || []).some(ch => ch)) lastNonEmpty = r;
+  }
+  for (let r = 0; r <= lastNonEmpty; r++) {
     let line = '';
-    let rowHasContent = false;
-    for (let c = 0; c < COLS; c++) {
-      line += grid[r][c] || ' ';
-      if (grid[r][c]) rowHasContent = true;
-    }
-    line = line.replace(/\s+$/, '');
-    if (rowHasContent || r <= lastNonEmpty) {
-      lines.push(line);
-      if (rowHasContent) lastNonEmpty = r;
-    }
+    for (let c = 0; c < COLS; c++) line += grid[r][c] || ' ';
+    lines.push(line.replace(/\s+$/, ''));
   }
   return lines.join('\n');
 }
