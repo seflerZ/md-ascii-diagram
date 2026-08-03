@@ -579,7 +579,9 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
         if (ellipseLayers.length) svg = svg.replace(/<\/svg>/, ellipseLayers.join('') + '</svg>');
       }
       const wc = b.toCol - b.fromCol, hc = b.toRow - b.fromRow + 1;
-      return svg.replace(/<svg/i, `<svg data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0"`);
+      // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
+      svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
+      return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0"`);
     }).join('');
 
     // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）

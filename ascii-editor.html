@@ -2157,12 +2157,17 @@ function renderShapesList() {
   if (!list) return;
   const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
   if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">暂无形状，粘贴 SVG 添加第一个吧</div>'; return; }
-  list.innerHTML = ids.map(id => `
+  list.innerHTML = ids.map(id => {
+    // 与画布渲染一致的变换：线宽不缩放 + 填满容器
+    let svg = shapes[id];
+    svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
+    svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
+    return `
     <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="editShape('${id}')" title="点击编辑该形状">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
-      <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${shapes[id]}</div>
+      <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
       <div style="font-size:11px;color:#999;margin-top:4px" onclick="event.stopPropagation();removeShape('${id}')">🗑 删除</div>
-    </div>`).join('');
+    </div>`}).join('');
 }
 
 function addShape() {
@@ -2744,7 +2749,9 @@ function renderPreview(text) {
       if (ellipseLayers.length) svg = svg.replace(/<\/svg>/, ellipseLayers.join('') + '</svg>');
     }
     const style = `position:absolute;left:${20 + b.fromCol * charW}px;top:${20 + b.fromRow * lineH}px;width:${(b.toCol - b.fromCol) * charW}px;height:${(b.toRow - b.fromRow + 1) * lineH}px`;
-    return svg.replace(/<svg/i, `<svg style="${style}"`);
+    // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
+    svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
+    return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" style="${style}"`);
   }).join('');
   // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）
   const textOverlays = [];
