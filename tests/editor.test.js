@@ -55,10 +55,10 @@ const SUITES = [
       selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 2, c: 4, dispCol: 4 }; magicAlign();
       results.push({ name: '竖线+错列下箭头', ok: grid[2][3] === '↓' && (grid[2][2] === '' || grid[2][2] === undefined) });
 
-      // 粗线散落 → 拉齐
-      initGrid(); setStr(0, '━━━━'); grid[1][1] = '━'; grid[1][2] = '━'; renderGrid();
+      // 粗线散落 → 补断点（错位的 ━ 移到基准行空位）
+      initGrid(); setStr(0, '━━ ━━'); grid[1][2] = '━'; renderGrid();  // r0: ━━ ━━, r1 c2 错位
       selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 1, c: 4, dispCol: 4 }; magicAlign();
-      results.push({ name: '粗线散落拉齐', ok: grid[0][0] === '━' && grid[0][3] === '━' && (grid[1][1] === '' || grid[1][1] === undefined) });
+      results.push({ name: '粗线散落拉齐', ok: grid[0][0] === '━' && grid[0][2] === '━' && grid[0][3] === '━' && (grid[1][2] === '' || grid[1][2] === undefined) });
 
       return results;
     },

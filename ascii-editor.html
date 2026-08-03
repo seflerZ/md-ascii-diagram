@@ -1284,25 +1284,54 @@ function colorAtCursor() {
 
 // ── Magic wand: align scattered horizontal/vertical lines ──
 
-// 横线族：横线 / 粗横 / 双横 / 虚线横 + 横向箭头
+// 横线族：横线 / 粗横 / 双横 / 虚线横 + 横向箭头（placePath 的 autoConnect 用）
 const H_LINE_CHARS = '─━═╌→←↔';
 // 竖线族：竖线 / 粗竖 / 双竖 / 虚线竖 + 纵向箭头
 const V_LINE_CHARS = '│┃║╎↑↓↕';
+// 三路以上聚合符号（├ ┤ ┬ ┴ ┼ ╫ ╪）：连接点，梳子不移动、不作基准
+const JUNCTIONS = '├┤┬┴┼╫╪';
+// 梳子可移动的横/竖字符（含箭头、粗线变体；角符号按方向各自判定；排除三路聚合）
+function isHMovable(ch) {
+  return !!ch && !JUNCTIONS.includes(ch) &&
+    (H_LINE_CHARS.includes(ch) || charDirs(ch).some(d => d === 'L' || d === 'R'));
+}
+function isVMovable(ch) {
+  return !!ch && !JUNCTIONS.includes(ch) &&
+    (V_LINE_CHARS.includes(ch) || charDirs(ch).some(d => d === 'U' || d === 'D'));
+}
 
-// 将 items 按 groupKey 分组，选众数所在的行/列作为目标，其他迁移过去（保留原字符）
-function alignGroup(items, groupKey, posFn) {
+// 聚类对齐：items 按 groupKey 邻近聚簇（gap 内同簇），每簇由 pickTarget 定基准
+// 移动 = 网格间字符交换：目标格是线字符 → 互换位置；是空格 → 平移；是内容文字 → 跳过
+function alignCluster(items, groupKey, posFn, pickTarget, gap) {
   if (!items.length) return;
-  const count = {};
-  items.forEach(item => { const k = groupKey(item); count[k] = (count[k] || 0) + 1; });
-  let target = null, best = -1;
-  for (const k in count) { if (count[k] > best) { best = count[k]; target = parseInt(k); } }
-  items.forEach(item => {
-    if (groupKey(item) !== target) {
-      setCellByDisp(item.r, item.d, '');
-      const pos = posFn(item, target);
-      const tc = findCellByDispCol(pos.r, pos.d);
-      if (tc >= 0) { const cur = getCellText(pos.r, tc); if (cur === '' || cur === ' ') setCellByDisp(pos.r, pos.d, item.ch); }
-    }
+  const sorted = items.slice().sort((a, b) => groupKey(a) - groupKey(b));
+  const clusters = []; let cur = [];
+  sorted.forEach(item => {
+    if (!cur.length || groupKey(item) - groupKey(cur[cur.length - 1]) <= gap) cur.push(item);
+    else { clusters.push(cur); cur = [item]; }
+  });
+  if (cur.length) clusters.push(cur);
+  clusters.forEach(cluster => {
+    const target = pickTarget(cluster);
+    cluster.forEach(item => {
+      if (groupKey(item) !== target) {
+        const pos = posFn(item, target);
+        const tc = findCellByDispCol(pos.r, pos.d);
+        if (tc >= 0) {
+          const dstCh = getCellText(pos.r, tc);
+          if (dstCh === '' || dstCh === ' ') {
+            // 目标格空闲 → 平移（原格变空）
+            setCellByDisp(item.r, item.d, '');
+            setCellByDisp(pos.r, pos.d, item.ch);
+          } else if (isHMovable(dstCh) || isVMovable(dstCh)) {
+            // 目标格是线字符 → 交换位置，不丢字符
+            setCellByDisp(item.r, item.d, dstCh);
+            setCellByDisp(pos.r, pos.d, item.ch);
+          }
+          // 目标格是内容文字 → 跳过，不碰内容
+        }
+      }
+    });
   });
 }
 
@@ -1310,22 +1339,39 @@ function magicAlign() {
   const b = getSelectionBounds();
   if (!b) { clearSelection(); return; }
   saveHistory();
-  const hLines = [];
-  const vLines = [];
-  for (let r = b.minR; r <= b.maxR; r++) {
-    const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
-    cells.forEach(cell => {
-      if (cell.classList.contains('w2')) return;
-      const d = parseInt(cell.dataset.dispCol);
-      const cc = parseInt(cell.dataset.c);
-      if (d < b.minD || d > b.maxD) return;
-      const ch = getCellText(r, cc);
-      if (H_LINE_CHARS.includes(ch)) hLines.push({ r, d, ch });
-      else if (V_LINE_CHARS.includes(ch)) vLines.push({ r, d, ch });
-    });
-  }
-  alignGroup(hLines, item => item.r, (item, tr) => ({ r: parseInt(tr), d: item.d }));
-  alignGroup(vLines, item => item.d, (item, td) => ({ r: item.r, d: parseInt(td) }));
+  const collect = (list) => {
+    for (let r = b.minR; r <= b.maxR; r++) {
+      document.querySelectorAll('.cell[data-r="' + r + '"]').forEach(cell => {
+        // 不跳过 w2：双宽箭头 ↓▲ 等也参与对齐，用其起始 dispCol
+        // 用 dispCol 范围 + 2 容错：墙可能在框选边界外（对角线框选），但不跨到相邻框的边
+        const d = parseInt(cell.dataset.dispCol), cc = parseInt(cell.dataset.c);
+        if (d < b.minD - 2 || d > b.maxD + 2) return;
+        const ch = getCellText(r, cc);
+        if (isHMovable(ch)) list.h.push({ r, d, ch });
+        if (isVMovable(ch)) list.v.push({ r, d, ch });
+      });
+    }
+  };
+  // 方向：从上/下影响竖线列基准（取最上/最下字符的 dispCol），
+  //       从左/右影响横线行基准（取最左/最右字符的 r）
+  const topDown = selStart.r <= selEnd.r;
+  const leftToRight = selStart.dispCol <= selEnd.dispCol;
+  // 先横线对齐（按 r 聚类，基准 = 方向侧横线的行）
+  let lists = { h: [], v: [] };
+  collect(lists);
+  alignCluster(
+    lists.h, item => item.r, (item, t) => ({ r: parseInt(t), d: item.d }),
+    cl => leftToRight ? cl.reduce((m, i) => i.d < m.d ? i : m).r : cl.reduce((m, i) => i.d > m.d ? i : m).r,
+    1
+  );
+  // 重新收集竖线位置（横线/角移动可能改变了 dispCol）
+  lists = { h: [], v: [] };
+  collect(lists);
+  alignCluster(
+    lists.v, item => item.d, (item, t) => ({ r: item.r, d: parseInt(t) }),
+    cl => topDown ? cl.reduce((m, i) => i.r < m.r ? i : m).d : cl.reduce((m, i) => i.r > m.r ? i : m).d,
+    2
+  );
   clearSelection();
 }
 
