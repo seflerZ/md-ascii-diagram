@@ -712,6 +712,19 @@ function setCellByDisp(r, d, ch) {
   if (cc >= 0) setCell(r, cc, ch);
 }
 
+// 按 dispCol 在 grid 数组里定位 c（不依赖 DOM，基于 grid 现有内容累加 charWidth）
+// 用于 paste：循环写入时 DOM dispCol 尚未重算，必须从 grid 推算
+function gridColByDisp(r, targetD) {
+  if (!grid[r]) return -1;
+  let d = 0;
+  for (let c = 0; c < COLS; c++) {
+    if (d === targetD) return c;
+    const ch = grid[r][c] || '';
+    d += ch ? charWidth(ch) : 1;
+  }
+  return -1;
+}
+
 // ── Line-character direction merging (so intersections become ├┤┬┴┼) ──
 // ═══ Line Character Connection Table ═══
 const LINE_DIRS = {
@@ -814,13 +827,22 @@ function placePath(path) {
 
 function getSelectionBounds() {
   if (!selStart || !selEnd) return null;
+  // 部分赋值点缺 dispCol，此处兜底（缺失时从 DOM 回填），避免 minD/maxD 变 NaN
+  const fillD = (s) => {
+    if (s.dispCol === undefined) {
+      const cell = getCell(s.r, s.c);
+      s.dispCol = cell ? parseInt(cell.dataset.dispCol) : s.c;
+    }
+    return s;
+  };
+  const a = fillD(selStart), b = fillD(selEnd);
   return {
-    minR: Math.min(selStart.r, selEnd.r),
-    maxR: Math.max(selStart.r, selEnd.r),
-    minC: Math.min(selStart.c, selEnd.c),
-    maxC: Math.max(selStart.c, selEnd.c),
-    minD: Math.min(selStart.dispCol, selEnd.dispCol),
-    maxD: Math.max(selStart.dispCol, selEnd.dispCol),
+    minR: Math.min(a.r, b.r),
+    maxR: Math.max(a.r, b.r),
+    minC: Math.min(a.c, b.c),
+    maxC: Math.max(a.c, b.c),
+    minD: Math.min(a.dispCol, b.dispCol),
+    maxD: Math.max(a.dispCol, b.dispCol),
   };
 }
 
@@ -1310,27 +1332,46 @@ function magicAlign() {
 // ═══════════════════════════════════════
 // Clipboard (copy / cut / paste)
 // ═══════════════════════════════════════
-let clipboard = null; // 2D array of chars
+let clipboard = null; // 2D array of {char, width} | null（按 dispCol 槽位）
 
 function copySelection() {
   const b = getSelectionBounds();
   if (!b) {
     // 无选区：复制光标所在格
     const ch = (grid[cursorR] && grid[cursorR][cursorC]) || '';
-    clipboard = [[ch]];
+    clipboard = [[ { char: ch, width: charWidth(ch) } ]];
     try { navigator.clipboard && navigator.clipboard.writeText(ch); } catch (e) {}
     return;
   }
   clipboard = [];
+  const width = b.maxD - b.minD + 1;   // 视觉宽度（dispCol 槽位数）
   for (let r = b.minR; r <= b.maxR; r++) {
-    const row = [];
-    for (let c = b.minC; c <= b.maxC; c++) {
-      row.push(grid[r] && grid[r][c] ? grid[r][c] : '');
+    // 默认每槽位是空格（width=1），双宽字符第二半才用 null 占位
+    const row = new Array(width).fill(null).map(() => ({ char: ' ', width: 1 }));
+    // 逐 dispCol 取格（用 Any 版含 w2 起始格，避免双宽字符被跳过丢失）
+    for (let d = b.minD; d <= b.maxD; d++) {
+      const cc = findCellByDispColAny(r, d);
+      if (cc < 0) continue;
+      const ch = (grid[r] && grid[r][cc]) || '';
+      const cellDisp = parseInt(getCell(r, cc).dataset.dispCol);
+      // 只处理起始格 = d 的字符（跳过 w2 第二半，避免重复）
+      if (cellDisp !== d) continue;
+      const w = charWidth(ch);
+      const idx = d - b.minD;
+      row[idx] = { char: ch || ' ', width: w };
+      if (w === 2 && idx + 1 < width) row[idx + 1] = null;  // w2 第二半占位
     }
     clipboard.push(row);
   }
   // Also write to system clipboard as text
-  const text = clipboard.map(row => row.map(ch => ch || ' ').join('')).join('\n');
+  // null 槽位 = 双宽字符第二半，跳过（前一个字符已含宽度）；空格是 {char:' ',width:1} 正常输出
+  const text = clipboard.map(row => {
+    let s = '';
+    for (const slot of row) {
+      if (slot && slot.char) s += slot.char;
+    }
+    return s;
+  }).join('\n');
   try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) {}
 }
 
@@ -1344,18 +1385,44 @@ async function pasteAtCursor() {
     // 内部剪贴板为空：尝试系统剪贴板（支持从外部复制文字后粘贴）
     try {
       const text = await navigator.clipboard.readText();
-      if (text) clipboard = text.split('\n').map(l => Array.from(l));
+      if (text) {
+        clipboard = text.split('\n').map(l => {
+          const row = [];
+          for (const ch of Array.from(l)) {
+            const w = charWidth(ch);
+            row.push({ char: ch, width: w });
+            if (w === 2) row.push(null);   // w2 第二半占位
+          }
+          return row;
+        });
+      }
     } catch (e) { /* 无权限/为空则忽略 */ }
     if (!clipboard) return;
   }
   saveHistory();
+  // 按光标起始 dispCol + 逐字宽度累加落格（保真双宽对齐）
+  const dcell = getCell(cursorR, cursorC);
+  const baseD = dcell ? parseInt(dcell.dataset.dispCol) : cursorC;
+  let maxD = baseD;
   for (let i = 0; i < clipboard.length; i++) {
+    let d = baseD;
     for (let j = 0; j < clipboard[i].length; j++) {
-      const ch = clipboard[i][j];
-      if (ch) setCell(cursorR + i, cursorC + j, ch);
+      const slot = clipboard[i][j];
+      if (slot && slot.char) {
+        // 直接操作 grid 数组（循环中 DOM dispCol 未重算，用 gridColByDisp 推算）
+        const cc = gridColByDisp(cursorR + i, d);
+        if (cc >= 0) {
+          grid[cursorR + i][cc] = slot.char;
+          // 双宽字符：清掉"第二半"对应的下一格（cc+1），避免残留旧内容撑开空格
+          if (slot.width === 2) grid[cursorR + i][cc + 1] = '';
+        }
+        d += slot.width;   // 双宽字符 width=2 已含占位
+      }
+      // null 槽位（双宽第二半）：不推进，前一个字符的 width 已覆盖
     }
+    if (d > maxD) maxD = d;
   }
-  ensureCapacity(cursorR + clipboard.length, cursorC + (clipboard[0] ? clipboard[0].length : 0));
+  ensureCapacity(cursorR + clipboard.length, maxD);
   renderGrid();
 }
 
@@ -1440,14 +1507,23 @@ document.addEventListener('keydown', (e) => {
     // yy 复制当前行（300ms 内连按两次 y）/ y 单键复制当前格
     if (lastVimKey === 'y' && e.key === 'y') {
       clearTimeout(vimTimer);
-      clipboard = [grid[cursorR].map(ch => ch || '')];
+      // yy 复制当前行：按 dispCol 重建带宽度行（w2 占两槽位）
+      const row = [];
+      for (let c = 0; c < COLS; c++) {
+        const ch = grid[cursorR][c] || '';
+        if (!ch) { row.push(null); continue; }
+        const w = charWidth(ch);
+        row.push({ char: ch, width: w });
+        if (w === 2) row.push(null);
+      }
+      clipboard = [row];
       lastVimKey = null; e.preventDefault(); return;
     }
     if (e.key === 'y') {
       clearTimeout(vimTimer);
       lastVimKey = 'y';
       const ch = (grid[cursorR] && grid[cursorR][cursorC]) || '';
-      clipboard = [[ch]];
+      clipboard = [[ { char: ch, width: charWidth(ch) } ]];
       vimTimer = setTimeout(() => { lastVimKey = null; }, 300);
       e.preventDefault(); return;
     }

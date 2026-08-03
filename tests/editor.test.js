@@ -76,7 +76,7 @@ const SUITES = [
       initGrid(); setStr(0, 'AB'); setStr(1, 'CD'); renderGrid();
       isVisual = true; selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 1, c: 1, dispCol: 1 }; updateSelection();
       dispatchKey('y');
-      results.push({ name: 'Visual y 复制选区', ok: clipboard && clipboard[0][0] === 'A' && clipboard[1][1] === 'D' });
+      results.push({ name: 'Visual y 复制选区', ok: clipboard && clipboard[0][0] && clipboard[0][0].char === 'A' && clipboard[1][1] && clipboard[1][1].char === 'D' });
 
       // Visual d 删选区 + 左移
       initGrid(); setStr(0, 'ABCD'); setStr(1, 'EFGH'); renderGrid();
@@ -91,7 +91,7 @@ const SUITES = [
       results.push({ name: 'Visual x 只删选区', ok: (grid[0][1] === '' || grid[0][1] === undefined) && grid[0][3] === 'D' });
 
       // Visual p 粘贴
-      initGrid(); renderGrid(); clipboard = [['M', 'N']]; cursorR = 1; cursorC = 1;
+      initGrid(); renderGrid(); clipboard = [[{char:'M',width:1},{char:'N',width:1}]]; cursorR = 1; cursorC = 1;
       isVisual = true; selStart = { r: 1, c: 1, dispCol: 1 }; selEnd = { r: 1, c: 1, dispCol: 1 }; updateSelection();
       dispatchKey('p');
       results.push({ name: 'Visual p 粘贴', ok: grid[1][1] === 'M' && grid[1][2] === 'N' });
@@ -109,18 +109,18 @@ const SUITES = [
       // yy 复制行回归
       initGrid(); setStr(0, 'XYZ'); renderGrid();
       cursorR = 0; isVisual = false; dispatchKey('y'); dispatchKey('y');
-      results.push({ name: 'yy 复制行回归', ok: clipboard && clipboard[0][0] === 'X' && clipboard[0][2] === 'Z' });
+      results.push({ name: 'yy 复制行回归', ok: clipboard && clipboard[0][0] && clipboard[0][0].char === 'X' && clipboard[0][2] && clipboard[0][2].char === 'Z' });
 
       // y 单按复制当前格
       initGrid(); grid[0][5] = 'X'; renderGrid();
       cursorR = 0; cursorC = 5; isVisual = false; dispatchKey('y');
-      results.push({ name: 'y 复制当前格', ok: clipboard && clipboard[0][0] === 'X' && clipboard[0].length === 1 });
+      results.push({ name: 'y 复制当前格', ok: clipboard && clipboard[0][0] && clipboard[0][0].char === 'X' && clipboard[0].length === 1 });
 
       // Ctrl+C 无选区复制光标格
       initGrid(); grid[0][7] = 'Y'; renderGrid();
       cursorR = 0; cursorC = 7; isVisual = false;
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true }));
-      results.push({ name: 'Ctrl+C无选区复制格', ok: clipboard && clipboard[0][0] === 'Y' && clipboard[0].length === 1 });
+      results.push({ name: 'Ctrl+C无选区复制格', ok: clipboard && clipboard[0][0] && clipboard[0][0].char === 'Y' && clipboard[0].length === 1 });
 
       // u 撤销回归
       initGrid(); setStr(0, 'AB'); renderGrid(); saveHistory(); setCell(0, 0, 'X'); saveHistory();
