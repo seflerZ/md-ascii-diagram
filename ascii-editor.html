@@ -33,6 +33,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .arrow-dropdown .arrow-opt:hover{background:#e8f0ff}
 .arrow-dropdown .arrow-opt.active{background:#d0e4ff;font-weight:bold}
 
+/* ── Line tool dropdown (实线/虚线) ── */
+.tool-line-wrap{position:relative;display:inline-flex}
+.tool-line-wrap .line-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;min-width:130px;padding:2px}
+.tool-line-wrap:hover .line-dropdown{display:block}
+.line-dropdown .line-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
+.line-dropdown .line-opt:hover{background:#e8f0ff}
+.line-dropdown .line-opt.active{background:#d0e4ff;font-weight:bold}
+
 /* ── Main area ── */
 .main{display:flex;flex:1;overflow:hidden}
 .editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -106,7 +114,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="group">
     <button id="tool-select" class="active" title="选择/编辑 (V)">🖱 选择</button>
     <button id="tool-free" title="自由绘制 (F)">✏️ 自由</button>
-    <button id="tool-line" title="直线 (L)">─ 直线</button>
+    <div class="tool-line-wrap">
+      <button id="tool-line" title="直线 (L)，进入后按 1/2 切换实线/虚线">─ 直线</button>
+      <div class="line-dropdown" id="line-dropdown">
+        <div class="line-opt active" data-type="1">─ │ 实线</div>
+        <div class="line-opt" data-type="2">╌ ╎ 虚线</div>
+      </div>
+    </div>
     <button id="tool-box" title="矩形框 (B)">▣ 矩形</button>
     <button id="tool-rounded" title="圆角矩形 (R)">▢ 圆角</button>
     <div class="tool-arrow-wrap">
@@ -735,6 +749,7 @@ function gridColByDisp(r, targetD) {
 const LINE_DIRS = {
   '-': ['L','R'], '|': ['U','D'],   // ASCII 线字符也纳入连接
   '─': ['L','R'], '│': ['U','D'],
+  '╌': ['L','R'], '╎': ['U','D'],   // 虚线横/竖：作为邻居可连接
   '┌': ['R','D'], '┐': ['L','D'], '└': ['U','R'], '┘': ['U','L'],
   '╭': ['R','D'], '╮': ['L','D'], '╰': ['U','R'], '╯': ['U','L'],
   '├': ['U','D','R'], '┤': ['U','D','L'], '┬': ['L','R','D'], '┴': ['L','R','U'],
@@ -775,6 +790,20 @@ function placeChar(r, c, ch) {
   // else: don't overwrite text / other chars
 }
 
+// 色码字符（着色框的角）是否确实构成框角：左侧/右侧有框线（框角色码总是横向连框边）
+function isColorBoxCorner(r, d) {
+  // 右侧：色码 + 可选明度数字(1-6) + 框线
+  let nd = d + 1;
+  const n1 = findCellByDispCol(r, nd);
+  if (n1 >= 0 && '123456'.includes(getCellText(r, n1))) nd++;
+  const n2 = findCellByDispCol(r, nd);
+  if (n2 >= 0 && isLineChar(getCellText(r, n2))) return true;
+  // 左侧：框线
+  const leftC = findCellByDispCol(r, d - 1);
+  if (leftC >= 0 && isLineChar(getCellText(r, leftC))) return true;
+  return false;
+}
+
 // Does the neighbor in direction `dir` connect back to (r, d)?
 function neighborConnects(r, d, dir) {
   let nr = r, nd = d;
@@ -786,8 +815,8 @@ function neighborConnects(r, d, dir) {
   const c = findCellByDispCol(nr, nd);
   if (c < 0) return false;
   const ch = getCellText(nr, c);
-  // 色码标记（着色框的角/边）：视为可连接的线，横遇竖即可合并成三通/四通
-  if (ch && ch !== ' ' && 'mroygcbpe'.includes(ch)) return true;
+  // 色码标记：仅当确实构成着色框的角（周围有框线）才视为可连接，避免误判普通文字字母（如 b/r）
+  if (ch && ch !== ' ' && 'mroygcbpe'.includes(ch)) return isColorBoxCorner(nr, nd);
   if (!isLineChar(ch)) return false;
   const opposite = { U: 'D', D: 'U', L: 'R', R: 'L' }[dir];
   return charDirs(ch).includes(opposite);
@@ -807,6 +836,12 @@ function autoConnect(r, c, d) {
   const key = dirs.join('');
   const target = DIRS_TO_CHAR[key];
   if (!target) return cur;
+  // 虚线字符：纯直线段保持虚线（│→╎、─→╌），交叉点（┬┴┼ 等）用实线连接符
+  if (cur === '╌' || cur === '╎') {
+    if (target === '─') return '╌';
+    if (target === '│') return '╎';
+    return target;
+  }
   // 圆角框的角保持圆角样式（如 ┌→╭）
   if (cur === '╭' || cur === '╮' || cur === '╰' || cur === '╯') {
     const ROUNDED = { '┌': '╭', '┐': '╮', '└': '╰', '┘': '╯' };
@@ -1085,11 +1120,24 @@ function computeArrowPath() {
   return out;
 }
 
+// 直线类型：1=实线(─│) 2=虚线(╌╎)
+let lineType = 1;
+function setLineType(t) {
+  lineType = t;
+  document.querySelectorAll('.line-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+  const btn = document.getElementById('tool-line');
+  if (btn) btn.textContent = (t === 2 ? '╌' : '─') + ' 直线';
+}
+
 // L-shaped line path (no arrow heads): reuse arrow path, replace all arrow types with lines
 function computeLinePath() {
+  const hChar = lineType === 2 ? '╌' : '─';
+  const vChar = lineType === 2 ? '╎' : '│';
   return computeArrowPath().map(p => {
-    if ('→←▶◀▷◁'.includes(p.ch)) return { ...p, ch: '─' };
-    if ('↑↓▲▼△▽'.includes(p.ch)) return { ...p, ch: '│' };
+    if ('→←▶◀▷◁'.includes(p.ch)) return { ...p, ch: hChar };
+    if ('↑↓▲▼△▽'.includes(p.ch)) return { ...p, ch: vChar };
+    if (p.ch === '─') return { ...p, ch: hChar };
+    if (p.ch === '│') return { ...p, ch: vChar };
     return p;
   });
 }
@@ -1546,6 +1594,12 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); return;
   }
 
+  // 直线工具下：1/2 切换实线/虚线
+  if (activeTool === 'line' && !e.ctrlKey && !e.metaKey && !e.altKey && '12'.includes(e.key)) {
+    setLineType(parseInt(e.key));
+    e.preventDefault(); return;
+  }
+
   // Visual 模式：y/d/x 作用于选区、p 粘贴（Vim yank/delete/paste）
   if (isVisual && !e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
     switch (e.key) {
@@ -1942,6 +1996,14 @@ document.querySelectorAll('.arrow-opt').forEach(o => {
   });
 });
 setArrowType(1); // 初始化按钮文字为当前类型
+document.querySelectorAll('.line-opt').forEach(o => {
+  o.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setLineType(parseInt(o.dataset.type));
+    setTool('line');
+  });
+});
+setLineType(1); // 初始化直线按钮文字
 document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
 document.getElementById('tool-magic').addEventListener('click', () => setTool('magic'));
 document.getElementById('tool-move').addEventListener('click', () => setTool('move'));
