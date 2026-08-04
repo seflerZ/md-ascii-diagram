@@ -472,7 +472,10 @@ function updateSelection() {
   }
   // Cursor focus
   const focusCell = getCell(cursorR, cursorC);
-  if (focusCell) focusCell.classList.add('focus');
+  if (focusCell) { focusCell.classList.add('focus'); focusCell.scrollIntoView({ block: 'nearest' }); }
+  // Preview panel follow
+  const previewLine = document.querySelector('.preview-wrap .pl[data-r="' + cursorR + '"]');
+  if (previewLine) previewLine.scrollIntoView({ block: 'nearest' });
 }
 
 // ═══════════════════════════════════════
@@ -2645,6 +2648,11 @@ function saveDiagram() {
     return r.json();
   }).then(data => {
     if (data.ok) {
+      // 同步本地缓存，避免切图再切回时读到旧内容
+      if (selectedIndex >= 0 && diagrams[selectedIndex]) {
+        diagrams[selectedIndex].content = content;
+        diagrams[selectedIndex].name = name;
+      }
       const btn = document.getElementById('btn-save');
       btn.textContent = '✅ 已保存';
       setTimeout(() => { btn.textContent = '💿 保存'; }, 1500);
@@ -3269,7 +3277,7 @@ function renderPreview(text) {
     }
     if (curBg || curUl || curBold || curColor || curRainbow || curScale) lineHtml += '</span>';
     lineHtml = lineHtml.replace(/\s+$/, '');
-    html += lineHtml + '\n';
+    html += '<span class="pl" data-r="' + r + '">' + lineHtml + '</span>\n';
   }
   // 标记框的 SVG 覆盖层（绝对定位到框区域）
   const overlays = shapeBoxes.map(s => {
