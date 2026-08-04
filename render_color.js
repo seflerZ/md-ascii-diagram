@@ -167,7 +167,7 @@ function isEmojiChar(ch) {
 // 检测形状框：框左下角有 d:N 标记（替换了 └），该框渲染时替换成形状 SVG
 function detectShapeBoxes(lines, boxes) {
   const result = [];
-  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
   for (let r = 0; r < lines.length; r++) {
     const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
     if (!m) continue;
@@ -275,14 +275,14 @@ function lineCells(line) {
 // Find UNCOLORED boxes (corners still ┌┐└┘, not color codes) — uses raw lines
 function findUncoloredBoxes(dl) {
   const boxes = [];
-  const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+  const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪╌';
   for (let r = 0; r < dl.length; r++) {
     const { cells } = lineCells(dl[r]);
     for (let ci = 0; ci < cells.length; ci++) {
       const cell = cells[ci];
       if (cell.char !== '┌' && cell.char !== '╭') continue;
       const nextCell = cells[ci + 1];
-      if (!nextCell || nextCell.char !== '─') continue;
+      if (!nextCell || (nextCell.char !== '─' && nextCell.char !== '╌')) continue;
       const fromDispCol = cell.dispCol;
       let rightDispCol = -1;
       for (let i = ci + 1; i < cells.length; i++) {
@@ -321,12 +321,12 @@ function findBoxes(dl) {
         dashStartIdx = ci + 2;
       }
       const dashCell = cells[dashStartIdx];
-      if (!dashCell || dashCell.char !== '─') continue;
+      if (!dashCell || (dashCell.char !== '─' && dashCell.char !== '╌')) continue;
       const cl = cell.char;
       const fromDispCol = cell.dispCol;
       const markerWidth = shadeDigit ? 2 : 1;
 
-      const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+      const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪╌';
       let rightDispCol = -1;
       for (let i = dashStartIdx; i < cells.length; i++) {
         if (BORDER_CHARS.includes(cells[i].char)) continue;
@@ -376,11 +376,11 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     }
 
     // Clean: replace color markers at corners
-    const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+    const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
     let clean = raw.join('\n');
-    clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,s,d,r)=>((r==='╮'?'╭':'┌')+'─'+d+r));
+    clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,s,d,r)=>((r==='╮'?'╭':'┌')+(d[0]||'─')+d+r));
     clean = clean.replace(new RegExp(`([mroygcbpe])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,d,r)=>((r==='╮'?'╭':'┌')+d+r));
-    clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+'─'+((l==='╰'?'╯':'┘'))));
+    clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+(d[d.length-1]||'─')+((l==='╰'?'╯':'┘'))));
     clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])`, 'g'), (m,l,d,c)=>((l==='╰'?'╰':l)+d+((l==='╰'?'╯':'┘'))));
     const lines = clean.split('\n');
     const shapeBoxes = detectShapeBoxes(lines, boxes);

@@ -41,6 +41,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .line-dropdown .line-opt:hover{background:#e8f0ff}
 .line-dropdown .line-opt.active{background:#d0e4ff;font-weight:bold}
 
+/* ── Box tool dropdown (实线/虚线) ── */
+.tool-box-wrap{position:relative;display:inline-flex}
+.tool-box-wrap .box-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;min-width:130px;padding:2px}
+.tool-box-wrap:hover .box-dropdown{display:block}
+.box-dropdown .box-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
+.box-dropdown .box-opt:hover{background:#e8f0ff}
+.box-dropdown .box-opt.active{background:#d0e4ff;font-weight:bold}
+
+/* ── Rounded tool dropdown (实线/虚线) ── */
+.tool-rounded-wrap{position:relative;display:inline-flex}
+.tool-rounded-wrap .rounded-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;min-width:130px;padding:2px}
+.tool-rounded-wrap:hover .rounded-dropdown{display:block}
+.rounded-dropdown .rounded-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
+.rounded-dropdown .rounded-opt:hover{background:#e8f0ff}
+.rounded-dropdown .rounded-opt.active{background:#d0e4ff;font-weight:bold}
+
 /* ── Main area ── */
 .main{display:flex;flex:1;overflow:hidden}
 .editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -121,8 +137,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="line-opt" data-type="2">╌ ╎ 虚线</div>
       </div>
     </div>
-    <button id="tool-box" title="矩形框 (B)">▣ 矩形</button>
-    <button id="tool-rounded" title="圆角矩形 (R)">▢ 圆角</button>
+    <div class="tool-box-wrap">
+      <button id="tool-box" title="矩形框 (B)，进入后按 1/2 切换实线/虚线">▣ 矩形</button>
+      <div class="box-dropdown" id="box-dropdown">
+        <div class="box-opt active" data-type="1">┌┐ 实线</div>
+        <div class="box-opt" data-type="2">╌╎ 虚线</div>
+      </div>
+    </div>
+    <div class="tool-rounded-wrap">
+      <button id="tool-rounded" title="圆角矩形 (R)，进入后按 1/2 切换实线/虚线">▢ 圆角</button>
+      <div class="rounded-dropdown" id="rounded-dropdown">
+        <div class="rounded-opt active" data-type="1">╭╮ 实线</div>
+        <div class="rounded-opt" data-type="2">╌╎ 虚线</div>
+      </div>
+    </div>
     <div class="tool-arrow-wrap">
       <button id="tool-arrow" title="箭头连线 (A)，进入后按 1/2/3 切换类型">→ 箭头</button>
       <div class="arrow-dropdown" id="arrow-dropdown">
@@ -922,20 +950,21 @@ function previewLine() {
 }
 
 function buildBoxPath(b, c) {
+  const h = c.h || '─', v = c.v || '│';
   const path = [];
   for (let d = b.minD; d <= b.maxD; d++) {
-    path.push({ r: b.minR, d, ch: d === b.minD ? c.tl : d === b.maxD ? c.tr : '─' });
-    path.push({ r: b.maxR, d, ch: d === b.minD ? c.bl : d === b.maxD ? c.br : '─' });
+    path.push({ r: b.minR, d, ch: d === b.minD ? c.tl : d === b.maxD ? c.tr : h });
+    path.push({ r: b.maxR, d, ch: d === b.minD ? c.bl : d === b.maxD ? c.br : h });
   }
   for (let r = b.minR + 1; r < b.maxR; r++) {
-    path.push({ r, d: b.minD, ch: '│' });
-    path.push({ r, d: b.maxD, ch: '│' });
+    path.push({ r, d: b.minD, ch: v });
+    path.push({ r, d: b.maxD, ch: v });
   }
   return path;
 }
 
 function previewBox(b) {
-  return buildBoxPath(b, { tl: '┌', tr: '┐', bl: '└', br: '┘' });
+  return buildBoxPath(b, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
 }
 
 function previewMoveTarget(p) {
@@ -1052,13 +1081,13 @@ function moveContentByGrid(b, dr, dc) {
 }
 
 function previewRoundedBox(b) {
-  return buildBoxPath(b, { tl: '╭', tr: '╮', bl: '╰', br: '╯' });
+  return buildBoxPath(b, boxStyle(roundedType, { tl: '╭', tr: '╮', bl: '╰', br: '╯' }));
 }
 
 function drawRoundedBox() {
   const b = getSelectionBounds();
   if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
-  const path = buildBoxPath(b, { tl: '╭', tr: '╮', bl: '╰', br: '╯' });
+  const path = buildBoxPath(b, boxStyle(roundedType, { tl: '╭', tr: '╮', bl: '╰', br: '╯' }));
   placePath(path);
   saveHistory();
   clearSelection();
@@ -1323,6 +1352,29 @@ function setLineType(t) {
   if (btn) btn.textContent = (t === 2 ? '╌' : '─') + ' 直线';
 }
 
+
+// 矩形框类型：1=实线(┌┐) 2=虚线(╌╎)
+let boxType = 1;
+function setBoxType(t) {
+  boxType = t;
+  document.querySelectorAll('.box-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+  const btn = document.getElementById('tool-box');
+  if (btn) btn.textContent = (t === 2 ? '╌' : '▣') + ' 矩形';
+}
+
+// 圆角矩形类型：1=实线(╭╮) 2=虚线(╌╎)
+let roundedType = 1;
+function setRoundedType(t) {
+  roundedType = t;
+  document.querySelectorAll('.rounded-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+  const btn = document.getElementById('tool-rounded');
+  if (btn) btn.textContent = (t === 2 ? '╌' : '▢') + ' 圆角';
+}
+
+// 返回虚线/实线的边字符，角保持实心
+function boxStyle(t, corners) {
+  return { ...corners, h: t === 2 ? '╌' : '─', v: t === 2 ? '╎' : '│' };
+}
 // L-shaped line path (no arrow heads): reuse arrow path, replace all arrow types with lines
 function computeLinePath() {
   const hChar = lineType === 2 ? '╌' : '─';
@@ -1350,7 +1402,7 @@ function drawLine() {
 function drawBox() {
   const b = getSelectionBounds();
   if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
-  const path = buildBoxPath(b, { tl: '┌', tr: '┐', bl: '└', br: '┘' });
+  const path = buildBoxPath(b, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
   placePath(path);
   saveHistory();
   clearSelection();
@@ -1814,6 +1866,18 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); return;
   }
 
+  // 矩形工具下：1/2 切换实线/虚线
+  if (activeTool === 'box' && !e.ctrlKey && !e.metaKey && !e.altKey && '12'.includes(e.key)) {
+    setBoxType(parseInt(e.key));
+    e.preventDefault(); return;
+  }
+
+  // 圆角矩形工具下：1/2 切换实线/虚线
+  if (activeTool === 'rounded' && !e.ctrlKey && !e.metaKey && !e.altKey && '12'.includes(e.key)) {
+    setRoundedType(parseInt(e.key));
+    e.preventDefault(); return;
+  }
+
   // Visual 模式：y/d/x 作用于选区、p 粘贴（Vim yank/delete/paste）
   if (isVisual && !e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
     switch (e.key) {
@@ -2250,6 +2314,22 @@ document.querySelectorAll('.line-opt').forEach(o => {
   });
 });
 setLineType(1); // 初始化直线按钮文字
+document.querySelectorAll('.box-opt').forEach(o => {
+  o.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setBoxType(parseInt(o.dataset.type));
+    setTool('box');
+  });
+});
+setBoxType(1); // 初始化矩形按钮文字
+document.querySelectorAll('.rounded-opt').forEach(o => {
+  o.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setRoundedType(parseInt(o.dataset.type));
+    setTool('rounded');
+  });
+});
+setRoundedType(1); // 初始化圆角按钮文字
 document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
 document.getElementById('tool-magic').addEventListener('click', () => setTool('magic'));
 document.getElementById('tool-move').addEventListener('click', () => setTool('move'));
@@ -2798,14 +2878,14 @@ function findUncoloredBoxes(dl) {
   // Detect boxes whose corners are still ┌┐└┘ (not yet colored).
   // Uses the ORIGINAL lines (before cleaning) so already-colored boxes (color codes) are excluded.
   const boxes = [];
-  const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+  const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪╌';
   for (let r = 0; r < dl.length; r++) {
     const cells = lineCells(dl[r]);
     for (let ci = 0; ci < cells.length; ci++) {
       const cell = cells[ci];
       if (cell.char !== '┌' && cell.char !== '╭') continue;
       const nextCell = cells[ci + 1];
-      if (!nextCell || nextCell.char !== '─') continue;
+      if (!nextCell || (nextCell.char !== '─' && nextCell.char !== '╌')) continue;
       const fromDispCol = cell.dispCol;
       let rightDispCol = -1;
       for (let i = ci + 1; i < cells.length; i++) {
@@ -2843,12 +2923,12 @@ function findBoxes(dl) {
         dashStartIdx = ci + 2;
       }
       const dashCell = cells[dashStartIdx];
-      if (!dashCell || dashCell.char !== '─') continue;
+      if (!dashCell || (dashCell.char !== '─' && dashCell.char !== '╌')) continue;
       const cl = cell.char;
       const fromDispCol = cell.dispCol;
       const markerWidth = shadeDigit ? 2 : 1;
 
-      const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪';
+      const BORDER_CHARS = '─═━┬┴├┤┼▼▲┃╫╪╌';
       let rightDispCol = -1;
       for (let i = dashStartIdx; i < cells.length; i++) {
         if (BORDER_CHARS.includes(cells[i].char)) continue;
@@ -2940,7 +3020,7 @@ function isEmojiChar(ch) {
 // 检测形状框：框左下角有 d:N 标记（替换了 └），该框渲染时替换成形状 SVG
 function detectShapeBoxes(lines, boxes) {
   const result = [];
-  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
   for (let r = 0; r < lines.length; r++) {
     const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
     if (!m) continue;
@@ -3033,11 +3113,11 @@ function renderPreview(text) {
   const charW = metrics.charW, lineH = metrics.lineH;
 
   // Clean color markers -> box-drawing chars (preserves display width)
-  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪';
+  const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
   let clean = text;
-  clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,s,d,r)=>((r==='╮'?'╭':'┌')+'─'+d+r));
+  clean = clean.replace(new RegExp(`([mroygcbpe])([1-6])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,s,d,r)=>((r==='╮'?'╭':'┌')+(d[0]||'─')+d+r));
   clean = clean.replace(new RegExp(`([mroygcbpe])([${BORDER}]*)([┐┛╗╮])`, 'g'), (m,c,d,r)=>((r==='╮'?'╭':'┌')+d+r));
-  clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+'─'+((l==='╰'?'╯':'┘'))));
+  clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])([1-6])`, 'g'), (m,l,d,c,s)=>((l==='╰'?'╰':l)+d+(d[d.length-1]||'─')+((l==='╰'?'╯':'┘'))));
   clean = clean.replace(new RegExp(`([└╚┗╰])([${BORDER}]*)([mroygcbpe])`, 'g'), (m,l,d,c)=>((l==='╰'?'╰':l)+d+((l==='╰'?'╯':'┘'))));
   const cleanLines = clean.split('\n');
 

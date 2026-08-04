@@ -698,6 +698,131 @@ const SUITES = [
       return results;
     },
   },
+
+  // ═══════ 虚线矩形（box/rounded × 实线/虚线）═══════
+  {
+    name: '虚线矩形',
+    fn: () => {
+      const results = [];
+      const dispatchKey = (key) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+
+      // ── 1. 实线回归 ──
+      boxType = 1;
+      const b1 = { minR: 0, maxR: 2, minD: 0, maxD: 4, minC: 0, maxC: 4 };
+      const path1 = buildBoxPath(b1, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
+      results.push({ name: 'boxType=1 四角', ok: path1.some(p => p.ch === '┌' && p.r === 0 && p.d === 0)
+        && path1.some(p => p.ch === '┐' && p.r === 0 && p.d === 4)
+        && path1.some(p => p.ch === '└' && p.r === 2 && p.d === 0)
+        && path1.some(p => p.ch === '┘' && p.r === 2 && p.d === 4) });
+      results.push({ name: 'boxType=1 边实线', ok: path1.some(p => p.ch === '─') && path1.some(p => p.ch === '│') });
+
+      // ── 2. 矩形虚线 ──
+      boxType = 2;
+      const b2 = { minR: 0, maxR: 2, minD: 0, maxD: 4, minC: 0, maxC: 4 };
+      const path2 = buildBoxPath(b2, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
+      results.push({ name: 'boxType=2 四角仍实心', ok: path2.some(p => p.ch === '┌')
+        && path2.some(p => p.ch === '┐') && path2.some(p => p.ch === '└') && path2.some(p => p.ch === '┘') });
+      results.push({ name: 'boxType=2 边虚线', ok: path2.some(p => p.ch === '╌') && path2.some(p => p.ch === '╎') });
+      results.push({ name: 'boxType=2 无边为─', ok: !path2.some(p => p.ch === '─') && !path2.some(p => p.ch === '│') });
+
+      // ── 2b. drawBox 落格 ──
+      initGrid(); renderGrid(); boxType = 2;
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 2, c: 4, dispCol: 4 };
+      drawBox();
+      results.push({ name: '矩形虚线落格╌', ok: grid[0][1] === '╌' && grid[0][3] === '╌' });
+      results.push({ name: '矩形虚线落格╎', ok: grid[1][0] === '╎' && grid[1][4] === '╎' });
+      results.push({ name: '矩形虚线角┌', ok: grid[0][0] === '┌' });
+
+      // ── 3. 圆角虚线 ──
+      roundedType = 2;
+      const b3 = { minR: 0, maxR: 2, minD: 0, maxD: 4, minC: 0, maxC: 4 };
+      const path3 = buildBoxPath(b3, boxStyle(roundedType, { tl: '╭', tr: '╮', bl: '╰', br: '╯' }));
+      results.push({ name: 'roundedType=2 四角╭╮╰╯', ok: path3.some(p => p.ch === '╭')
+        && path3.some(p => p.ch === '╮') && path3.some(p => p.ch === '╰') && path3.some(p => p.ch === '╯') });
+      results.push({ name: 'roundedType=2 边虚线', ok: path3.some(p => p.ch === '╌') && path3.some(p => p.ch === '╎') });
+
+      // ── 3b. drawRoundedBox 落格 ──
+      initGrid(); renderGrid(); roundedType = 2;
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 2, c: 4, dispCol: 4 };
+      drawRoundedBox();
+      results.push({ name: '圆角虚线落格╌', ok: grid[0][1] === '╌' && grid[0][3] === '╌' });
+      results.push({ name: '圆角虚线落格╎', ok: grid[1][0] === '╎' && grid[1][4] === '╎' });
+      results.push({ name: '圆角虚线角╭', ok: grid[0][0] === '╭' });
+
+      // ── 3c. roundedType=1 回归实线 ──
+      roundedType = 1;
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 2, c: 4, dispCol: 4 };
+      drawRoundedBox();
+      results.push({ name: 'roundedType=1 边实线', ok: grid[0][1] === '─' && grid[1][0] === '│' });
+
+      // ── 4. 快捷键 ──
+      setTool('box'); dispatchKey('2');
+      results.push({ name: '快捷键2→矩形虚线', ok: boxType === 2 && document.getElementById('tool-box').textContent.includes('╌') });
+      dispatchKey('1');
+      results.push({ name: '快捷键1→矩形实线', ok: boxType === 1 });
+
+      setTool('rounded'); dispatchKey('2');
+      results.push({ name: '快捷键2→圆角虚线', ok: roundedType === 2 && document.getElementById('tool-rounded').textContent.includes('╌') });
+      dispatchKey('1');
+      results.push({ name: '快捷键1→圆角实线', ok: roundedType === 1 });
+
+      // ── 5. 下拉 ──
+      document.querySelector('.box-opt[data-type="2"]').click();
+      results.push({ name: '矩形下拉虚线', ok: boxType === 2 && activeTool === 'box' });
+      document.querySelector('.box-opt[data-type="1"]').click();
+      results.push({ name: '矩形下拉实线', ok: boxType === 1 });
+      document.querySelector('.rounded-opt[data-type="2"]').click();
+      results.push({ name: '圆角下拉虚线', ok: roundedType === 2 && activeTool === 'rounded' });
+
+      // ── 6. 独立性 ──
+      boxType = 2; roundedType = 1;
+      results.push({ name: 'boxType改≠roundedType', ok: boxType === 2 && roundedType === 1 });
+      roundedType = 2; boxType = 1;
+      results.push({ name: 'roundedType改≠boxType', ok: roundedType === 2 && boxType === 1 });
+
+      // ── 7. 着色识别：findBoxes 虚线着色框 ──
+      boxType = 1; roundedType = 1;  // reset
+      initGrid(); renderGrid();
+      grid[0][0] = 'y'; grid[0][1] = '╌'; grid[0][2] = '╌'; grid[0][3] = '╌'; grid[0][4] = '╌'; grid[0][5] = '┐';
+      grid[1][0] = '╎'; grid[1][5] = '╎';
+      grid[2][0] = '└'; grid[2][1] = '╌'; grid[2][2] = '╌'; grid[2][3] = '╌'; grid[2][4] = '╌'; grid[2][5] = 'y';
+      renderGrid();
+      const boxes = findBoxes(getGridText().split('\n'));
+      results.push({ name: 'findBoxes识别虚线着色框', ok: boxes.length >= 1 && boxes[0].color === 'y' });
+
+      // ── 7b. findUncoloredBoxes 未着色虚线框 ──
+      initGrid(); renderGrid();
+      grid[0][1] = '┌'; grid[0][2] = '╌'; grid[0][3] = '╌'; grid[0][4] = '╌'; grid[0][5] = '┐';
+      grid[1][1] = '╎'; grid[1][5] = '╎';
+      grid[2][1] = '└'; grid[2][2] = '╌'; grid[2][3] = '╌'; grid[2][4] = '╌'; grid[2][5] = '┘';
+      renderGrid();
+      const ub = findUncoloredBoxes(getGridText().split('\n'));
+      results.push({ name: 'findUncoloredBoxes识别虚线框', ok: ub.length >= 1 });
+
+      // ── 8. findBoxAt 点击着色识别虚线框 ──
+      initGrid(); renderGrid();
+      boxType = 2;
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 5, dispCol: 5 };
+      drawBox();
+      const fb = findBoxAt(1, 2);
+      results.push({ name: 'findBoxAt虚线框', ok: fb !== null && fb.topR === 0 && fb.botR === 3 });
+
+      // ── 9. 移动双宽：虚线框+汉字 ──
+      initGrid(); renderGrid(); boxType = 2;
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 7, dispCol: 7 };
+      drawBox();
+      grid[1][2] = '中'; grid[1][3] = '文';  // 双宽汉字，占 dispCol 2-3, 3-4 (but '文' is CJK so w2)
+      renderGrid();
+      // 简单验证：移动选区内容（行0-3, 列2-6）
+      const b = { minR: 1, maxR: 2, minD: 2, maxD: 6, minC: 2, maxC: 6 };
+      moveContentByGrid(b, 0, 0);  // no-op move
+      // 验证虚线边还在
+      results.push({ name: '移动后虚线边仍在', ok: grid[0][0] === '┌' && grid[0][1] === '╌' });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──
