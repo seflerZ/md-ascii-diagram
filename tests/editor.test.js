@@ -509,6 +509,19 @@ const SUITES = [
       results.push({ name: '纯ASCII下移回归', ok:
         grid[0][0] === '' && grid[1][0] === 'A' && grid[1][1] === 'B' && grid[1][2] === 'C' });
 
+      // 移动后选区外汉字保留：向下箭头(行0-6)移到行5，行5原本的「中文」dispCol2..5
+      // 在选区外，move 重建时必须按原 dispCol 钉住（曾经被 w2 误跳过 → 汉字消失）
+      initGrid();
+      selStart = { r:0, c:8, dispCol:8 }; selEnd = { r:6, c:8, dispCol:8 };
+      thickAxis = null; thickSign = 0; thickLocked = false;
+      drawThick();
+      grid[5][2] = '中'; grid[5][4] = '文'; renderGrid();
+      selStart = { r:0, c:8, dispCol:8 }; selEnd = { r:6, c:13, dispCol:13 };
+      thickAxis = null; thickSign = 0; thickLocked = false;
+      moveContentByGrid(getSelectionBounds(), 1, 0); renderGrid();
+      results.push({ name: '移动后选区外汉字保留', ok:
+        grid[5][2] === '中' && grid[5][4] === '文' });
+
       // d26 真实场景：22 视觉宽框，各行右墙 grid 列不同但 dispCol=21（宽字符撑开）
       // 框选「向」到「B」下移一格，墙必须钉在原 dispCol，不能因源收缩/目标撑开而漂移
       initGrid();
@@ -556,6 +569,131 @@ const SUITES = [
       results.push({ name: '键盘move右移-选区平移不扩大', ok: b3.minD === 1 && b3.maxD === 7 });
       results.push({ name: '键盘move右移-光标跟到selEnd', ok:
         cursorR === 0 && parseInt(document.querySelector(`.cell[data-r="${cursorR}"][data-c="${cursorC}"]`).dataset.dispCol) === 7 });
+
+      return results;
+    },
+  },
+
+  // ═══════ 粗箭头（thick arrow，四方向固定头+可变杆）═══════
+  {
+    name: '粗箭头',
+    fn: () => {
+      const results = [];
+      // 单宽网格 c===dispCol，直接设 {r,c,dispCol:c}
+      const sel = (r1, d1, r2, d2) => {
+        selStart = { r:r1, c:d1, dispCol:d1 }; selEnd = { r:r2, c:d2, dispCol:d2 };
+        thickAxis = null; thickSign = 0; _thickLastR1 = undefined; _thickLastD1 = undefined;  // fresh drag
+      };
+
+      // ── 水平 ──
+      // 向右 N=3：杆 ─×3 + ┘\ / ┐/
+      initGrid(); renderGrid(); sel(0, 0, 0, 5);
+      const pathR = computeThickPath();
+      results.push({ name: '向右N=3尖在右', ok: pathR.some(p => p.ch === '\\' && p.r === 0 && p.d === 5) && pathR.some(p => p.ch === '/' && p.r === 1 && p.d === 5) });
+      results.push({ name: '向右N=3折角', ok: pathR.some(p => p.ch === '┘' && p.r === 0 && p.d === 4) && pathR.some(p => p.ch === '┐' && p.r === 1 && p.d === 4) });
+      results.push({ name: '向右N=3杆数', ok: pathR.filter(p => p.ch === '─').length === 8 }); // 4行杆×2列
+
+      // 落格后验证 grid
+      initGrid(); renderGrid(); sel(0, 0, 0, 5); drawThick();
+      results.push({ name: '向右落格折角不变', ok: grid[0][4] === '┘' && grid[1][4] === '┐' });
+      results.push({ name: '向右落格尖不变', ok: grid[0][5] === '\\' && grid[1][5] === '/' });
+
+      // 向左 N=3：尖在左
+      initGrid(); renderGrid(); sel(0, 5, 0, 0);
+      const pathL = computeThickPath();
+      results.push({ name: '向左N=3尖在左', ok: pathL.some(p => p.ch === '/' && p.r === 0 && p.d === 0) && pathL.some(p => p.ch === '\\' && p.r === 1 && p.d === 0) });
+      results.push({ name: '向左N=3折角', ok: pathL.some(p => p.ch === '└' && p.r === 0 && p.d === 1) && pathL.some(p => p.ch === '┌' && p.r === 1 && p.d === 1) });
+
+      // 最小水平 N=0（头+折角，无杆）：sel(0,0,0,1)
+      initGrid(); renderGrid(); sel(0, 0, 0, 1); drawThick();
+      results.push({ name: '最小水平纯头', ok: grid[0][1] === '\\' && grid[1][1] === '/' && grid[0][0] === '┘' && grid[1][0] === '┐' });
+
+      // ── 垂直 ──
+      // 向下：sel(0,1,6,1)，a=1 b=4，hi-lo=6≥2
+      initGrid(); renderGrid(); sel(0, 1, 6, 1);
+      const pathD = computeThickPath();
+      results.push({ name: '向下尖在底', ok: pathD.some(p => p.ch === '\\' && p.r === 6 && p.d === 2) && pathD.some(p => p.ch === '/' && p.r === 6 && p.d === 3) });
+      results.push({ name: '向下折角', ok: pathD.some(p => p.ch === '┘' && p.r === 4 && p.d === 1) && pathD.some(p => p.ch === '└' && p.r === 4 && p.d === 4) });
+      results.push({ name: '向下杆数', ok: pathD.filter(p => p.ch === '│').length === 8 });
+
+      // 落格
+      initGrid(); renderGrid(); sel(0, 1, 6, 1); drawThick();
+      results.push({ name: '向下落格尖保真', ok: grid[6][2] === '\\' && grid[6][3] === '/' });
+      results.push({ name: '向下落格折角保真', ok: grid[4][1] === '┘' && grid[4][4] === '└' });
+
+      // 向上：sel(6,1,0,1)
+      initGrid(); renderGrid(); sel(6, 1, 0, 1);
+      const pathU = computeThickPath();
+      results.push({ name: '向上尖在顶', ok: pathU.some(p => p.ch === '/' && p.r === 0 && p.d === 2) && pathU.some(p => p.ch === '\\' && p.r === 0 && p.d === 3) });
+      results.push({ name: '向上折角', ok: pathU.some(p => p.ch === '┐' && p.r === 2 && p.d === 1) && pathU.some(p => p.ch === '┌' && p.r === 2 && p.d === 4) });
+
+      // ── 边界 ──
+      initGrid(); renderGrid(); sel(0, 0, 0, 0);
+      results.push({ name: '空选区返空', ok: computeThickPath().length === 0 });
+
+      // autoConnect 不吞头/角：画完后角格仍为折角
+      initGrid(); renderGrid(); sel(0, 0, 0, 5); drawThick();
+      results.push({ name: 'autoConnect不吞折角', ok: grid[0][4] === '┘' && grid[1][4] === '┐' });
+      results.push({ name: 'autoConnect不吞斜线', ok: grid[0][5] === '\\' && grid[1][5] === '/' });
+      // 杆被归一为 ─
+      results.push({ name: '横杆autoConnect归一为─', ok: grid[0][0] === '─' && grid[1][0] === '─' });
+
+      // 跨轴变头深：先锁定向右（3格），再加垂直偏移 dr=3 → H=3
+      // （手动控锁，模拟同一拖拽中继续移动）
+      initGrid(); renderGrid();
+      selStart = { r:0, c:0, dispCol:0 }; selEnd = { r:0, c:3, dispCol:3 };
+      thickAxis = null; thickSign = 0; _thickLastR1 = undefined; _thickLastD1 = undefined;
+      computeThickPath();                    // step1: lock right
+      selEnd = { r:3, c:10, dispCol:10 };    // step2: widen head via dr=3 (keep lock)
+      const pathBig = computeThickPath();
+      const bigRows = new Set(pathBig.map(p => p.r)).size;
+      results.push({ name: '锁定向右后dr=3头深H≥3', ok: bigRows >= 6 }); // 2H rows, H>=3
+      results.push({ name: '锁定向右后dr=3尖收拢', ok:
+        pathBig.some(p => p.ch === '\\' && p.r > 0 && p.d === 10) &&
+        pathBig.some(p => p.ch === '/' && p.r > 0 && p.d === 10) });
+      // 纯水平 dr=0 → H=1 不变（锁定向右后不加垂直偏移）
+      initGrid(); renderGrid();
+      selStart = { r:0, c:0, dispCol:0 }; selEnd = { r:0, c:10, dispCol:10 };
+      thickAxis = null; thickSign = 0; _thickLastR1 = undefined; _thickLastD1 = undefined;
+      computeThickPath();                   // lock right
+      const pathH1 = computeThickPath();     // same drag, still pure horizontal
+      results.push({ name: '纯水平dr=0头深H=1', ok: new Set(pathH1.map(p => p.r)).size === 2 });
+
+      // 前6格可调方向：先右1格，再大幅向上 → 方向跟随增量改向上（未锁）
+      initGrid(); renderGrid();
+      selStart = { r:5, c:0, dispCol:0 }; selEnd = { r:5, c:1, dispCol:1 };   // step1: 1 right
+      computeThickPath();
+      selEnd = { r:0, c:1, dispCol:1 };                                       // step2: drag up 5 (still <6)
+      const pathFollow = computeThickPath();
+      results.push({ name: '前6格-增量改方向即时响应', ok:
+        pathFollow.some(p => p.ch === '│') && pathFollow.some(p => p.ch === '/' && p.r === 0) });
+      // 锁定后方向永不变：锁定向右(6格)后大幅向下 → 仍向右
+      initGrid(); renderGrid();
+      selStart = { r:3, c:0, dispCol:0 }; selEnd = { r:3, c:6, dispCol:6 };   // step1: 6 right → LOCK right
+      computeThickPath();
+      selEnd = { r:5, c:6, dispCol:6 };                                       // step2: drag down 2 → head widens
+      const pathWiden = computeThickPath();
+      results.push({ name: '锁定向右(6格)后向下拖不翻', ok:
+        pathWiden.some(p => p.ch === '─') && !pathWiden.some(p => p.ch === '│') });
+      // 头确实变宽：跨轴偏移2 → H=2（4行高）
+      initGrid(); renderGrid();
+      selStart = { r:3, c:0, dispCol:0 }; selEnd = { r:3, c:6, dispCol:6 };
+      computeThickPath();
+      selEnd = { r:5, c:6, dispCol:6 };
+      results.push({ name: '锁定向右(6格)后向下拖头变宽', ok:
+        new Set(computeThickPath().map(p => p.r)).size >= 4 }); // 2H rows, H=2
+
+      // ── 快捷键 ──
+      const dispatchKey = (key) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles:true, cancelable:true }));
+      setTool('select'); dispatchKey('k');
+      results.push({ name: '快捷键k→粗箭头', ok: activeTool === 'thick' });
+
+      // ── 键盘绘制 ──
+      initGrid(); renderGrid(); setTool('thick');
+      cursorR = 2; cursorC = 2;
+      dispatchKey('ArrowRight'); dispatchKey('ArrowRight'); dispatchKey('ArrowRight');
+      dispatchKey('Enter');
+      results.push({ name: '键盘右×3+Enter落格', ok: grid[2][5] === '\\' && grid[3][5] === '/' && grid[2][4] === '┘' && grid[3][4] === '┐' });
 
       return results;
     },

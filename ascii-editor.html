@@ -131,6 +131,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="arrow-opt" data-type="3">▷ ◁ 空心</div>
       </div>
     </div>
+    <button id="tool-thick" title="粗箭头 (K)，方向键扩展，Enter 确认">⟹ 粗箭头</button>
     <button id="tool-text" title="文字 (T)">T 文字</button>
     <button id="tool-magic" title="梳子理线 (W)">🪮 梳子</button>
     <button id="tool-move" title="移动 (M)">↕ 移动</button>
@@ -574,8 +575,9 @@ function onCellMouseDown(e) {
   } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
     selStart = p; selEnd = p;
     updateSelection();
-  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow') {
-    // box / rounded / line / arrow: prepare drag, no selection highlight
+  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
+    // box / rounded / line / arrow / thick: prepare drag, no selection highlight
+    if (activeTool === 'thick') thickAxis = null;   // new drag, unlock axis
     clearSelection();
     selStart = p; selEnd = p;
     setPreview(previewPositions());
@@ -617,7 +619,7 @@ function onCellMouseMove(e) {
       selEnd = p;
       updateSelection();
     }
-  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow') {
+  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
     // box / rounded / line / arrow: live preview
     selEnd = p;
     setPreview(previewPositions());
@@ -653,6 +655,9 @@ function onCellMouseUp(e) {
   } else if (activeTool === 'arrow') {
     clearPreview();
     drawArrow();
+  } else if (activeTool === 'thick') {
+    clearPreview();
+    drawThick();
   } else if (activeTool === 'eraser') {
     eraseSelection();
   } else if (activeTool === 'move') {
@@ -908,6 +913,7 @@ function previewPositions() {
   if (activeTool === 'box') return previewBox(b);
   if (activeTool === 'rounded') return previewRoundedBox(b);
   if (activeTool === 'arrow') return previewArrow();
+  if (activeTool === 'thick') return previewThick();
   return [];
 }
 
@@ -952,6 +958,21 @@ function previewMoveTarget(p) {
 // 修法：重建受影响行——遍历 dispCol，目标选区填新内容、源选区填空格、选区外按原字符原 dispCol 落格。
 function moveContentByGrid(b, dr, dc) {
   if (dr === 0 && dc === 0) return;
+  // 扩展选区：纳入边界外紧邻的斜线（粗箭头的折角 \ / 常比杆列突出1格，
+  // 框选视觉矩形容易漏掉 → 漏了会破相/混入同行）。只认 \ / 斜线，不影响普通内容。
+  {
+    let minD = b.minD, maxD = b.maxD, changed = true;
+    while (changed) {
+      changed = false;
+      for (let r = b.minR; r <= b.maxR; r++) {
+        const ccL = findCellByDispColAny(r, minD - 1);
+        if (ccL >= 0 && (grid[r][ccL] === '\\' || grid[r][ccL] === '/')) { minD--; changed = true; }
+        const ccR = findCellByDispColAny(r, maxD + 1);
+        if (ccR >= 0 && (grid[r][ccR] === '\\' || grid[r][ccR] === '/')) { maxD++; changed = true; }
+      }
+    }
+    b = { ...b, minD, maxD };
+  }
   const width = b.maxD - b.minD + 1;   // 视觉宽度（dispCol 槽位数）
   // 1. 切片：按 dispCol 逐槽取格，宽字符第二半占 null（同 copySelection）
   const slice = [];
@@ -982,12 +1003,12 @@ function moveContentByGrid(b, dr, dc) {
     const m = new Map();
     const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
     cells.forEach(cell => {
-      if (cell.classList.contains('w2')) return;   // 只记起始格
       const d = parseInt(cell.dataset.dispCol);
       const c = parseInt(cell.dataset.c);
       const ch = (grid[r] && grid[r][c]) || '';
       if (!ch) return;
       // 选区外：字符整体不在源选区 [srcMinD, srcMaxD] 内
+      // 宽字符只记起始格（无第二半独立 cell），dispCol + width 覆盖第二半
       const w = charWidth(ch);
       if (d + w - 1 < srcMinD || d > srcMaxD) m.set(d, { ch, width: w });
     });
@@ -1123,6 +1144,11 @@ function previewArrow() {
 
 // 箭头类型：1=细(→←↑↓) 2=实心(▶◀▲▼) 3=空心(▷◁△▽)
 let arrowType = 1;
+let thickAxis = null;  // 'v'/'h' current direction (follows mouse while unlocked)
+let thickSign = 0;     // heading: +1=down/right, -1=up/left
+let thickLocked = false;  // true once an axis travels THICK_LOCK cells
+let _thickLastR1, _thickLastD1;  // detect new drag (selStart changed)
+let _thickLastR2, _thickLastD2;  // last selEnd, for incremental direction
 const ARROW_HEADS = {
   1: { r: '→', l: '←', d: '↓', u: '↑' },
   2: { r: '▶', l: '◀', d: '▼', u: '▲' },
@@ -1136,6 +1162,114 @@ function setArrowType(t) {
   document.querySelectorAll('.arrow-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
   const btn = document.getElementById('tool-arrow');
   if (btn && ARROW_HEADS[t]) btn.textContent = ARROW_HEADS[t].r + ' 箭头';
+}
+
+// Compute the thick arrow path (4 directions, auto-scaled head + variable shaft)
+// Characters: ┘┐└┌\/─│, all single-width, safe for autoConnect
+// Shaft length = drag along arrow axis; head depth H = drag across axis
+// Horizontal: H=max(1,min(|dr|,|dd|,10)), shaft=|dd|-H
+// Vertical:   H=max(1,min(|dd|,2)), shaft=|dr|-H
+// Coordinate convention: {r, d, ch} where d=dispCol (visual column, NOT grid column)
+function computeThickPath() {
+  if (!selStart || !selEnd) return [];
+  const BS = '\\';
+  const r1 = selStart.r, d1 = selStart.dispCol;
+  const r2 = selEnd.r,  d2 = selEnd.dispCol;
+  if (r1 === r2 && d1 === d2) return [];
+  const dr = r2 - r1, dd = d2 - d1;
+  // Direction: follow the mouse's most recent increment while unlocked, so a
+  // direction change mid-drag is reflected immediately. Once an axis has
+  // accumulated THICK_LOCK cells of travel it locks permanently; after that
+  // only head depth (H) and shaft length change — heading never flips.
+  const adr = Math.abs(dr), add = Math.abs(dd);
+  const THICK_LOCK = 6;
+  if (_thickLastR1 !== r1 || _thickLastD1 !== d1) {
+    thickAxis = null; thickSign = 0; thickLocked = false;
+    _thickLastR1 = r1; _thickLastD1 = d1;
+    _thickLastR2 = r2; _thickLastD2 = d2;
+  }
+  const ddr = r2 - _thickLastR2, ddd = d2 - _thickLastD2;
+  const iadr = Math.abs(ddr), iadd = Math.abs(ddd);
+  _thickLastR2 = r2; _thickLastD2 = d2;
+  if (!thickLocked) {
+    // follow most recent non-diagonal increment
+    if (iadr > iadd) { thickAxis = 'v'; thickSign = ddr >= 0 ? 1 : -1; }
+    else if (iadd > iadr) { thickAxis = 'h'; thickSign = ddd >= 0 ? 1 : -1; }
+    // permanent lock: an axis accumulated THICK_LOCK travel
+    if (adr >= THICK_LOCK || add >= THICK_LOCK) {
+      thickLocked = true;
+      if (adr >= add) { thickAxis = 'v'; thickSign = dr >= 0 ? 1 : -1; }
+      else { thickAxis = 'h'; thickSign = dd >= 0 ? 1 : -1; }
+    }
+  }
+  const isVert = thickAxis === 'v' || (thickAxis === null && adr >= add && adr > 0);
+  const out = [];
+
+  if (isVert) {
+    // ── Vertical ── (shaft along vertical, head depth from horizontal offset)
+    const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+    const span = hi - lo, cross = add;
+    const a = d1, b = d1 + 3;
+    let H = Math.min(cross, 2);                  // head layers grow with cross-axis travel
+    H = Math.max(2, H);                          // min 2: full head (折角+斜线+尖), like the template
+    H = Math.min(H, span - 1);                   // respect span (tiny arrows fall back to H=1)
+    if (H < 1 || span < 2) return [];
+    const vertSign = thickAxis === 'v' ? thickSign : (dr >= 0 ? 1 : -1);
+    if (vertSign > 0) {         // downward → tip at hi
+      const headR = hi - H;
+      for (let r = lo; r <= headR - 1; r++) { out.push({r,d:a,ch:'│'},{r,d:b,ch:'│'}); }
+      out.push({r:headR, d:a-1,ch:BS},{r:headR,d:a,ch:'┘'},{r:headR,d:b,ch:'└'},{r:headR,d:b+1,ch:'/'});
+      for (let k = 1; k < H; k++) {
+        out.push({r:headR + k, d:a - 1 + k, ch:BS}, {r:headR + k, d:b + 1 - k, ch:'/'});
+      }
+      out.push({r:hi, d:a+1, ch:BS}, {r:hi, d:a+2, ch:'/'});   // tip: always adjacent
+    } else {                    // upward → tip at lo
+      out.push({r:lo, d:a+1, ch:'/'}, {r:lo, d:a+2, ch:BS});   // tip: always adjacent
+      const headR = lo + H;
+      for (let k = H - 1; k >= 1; k--) {
+        out.push({r:headR - k, d:a - 1 + k, ch:'/'}, {r:headR - k, d:b + 1 - k, ch:BS});
+      }
+      out.push({r:headR, d:a-1,ch:'/'},{r:headR,d:a,ch:'┐'},{r:headR,d:b,ch:'┌'},{r:headR,d:b+1,ch:BS});
+      for (let r = headR + 1; r <= hi; r++) { out.push({r,d:a,ch:'│'},{r,d:b,ch:'│'}); }
+    }
+  } else {
+    // ── Horizontal ── (shaft along horizontal, head from vertical offset)
+    const lo = Math.min(d1, d2), hi = Math.max(d1, d2);
+    const span = hi - lo, cross = adr;
+    let H = Math.max(1, Math.min(cross, span, 10));   // head layers (max 10)
+    if (span < H + 1) H = span;                       // minimum: head only, no shaft
+    const r0 = r1;
+    const horizSign = thickAxis === 'h' ? thickSign : (dd >= 0 ? 1 : -1);
+    if (horizSign > 0) {       // rightward → tip at hi
+      const cornerD = hi - H;
+      for (let d = lo; d <= cornerD - 1; d++) { out.push({r:r0,d,ch:'─'}); }
+      out.push({r:r0, d:cornerD, ch:'┘'});
+      for (let k = 0; k < H; k++) { out.push({r:r0 + k, d:cornerD + 1 + k, ch:BS}); }
+      const botR = r0 + 2 * H - 1;
+      out.push({r:botR, d:cornerD, ch:'┐'});
+      for (let d = lo; d <= cornerD - 1; d++) { out.push({r:botR,d,ch:'─'}); }
+      for (let k = 0; k < H; k++) { out.push({r:r0 + H + k, d:hi - k, ch:'/'}); }
+    } else {                   // leftward → tip at lo
+      const cornerD = lo + H;
+      for (let k = 0; k < H; k++) { out.push({r:r0 + k, d:lo + H - 1 - k, ch:'/'}); }
+      out.push({r:r0, d:cornerD, ch:'└'});
+      for (let d = cornerD + 1; d <= hi; d++) { out.push({r:r0,d,ch:'─'}); }
+      const botR = r0 + 2 * H - 1;
+      for (let d = cornerD + 1; d <= hi; d++) { out.push({r:botR,d,ch:'─'}); }
+      out.push({r:botR, d:cornerD, ch:'┌'});
+      for (let k = 0; k < H; k++) { out.push({r:r0 + H + k, d:lo + k, ch:BS}); }
+    }
+  }
+  return out;
+}
+function previewThick() { return computeThickPath(); }
+function drawThick() {
+  const path = computeThickPath();
+  if (!path.length) { clearSelection(); thickAxis = null; return; }
+  placePath(path);
+  saveHistory();
+  clearSelection();
+  thickAxis = null;   // done, unlock for next drag
 }
 
 // Compute the arrow path with actual characters (shared by preview & draw)
@@ -1666,6 +1800,7 @@ document.addEventListener('keydown', (e) => {
       case 'w': case 'W': setTool('magic'); e.preventDefault(); return;
       case 'm': case 'M': setTool('move'); e.preventDefault(); return;
       case 'e': case 'E': setTool('eraser'); e.preventDefault(); return;
+      case 'k': case 'K': setTool('thick'); e.preventDefault(); return;
     }
   }
 
@@ -1895,8 +2030,8 @@ document.addEventListener('keydown', (e) => {
   // Esc 回到 Normal 模式（选择工具，取消 Visual）
   if (e.key === 'Escape') {
     if (isVisual) { isVisual = false; clearSelection(); }
-    else if ((activeTool === 'arrow' || activeTool === 'line') && selStart) {
-      // 箭头/直线键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
+    else if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') && selStart) {
+      // 箭头/直线/粗箭头键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
       cursorR = selStart.r; cursorC = selStart.c;
       clearPreview();
       clearSelection();
@@ -1931,8 +2066,8 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
-    // 箭头/直线工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
-    if (activeTool === 'arrow' || activeTool === 'line') {
+    // 箭头/直线/粗箭头工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
+    if (activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') {
       e.preventDefault();
       const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
@@ -1940,6 +2075,7 @@ document.addEventListener('keydown', (e) => {
       if (!selStart) {
         const sc = getCell(cursorR, cursorC);
         selStart = { r: cursorR, c: cursorC, dispCol: sc ? parseInt(sc.dataset.dispCol) : 0 };
+        if (activeTool === 'thick') thickAxis = null;   // new kb draw, unlock axis
       }
       // 终点向方向移动一格（dispCol 坐标）
       const cur = selEnd || selStart;
@@ -2013,10 +2149,12 @@ document.addEventListener('keydown', (e) => {
   // Enter - new row (or stay, for our grid)
   if (e.key === 'Enter') {
     e.preventDefault();
-    // 箭头/直线工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
-    if ((activeTool === 'arrow' || activeTool === 'line') && selStart && selEnd) {
+    // 箭头/直线/粗箭头工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
+    if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') && selStart && selEnd) {
       clearPreview();
-      if (activeTool === 'arrow') drawArrow(); else drawLine();
+      if (activeTool === 'arrow') drawArrow();
+      else if (activeTool === 'line') drawLine();
+      else if (activeTool === 'thick') drawThick();
       updateStatus();
       return;
     }
@@ -2069,14 +2207,15 @@ function setTool(tool) {
   activeTool = tool;
   isVisual = false;
   // 切到绘制类工具：清掉残留的框选/路径选区，键盘绘制从当前光标起算
-  if (tool === 'arrow' || tool === 'line' || tool === 'box' || tool === 'rounded' || tool === 'free') {
+  if (tool === 'arrow' || tool === 'line' || tool === 'box' || tool === 'rounded' || tool === 'free' || tool === 'thick') {
     clearSelection();
     clearPreview();
+    if (tool === 'thick') thickAxis = null;   // reset axis lock on tool activation
   }
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
   const btnMap = {
     select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
-    arrow: 'tool-arrow', text: 'tool-text', magic: 'tool-magic', move: 'tool-move', eraser: 'tool-eraser',
+    arrow: 'tool-arrow', thick: 'tool-thick', text: 'tool-text', magic: 'tool-magic', move: 'tool-move', eraser: 'tool-eraser',
   };
   const btn = document.getElementById(btnMap[tool]);
   if (btn) btn.classList.add('active');
@@ -2085,7 +2224,7 @@ function setTool(tool) {
   document.getElementById('panel-color').classList.toggle('active', tool === 'color');
 
   document.getElementById('status-tool').textContent = '工具: ' +
-    ({ select: '选择', free: '自由绘制', line: '直线', box: '矩形', rounded: '圆角矩形', arrow: '箭头', text: '文字', magic: '梳子', move: '移动', eraser: '擦除' }[tool] || tool);
+    ({ select: '选择', free: '自由绘制', line: '直线', box: '矩形', rounded: '圆角矩形', arrow: '箭头', thick: '粗箭头', text: '文字', magic: '梳子', move: '移动', eraser: '擦除' }[tool] || tool);
   // Set cursor for move tool
   document.getElementById('canvas-wrap').style.cursor = tool === 'move' ? 'move' : 'default';
 }
@@ -2096,6 +2235,7 @@ document.getElementById('tool-line').addEventListener('click', () => setTool('li
 document.getElementById('tool-box').addEventListener('click', () => setTool('box'));
 document.getElementById('tool-rounded').addEventListener('click', () => setTool('rounded'));
 document.getElementById('tool-arrow').addEventListener('click', () => setTool('arrow'));
+document.getElementById('tool-thick').addEventListener('click', () => setTool('thick'));
 document.querySelectorAll('.arrow-opt').forEach(o => {
   o.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2630,7 +2770,7 @@ function ensureCapacity(r, c) {
     resizeGrid(newRows, newCols);
     renderGrid();
     // Re-apply live preview after re-render
-    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'arrow') {
+    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'arrow' || activeTool === 'thick') {
       setPreview(previewPositions());
     }
   }
