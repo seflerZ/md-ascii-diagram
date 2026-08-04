@@ -1508,12 +1508,11 @@ function applyColor() {
   const tlC = findCellByDispCol(box.topR, box.leftD);
   const brC = findCellByDispCol(box.botR, box.rightD);
   setCell(box.topR, tlC, code);
-  setCell(box.botR, brC, code);
+  if (brC >= 0) setCell(box.botR, brC, code);
+  // 明度数字只看左上角（色码后一格）；右下角只色码、不写数字
   if (shade) {
     const nextC = findCellByDispCol(box.topR, box.leftD + 1);
-    const prevC = findCellByDispCol(box.botR, box.rightD - 1);
     if (nextC >= 0) setCell(box.topR, nextC, shade);
-    if (prevC >= 0) setCell(box.botR, prevC, shade);
   }
   saveHistory();
   clearSelection();
@@ -1536,15 +1535,14 @@ function colorAtCursor() {
     if (tlC >= 0) setCell(box.topR, tlC, (getCellText(box.topR, tlC) === '╭' || getCellText(box.topR, tlC) === '╮') ? '╭' : '┌');
     if (brC >= 0) setCell(box.botR, brC, (getCellText(box.botR, brC) === '╯' || getCellText(box.botR, brC) === '╰') ? '╯' : '┘');
     if (nextC >= 0 && /[1-6]/.test(getCellText(box.topR, nextC))) setCell(box.topR, nextC, '─');
-    if (prevC >= 0 && /[1-6]/.test(getCellText(box.botR, prevC))) setCell(box.botR, prevC, '─');
   } else {
     const code = activeColor;
     const shade = activeShade === 3 ? '' : String(activeShade);
     if (tlC >= 0) setCell(box.topR, tlC, code);
     if (brC >= 0) setCell(box.botR, brC, code);
+    // 明度数字只看左上角；右下角只色码
     if (shade) {
       if (nextC >= 0) setCell(box.topR, nextC, shade);
-      if (prevC >= 0) setCell(box.botR, prevC, shade);
     }
   }
   saveHistory();
@@ -2866,8 +2864,9 @@ function findBoxes(dl) {
         const bottomCells = lineCells(dl[r2]);
         const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
         if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰')) continue;
-        const rightStart = bottomCells.find(c => c.dispCol === rightDispCol - markerWidth + 1);
-        if (!rightStart || rightStart.char !== cl) continue;
+        // 右下角只认色码，位置灵活（有数字布局在 rightDispCol-1，只色码在 rightDispCol）
+        const rightStart = bottomCells.find(c => c.char === cl && (c.dispCol === rightDispCol - markerWidth + 1 || c.dispCol === rightDispCol));
+        if (!rightStart) continue;
         let hex = '#ccc';
         if (COLORS[cl]) hex = adjustColor(COLORS[cl].hex, shadeDigit || '3');
         boxes.push({

@@ -342,12 +342,9 @@ function findBoxes(dl) {
         const bottomCells = lineCells(dl[r2]).cells;
         const leftChar = bottomCells.find(c => c.dispCol === fromDispCol);
         if (!leftChar || (leftChar.char !== '└' && leftChar.char !== '╰')) continue;
-        const rightStart = bottomCells.find(c => c.dispCol === rightDispCol - markerWidth + 1);
-        if (!rightStart || rightStart.char !== cl) continue;
-        if (markerWidth > 1) {
-          const digitCell = bottomCells.find(c => c.dispCol === rightDispCol);
-          if (!digitCell) continue;
-        }
+        const rightStart = bottomCells.find(c => c.char === cl && (c.dispCol === rightDispCol - markerWidth + 1 || c.dispCol === rightDispCol));
+        if (!rightStart) continue;
+        // 明度数字只看左上角 shadeDigit；右下角只需色码（位置灵活）
         boxes.push({
           color: cl,
           fromRow: r, toRow: r2,

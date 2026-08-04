@@ -11,7 +11,7 @@ const { spawn } = require('child_process');
 const net = require('net');
 const path = require('path');
 
-const BASE = 'http://localhost:8000/ascii-editor.html';
+const BASE = 'http://127.0.0.1:8000/ascii-editor.html';
 const ROOT = path.resolve(__dirname, '..');
 
 // ── 工具 ──
