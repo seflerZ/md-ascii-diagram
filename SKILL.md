@@ -157,7 +157,8 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `Ctrl+Z` | 撤销（备用） |
 | `Ctrl+C/X/V` | 复制/剪切/粘贴 |
 | `Shift+色码`（如 `Shift+G`） | 着色光标所在框 |
-| `Ctrl+Shift+R` | 圆角化当前矩形框 |
+| `Ctrl+Shift+D` | 光标所在矩形/圆角框 实线⇄虚线转换 |
+| `Ctrl+Shift+R` | 光标所在矩形框 圆角⇄方角转换（循环） |
 | `Ctrl+[` / `Ctrl+]` | 上一张图 / 下一张图 |
 | 原色按钮（原） | 还原着色为未着色状态 |
 

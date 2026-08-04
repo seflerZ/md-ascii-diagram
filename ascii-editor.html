@@ -138,14 +138,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
     <div class="tool-box-wrap">
-      <button id="tool-box" title="矩形框 (B)，进入后按 1/2 切换实线/虚线">▣ 矩形</button>
+      <button id="tool-box" title="矩形框 (B)，进入后按 1/2 切换实线/虚线；Ctrl+Shift+D 转换光标所在框 实线/虚线">▣ 矩形</button>
       <div class="box-dropdown" id="box-dropdown">
         <div class="box-opt active" data-type="1">┌┐ 实线</div>
         <div class="box-opt" data-type="2">╌╎ 虚线</div>
       </div>
     </div>
     <div class="tool-rounded-wrap">
-      <button id="tool-rounded" title="圆角矩形 (R)，进入后按 1/2 切换实线/虚线">▢ 圆角</button>
+      <button id="tool-rounded" title="圆角矩形 (R)，进入后按 1/2 切换实线/虚线；Ctrl+Shift+R 转换光标所在框 圆角/方角">▢ 圆角</button>
       <div class="rounded-dropdown" id="rounded-dropdown">
         <div class="rounded-opt active" data-type="1">╭╮ 实线</div>
         <div class="rounded-opt" data-type="2">╌╎ 虚线</div>
@@ -207,7 +207,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <tr><td style="padding:2px 8px"><b>L</b></td><td>直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td>剪切</td></tr>
       <tr><td style="padding:2px 8px"><b>B</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
       <tr><td style="padding:2px 8px"><b>R</b></td><td>圆角矩形</td><td style="padding:2px 8px"><b>I</b></td><td>插入列</td></tr>
-      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>圆角化当前框</td><td></td><td></td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+D</b></td><td>光标所在框 实线⇄虚线</td><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>光标所在框 圆角⇄方角</td></tr>
       <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td>插入行</td></tr>
       <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Insert</b></td><td>切换插入/覆盖</td></tr>
       <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
@@ -1160,12 +1160,65 @@ function roundCorners() {
   const d = parseInt(cell.dataset.dispCol);
   const box = findBoxAt(cursorR, d);
   if (!box) return;
-  const map = { '┌': '╭', '┐': '╮', '└': '╰', '┘': '╯' };
-  // 只改四角，不扫描内部
+  // 圆角化 ⇄ 方角化 循环：四角多数已是圆角 → 方角化；否则 → 圆角化
+  const toRound = { '┌': '╭', '┐': '╮', '└': '╰', '┘': '╯' };
+  const toSquare = { '╭': '┌', '╮': '┐', '╰': '└', '╯': '┘' };
   const corners = [[box.topR, box.leftD], [box.topR, box.rightD], [box.botR, box.leftD], [box.botR, box.rightD]];
+  let rounded = 0, square = 0;
+  corners.forEach(([r, d2]) => {
+    const cc = findCellByDispCol(r, d2);
+    if (cc >= 0) {
+      const ch = getCellText(r, cc);
+      if (toSquare[ch]) rounded++;
+      else if (toRound[ch]) square++;
+    }
+  });
+  const map = rounded >= square ? toSquare : toRound;
   corners.forEach(([r, d2]) => {
     const cc = findCellByDispCol(r, d2);
     if (cc >= 0 && map[getCellText(r, cc)]) setCell(r, cc, map[getCellText(r, cc)]);
+  });
+  saveHistory();
+}
+
+// Ctrl+Shift+D：光标所在矩形/圆角框 实线⇄虚线 循环（转换已有框，不改工具类型）
+function toggleBoxLine() {
+  const cell = getCell(cursorR, cursorC);
+  if (!cell) return;
+  const d = parseInt(cell.dataset.dispCol);
+  const box = findBoxAt(cursorR, d);
+  if (!box) return;
+  // 边字符转换表：实线↔虚线（四角不动）
+  const solidToDashed = { '─': '╌', '│': '╎' };
+  const dashedToSolid = { '╌': '─', '╎': '│' };
+  // 收集四条边的格子（不含角）
+  const edges = [];
+  // 上/下边：同一行，dispCol leftD+1 .. rightD-1
+  for (const y of [box.topR, box.botR]) {
+    for (let x = box.leftD + 1; x < box.rightD; x++) {
+      const cc = findCellByDispCol(y, x);
+      if (cc >= 0) edges.push([y, cc]);
+    }
+  }
+  // 左/右边：同一列，r topR+1 .. botR-1
+  for (const x of [box.leftD, box.rightD]) {
+    for (let y = box.topR + 1; y < box.botR; y++) {
+      const cc = findCellByDispCol(y, x);
+      if (cc >= 0) edges.push([y, cc]);
+    }
+  }
+  // 看边目前以实线还是虚线为主，决定转换方向
+  let solid = 0, dashed = 0;
+  edges.forEach(([r, cc]) => {
+    const ch = getCellText(r, cc);
+    if (solidToDashed[ch]) solid++;
+    else if (dashedToSolid[ch]) dashed++;
+  });
+  if (!solid && !dashed) return;  // 没认出框边，不动
+  const map = dashed >= solid ? dashedToSolid : solidToDashed;
+  edges.forEach(([r, cc]) => {
+    const ch = getCellText(r, cc);
+    if (map[ch]) setCell(r, cc, map[ch]);
   });
   saveHistory();
 }
@@ -1976,7 +2029,14 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Ctrl+Shift+R 圆角化当前矩形框
+  // Ctrl+Shift+D 转换光标所在矩形/圆角框的 实线/虚线（不改工具类型）
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'd' || e.key === 'D')) {
+    e.preventDefault();
+    toggleBoxLine();
+    return;
+  }
+
+  // Ctrl+Shift+R 圆角化当前矩形框（再按方角化，循环）
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
     e.preventDefault();
     roundCorners();

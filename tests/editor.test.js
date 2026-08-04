@@ -820,6 +820,39 @@ const SUITES = [
       // 验证虚线边还在
       results.push({ name: '移动后虚线边仍在', ok: grid[0][0] === '┌' && grid[0][1] === '╌' });
 
+      // ── 10. Ctrl+Shift+D 光标所在矩形 实线⇄虚线 循环（不改工具类型） ──
+      boxType = 1; roundedType = 1;
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 5, dispCol: 5 };
+      drawBox();  // 画实线框
+      cursorR = 1; cursorC = 1; renderGrid();
+      const ctrlShiftD = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+      ctrlShiftD();  // 实线 → 虚线
+      results.push({ name: 'Ctrl+Shift+D 实线框→虚线', ok: getCellText(0, 1) === '╌' && getCellText(1, 0) === '╎' && getCellText(0, 0) === '┌' && boxType === 1 });
+      ctrlShiftD();  // 虚线 → 实线
+      results.push({ name: 'Ctrl+Shift+D 再按→实线', ok: getCellText(0, 1) === '─' && getCellText(1, 0) === '│' && getCellText(0, 0) === '┌' && boxType === 1 });
+
+      // ── 10b. Ctrl+Shift+D 对虚线框再按回实线（独立于工具类型） ──
+      boxType = 2;  // 工具类型是虚线，但已画实线框，转换应按「框现状」走
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 5, dispCol: 5 };
+      drawBox();  // boxType=2 → 虚线框
+      cursorR = 1; cursorC = 1; renderGrid();
+      ctrlShiftD();  // 虚线 → 实线
+      results.push({ name: 'Ctrl+Shift+D 虚线框→实线', ok: getCellText(0, 1) === '─' && getCellText(1, 0) === '│' && boxType === 2 });
+
+      // ── 11. Ctrl+Shift+R 圆角化⇄方角化 循环 ──
+      boxType = 1;
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 5, dispCol: 5 };
+      drawBox();
+      cursorR = 1; cursorC = 1; renderGrid();
+      const ctrlShiftR = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+      ctrlShiftR();  // 方角 → 圆角
+      results.push({ name: 'Ctrl+Shift+R 方角→圆角', ok: getCellText(0, 0) === '╭' && getCellText(0, 5) === '╮' && getCellText(3, 0) === '╰' && getCellText(3, 5) === '╯' });
+      ctrlShiftR();  // 圆角 → 方角
+      results.push({ name: 'Ctrl+Shift+R 再按→方角', ok: getCellText(0, 0) === '┌' && getCellText(0, 5) === '┐' && getCellText(3, 0) === '└' && getCellText(3, 5) === '┘' });
+
       return results;
     },
   },
