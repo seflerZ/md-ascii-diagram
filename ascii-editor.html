@@ -121,6 +121,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #diagram-list .diag-item:hover{background:#e8f0ff}
 #diagram-list .diag-item .name{font-weight:bold;color:#333;margin-bottom:3px}
 #diagram-list .diag-item .preview{color:#888;font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;max-height:4.5em;line-height:1.4;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace}
+#ime-input{position:fixed;width:1px;height:1px;padding:0;border:0;outline:0;opacity:0;font-size:16px;pointer-events:none;z-index:-1;color:transparent;background:transparent}
 </style>
 </head>
 <body>
@@ -249,6 +250,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="editor-panel">
     <div class="canvas-wrap" id="canvas-wrap">
       <div class="grid-root" id="canvas"></div>
+      <input id="ime-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-label="文字输入">
     </div>
     <div class="status">
       <span id="status-pos">行: 1 列: 1</span>
@@ -606,6 +608,7 @@ function onCellMouseDown(e) {
   } else if (activeTool === 'text' || activeTool === 'eraser' || activeTool === 'magic') {
     selStart = p; selEnd = p;
     updateSelection();
+    if (activeTool === 'text') focusImeInput();  // 点格子时聚焦隐藏 IME 输入框
   } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
     // box / rounded / line / arrow / thick: prepare drag, no selection highlight
     if (activeTool === 'thick') thickAxis = null;   // new drag, unlock axis
@@ -1865,7 +1868,7 @@ async function pasteAtCursor() {
 // ═══ Keyboard Handler (central event dispatch) ═══
 document.addEventListener('keydown', (e) => {
   // Skip if user is typing in a modal input
-  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && e.target.id !== 'ime-input')) return;
   // 跳过 IME 组合态（拼音/选词中间键，含 Enter/Space）——中文由 compositionend 提交
   if (e.isComposing) return;
 
@@ -2267,6 +2270,7 @@ document.addEventListener('keydown', (e) => {
     selEnd = { r: cursorR, c: cursorC };
     updateSelection();
     updateStatus();
+    focusImeInput();
     return;
   }
 
@@ -2303,6 +2307,25 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// 中文输入法（IME）承接：隐藏输入框给 IME 提供可合成焦点，中文经 compositionend 提交
+function focusImeInput() {
+  const inp = document.getElementById('ime-input');
+  if (!inp) return;
+  const cell = getCell(cursorR, cursorC);
+  if (cell) {
+    const rect = cell.getBoundingClientRect();
+    inp.style.left = rect.left + 'px';
+    inp.style.top = rect.top + 'px';
+  }
+  if (document.activeElement !== inp) {
+    try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
+  }
+}
+function blurImeInput() {
+  const inp = document.getElementById('ime-input');
+  if (inp && document.activeElement === inp) inp.blur();
+}
+
 // 中文输入法（IME）：compositionend 提交最终文字，text 工具下写入光标（支持多字符）
 document.addEventListener('compositionend', (e) => {
   if (activeTool !== 'text' || !e.data) return;
@@ -2323,6 +2346,10 @@ document.addEventListener('compositionend', (e) => {
   selEnd = { r: cursorR, c: cursorC };
   updateSelection();
   updateStatus();
+  // 清空隐藏 IME 输入框并移到新光标位，供下一次合成
+  const inp = document.getElementById('ime-input');
+  if (inp) inp.value = '';
+  focusImeInput();
 });
 
 // ═══════════════════════════════════════
@@ -2352,6 +2379,8 @@ function setTool(tool) {
     ({ select: '选择', free: '自由绘制', line: '直线', box: '矩形', rounded: '圆角矩形', arrow: '箭头', thick: '粗箭头', text: '文字', magic: '梳子', move: '移动', eraser: '擦除' }[tool] || tool);
   // Set cursor for move tool
   document.getElementById('canvas-wrap').style.cursor = tool === 'move' ? 'move' : 'default';
+  // 文字工具下聚焦隐藏 IME 输入框，让中文输入法有合成目标；其他工具失焦
+  if (tool === 'text') focusImeInput(); else blurImeInput();
 }
 
 document.getElementById('tool-select').addEventListener('click', () => setTool('select'));
@@ -2880,11 +2909,11 @@ function importText(text) {
     for (let c = 0; c < COLS; c++) grid[r][c] = '';
   }
 
-  // Fill grid
+  // Fill grid（按码点拆分，避免 emoji 代理对把末尾字符重复）
   for (let r = 0; r < Math.min(lines.length, ROWS); r++) {
-    const line = lines[r];
-    for (let c = 0; c < Math.min(line.length, COLS); c++) {
-      grid[r][c] = Array.from(line)[c] || line[c];
+    const chars = Array.from(lines[r]);
+    for (let c = 0; c < Math.min(chars.length, COLS); c++) {
+      grid[r][c] = chars[c];
     }
   }
 

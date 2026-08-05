@@ -856,6 +856,46 @@ const SUITES = [
       return results;
     },
   },
+  {
+    name: 'importText emoji 往返',
+    fn: () => {
+      const results = [];
+      // 回归：含 emoji（代理对/VS16）的行 load→save 往返不得重复/损坏末尾字符
+      // 旧 bug：Array.from(line)[c] || line[c] 按 UTF-16 重读尾巴 → 「化层」累积
+      const original = '    🧠 LLM Agent Service（底座）  🛠️数据工具化层';
+      importText(original);
+      const pass1 = getGridText();
+      results.push({ name: 'emoji行首轮往返保真', ok: pass1 === original });
+      importText(pass1);
+      const pass2 = getGridText();
+      results.push({ name: 'emoji行二轮不累积', ok: pass2 === original });
+      return results;
+    },
+  },
+  {
+    name: 'IME中文输入',
+    fn: () => {
+      const results = [];
+      // 中文输入法需要可合成焦点元素：文字工具点格子后，隐藏 #ime-input 应获得焦点
+      initGrid(); renderGrid();
+      setTool('text');
+      document.querySelector('.cell[data-r="0"][data-c="0"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      results.push({ name: '点格子后焦点在ime-input', ok: document.activeElement && document.activeElement.id === 'ime-input' });
+      // 模拟 IME 合成中文（compositionend 提交）
+      document.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+      document.dispatchEvent(new CompositionEvent('compositionupdate', { bubbles: true, data: '中文' }));
+      document.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '中文' }));
+      results.push({ name: '中文写入格子', ok: grid[0][0] === '中' && grid[0][1] === '文' && cursorC === 2 });
+      results.push({ name: '合成后输入框清空且仍聚焦', ok: document.getElementById('ime-input').value === '' && document.activeElement && document.activeElement.id === 'ime-input' });
+      // 中文合成后按 Esc 应退出文字工具并失焦、快捷键恢复（回归：INPUT 守卫曾吞掉全部键）
+      const inp = document.getElementById('ime-input');
+      inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      results.push({ name: '中文后Esc退出文字工具', ok: activeTool === 'select' && !(document.activeElement && document.activeElement.id === 'ime-input') });
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+      results.push({ name: 'Esc后快捷键恢复', ok: activeTool === 'box' });
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──
