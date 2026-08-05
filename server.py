@@ -73,6 +73,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
             self.end_headers()
             self.wfile.write(content.encode('utf-8'))
         else:
@@ -199,7 +200,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    server = http.server.HTTPServer(('0.0.0.0', PORT), Handler)
+    server = http.server.ThreadingHTTPServer(('0.0.0.0', PORT), Handler)
     print(f'ASCII 编辑器服务器启动: http://localhost:{PORT}')
     print(f'打开编辑器: http://localhost:{PORT}/ascii-editor.html?file=文档路径')
     server.serve_forever()

@@ -9,6 +9,8 @@ try {
   const shapesFile = path.join(__dirname, 'shapes.json');
   if (fs.existsSync(shapesFile)) shapes = JSON.parse(fs.readFileSync(shapesFile, 'utf8'));
 } catch (e) { shapes = {}; }
+// 形状值兼容两种格式：旧 = 纯 SVG 字符串；新 = {svg, desc} 对象（desc 供大模型理解形状语义）
+function shapeSvg(id) { const v = shapes[id]; return (v && typeof v === 'object') ? (v.svg || '') : (v || ''); }
 
 // 技能包内字体（绝对 file:// 路径，供生成的独立 HTML 引用）
 const FONT_DIR = path.join(__dirname, 'fonts');
@@ -173,7 +175,7 @@ function detectShapeBoxes(lines, boxes) {
     if (!m) continue;
     const id = m[1];
     const col = m.index;
-    if (!shapes[id]) continue;
+    if (!shapeSvg(id)) continue;
     // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
     const bottomCells = lineCells(lines[r]).cells;
     let toCol = -1;
@@ -204,7 +206,7 @@ function detectShapeBoxes(lines, boxes) {
       if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
     }
     if (hex) box.hex = hex;
-    result.push({ id, box, svg: shapes[id] });
+    result.push({ id, box, svg: shapeSvg(id) });
   }
   return result;
 }
@@ -443,7 +445,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
         const emojiScale = pendingScale;  // 当前格（Emoji）由数字标记的缩放
         pendingScale = null;
         // 标记框：整个框替换成形状 SVG（空格占位，SVG 覆盖层统一叠加）
-        const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol <= s.box.toCol);
+        const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol < s.box.toCol);
         if (shapeBox) {
           if (curBg || curUl || curBold || curColor || curRainbow || curScale) { line += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; curScale = null; }
           line += ' ';
@@ -578,7 +580,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       const wc = b.toCol - b.fromCol, hc = b.toRow - b.fromRow + 1;
       // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
       svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
-      return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0"`);
+      return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden"`);
     }).join('');
 
     // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）

@@ -239,6 +239,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div id="shapes-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:260px;overflow:auto;align-items:flex-start"></div>
     <div style="margin-bottom:8px;display:flex;gap:6px;align-items:center">
       <label style="font-size:13px;color:#666">名字 <input id="shapes-name" maxlength="3" placeholder="留空自动编号" style="width:90px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
+      <label style="font-size:13px;color:#666">描述 <input id="shapes-desc" placeholder="给大模型看的语义说明，如：数据库实例" style="width:280px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
     </div>
     <textarea id="shapes-input" placeholder="粘贴 SVG 代码，如 &lt;svg viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='40' fill='#4EA660'/&gt;&lt;/svg&gt;" style="width:100%;height:120px;font-family:monospace;font-size:12px;box-sizing:border-box"></textarea>
     <div class="modal-buttons">
@@ -2809,8 +2810,12 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
 });
 
 // ═══ 形状库（自定义贴纸）═══
-let shapes = {};  // {"编号": "<svg>..."}
+let shapes = {};  // {"编号": "<svg>"} 或 {"编号": {svg, desc}}（desc 供大模型理解形状语义）
 let pendingShapeBox = null;  // Ctrl+Shift+B 待替换的矩形（findBoxAt 结果），选中形状后落标记
+
+// 形状值兼容两种格式：旧 = 纯 SVG 字符串；新 = {svg, desc} 对象
+function shapeSvg(id) { const v = shapes[id]; return (v && typeof v === 'object') ? (v.svg || '') : (v || ''); }
+function shapeDesc(id) { const v = shapes[id]; return (v && typeof v === 'object') ? (v.desc || '') : ''; }
 
 function loadShapes() {
   return fetch('/shapes').then(r => r.json()).then(d => { shapes = d || {}; renderShapesList(); }).catch(() => { shapes = {}; });
@@ -2820,10 +2825,11 @@ function saveShapes() {
   return fetch('/shapes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(shapes) });
 }
 
-// 点击已有形状 → 把 SVG 填充到输入框，便于编辑后同名覆盖
+// 点击已有形状 → 把 SVG 和描述填充到输入框，便于编辑后同名覆盖
 function editShape(id) {
   document.getElementById('shapes-name').value = id;
-  document.getElementById('shapes-input').value = shapes[id] || '';
+  document.getElementById('shapes-input').value = shapeSvg(id);
+  document.getElementById('shapes-desc').value = shapeDesc(id);
 }
 
 function renderShapesList() {
@@ -2833,13 +2839,15 @@ function renderShapesList() {
   if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">暂无形状，粘贴 SVG 添加第一个吧</div>'; return; }
   list.innerHTML = ids.map(id => {
     // 与画布渲染一致的变换：线宽不缩放 + 填满容器
-    let svg = shapes[id];
+    let svg = shapeSvg(id);
+    const desc = shapeDesc(id);
     svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
     svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
     return `
     <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="editShape('${id}')" title="点击编辑该形状">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
       <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
+      <div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3;word-break:break-all;min-height:13px">${escapeHtml(desc)}</div>
       <div style="font-size:11px;color:#999;margin-top:4px" onclick="event.stopPropagation();removeShape('${id}')">🗑 删除</div>
     </div>`}).join('');
 }
@@ -2858,9 +2866,14 @@ function addShape() {
     const nums = Object.keys(shapes).filter(k => /^\d+$/.test(k)).map(Number);
     id = String(nums.length ? Math.max(...nums) + 1 : 1);
   }
-  shapes[id] = svg;
-  saveShapes().then(() => { document.getElementById('shapes-input').value = ''; document.getElementById('shapes-name').value = ''; renderShapesList(); })
-    .catch(() => alert('保存失败（请确认通过 server.py 访问）'));
+  const desc = document.getElementById('shapes-desc').value.trim();
+  shapes[id] = { svg, desc };
+  saveShapes().then(() => {
+    document.getElementById('shapes-input').value = '';
+    document.getElementById('shapes-name').value = '';
+    document.getElementById('shapes-desc').value = '';
+    renderShapesList();
+  }).catch(() => alert('保存失败（请确认通过 server.py 访问）'));
 }
 
 function removeShape(id) {
@@ -2889,13 +2902,15 @@ function renderShapePickList() {
   if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">形状库为空，请先点击「🧩 形状」按钮添加 SVG 形状</div>'; return; }
   list.innerHTML = ids.map(id => {
     // 与画布渲染一致的变换：线宽不缩放 + 填满容器
-    let svg = shapes[id];
+    let svg = shapeSvg(id);
+    const desc = shapeDesc(id);
     svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
     svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
     return `
-    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="applyShapePick('${id}')" title="替换为 #${id}">
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="applyShapePick('${id}')" title="替换为 #${id}${desc ? '：' + desc : ''}">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
       <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
+      <div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3;word-break:break-all;min-height:13px">${escapeHtml(desc)}</div>
     </div>`}).join('');
 }
 
@@ -3229,7 +3244,7 @@ function detectShapeBoxes(lines, boxes) {
     if (!m) continue;
     const id = m[1];
     const col = m.index;
-    if (!shapes[id]) continue;
+    if (!shapeSvg(id)) continue;
     // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
     const bottomCells = lineCells(lines[r]);
     let toCol = -1;
@@ -3260,7 +3275,7 @@ function detectShapeBoxes(lines, boxes) {
       if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
     }
     if (hex) box.hex = hex;
-    result.push({ id, box, svg: shapes[id] });
+    result.push({ id, box, svg: shapeSvg(id) });
   }
   return result;
 }
@@ -3372,7 +3387,7 @@ function renderPreview(text) {
       const emojiScale = pendingScale;  // 当前格（Emoji）由数字标记的缩放
       pendingScale = null;
       // 标记框：整个框替换成形状 SVG（空格占位，SVG 覆盖层统一在行末叠加）
-      const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol <= s.box.toCol);
+      const shapeBox = shapeBoxes.find(s => r >= s.box.fromRow && r <= s.box.toRow && cell.dispCol >= s.box.fromCol && cell.dispCol < s.box.toCol);
       if (shapeBox) {
         if (curBg || curUl || curBold || curColor || curRainbow || curScale) { lineHtml += '</span>'; curBg = null; curUl = false; curBold = false; curColor = null; curRainbow = false; curScale = null; }
         lineHtml += ' ';
@@ -3490,7 +3505,7 @@ function renderPreview(text) {
       });
       if (ellipseLayers.length) svg = svg.replace(/<\/svg>/, ellipseLayers.join('') + '</svg>');
     }
-    const style = `position:absolute;left:${20 + b.fromCol * charW}px;top:${20 + b.fromRow * lineH}px;width:${(b.toCol - b.fromCol) * charW}px;height:${(b.toRow - b.fromRow + 1) * lineH}px`;
+    const style = `position:absolute;left:${20 + b.fromCol * charW}px;top:${20 + b.fromRow * lineH}px;width:${(b.toCol - b.fromCol) * charW}px;height:${(b.toRow - b.fromRow + 1) * lineH}px;overflow:hidden`;
     // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
     svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
     return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" style="${style}"`);

@@ -1027,6 +1027,72 @@ const SUITES = [
       return results;
     },
   },
+  {
+    name: '自定义形状描述字段',
+    fn: () => {
+      const results = [];
+      const SVG1 = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
+      const SVG2 = '<svg><ellipse/></svg>';
+      const dispatchKey = (key, opts) => document.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key, bubbles: true, cancelable: true }, opts || {})));
+
+      // ── 1. 兼容旧纯字符串格式 ──
+      shapes = { old: SVG1 };
+      results.push({ name: '旧字符串格式 shapeSvg', ok: shapeSvg('old') === SVG1 });
+      results.push({ name: '旧字符串格式 shapeDesc为空', ok: shapeDesc('old') === '' });
+
+      // ── 2. 新对象格式 {svg, desc} ──
+      shapes = { db: { svg: SVG2, desc: '数据库' } };
+      results.push({ name: '新格式 shapeSvg', ok: shapeSvg('db') === SVG2 });
+      results.push({ name: '新格式 shapeDesc', ok: shapeDesc('db') === '数据库' });
+
+      // ── 3. editShape 填充描述输入框 ──
+      renderShapesList();
+      editShape('db');
+      results.push({ name: 'editShape填充描述', ok: document.getElementById('shapes-desc').value === '数据库' && document.getElementById('shapes-input').value === SVG2 });
+
+      // ── 4. 列表渲染含描述 ──
+      results.push({ name: '列表显示描述', ok: document.getElementById('shapes-list').textContent.includes('数据库') });
+
+      // ── 5. detectShapeBoxes 从对象格式取 svg ──
+      // 注意：d:db 标记占 4 格，底边右角 ┘ 需与顶边右角 ┐ 对齐（同一 dispCol）
+      const lines = ['┌────┐', '│ db │', 'd:db─┘'];
+      const sb = detectShapeBoxes(lines, []);
+      results.push({ name: 'detectShapeBoxes取对象svg', ok: sb.length === 1 && sb[0].id === 'db' && sb[0].svg === SVG2 });
+
+      // ── 6. 选择列表含描述 ──
+      renderShapePickList();
+      results.push({ name: '选择列表含描述', ok: document.getElementById('shape-pick-list').textContent.includes('数据库') });
+
+      // ── 7. addShape 存对象 {svg, desc}（拦截保存避免写盘）──
+      const origSave = saveShapes;
+      saveShapes = () => Promise.resolve();
+      document.getElementById('shapes-name').value = 'tst';
+      document.getElementById('shapes-input').value = SVG1;
+      document.getElementById('shapes-desc').value = '测试形状';
+      addShape();
+      results.push({ name: 'addShape存对象含描述', ok: shapes['tst'] && shapes['tst'].svg === SVG1 && shapes['tst'].desc === '测试形状' });
+      saveShapes = origSave;
+
+      // ── 8. 转换形状全链路（对象格式 + desc）：Ctrl+Shift+B 弹窗 → 选形状 → 替换 ──
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 6, dispCol: 6 };
+      drawBox();
+      cursorR = 1; cursorC = 1; renderGrid();
+      dispatchKey('b', { ctrlKey: true, shiftKey: true });
+      results.push({ name: '对象格式Ctrl+Shift+B弹窗', ok: document.getElementById('modal-shape-pick').classList.contains('active') && pendingShapeBox && pendingShapeBox.botR === 3 });
+      results.push({ name: '弹窗列表含描述', ok: document.getElementById('shape-pick-list').textContent.includes('数据库') });
+      applyShapePick('db');
+      results.push({ name: '对象格式替换落标记', ok: grid[3][0]==='d' && grid[3][1]===':' && grid[3][2]==='d' && grid[3][3]==='b' });
+      results.push({ name: '对象格式替换后弹窗关闭', ok: !document.getElementById('modal-shape-pick').classList.contains('active') });
+
+      // ── 9. 形状框右一列不被覆盖（回归：覆盖范围曾用 <= toCol 误吞框外紧贴的一列）──
+      const arrowLines = ['┌──────────┐', '│          │', '│          │', '│          │', '│          │', 'd:db───────┘→'];
+      const arrowHtml = renderPreview(arrowLines.join('\n'));
+      results.push({ name: '框右紧贴箭头不被覆盖', ok: arrowHtml.includes('→') });
+
+      return results;
+    },
+  },
 ];
 
 // ── 主流程 ──
