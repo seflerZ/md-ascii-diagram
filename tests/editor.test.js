@@ -1090,6 +1090,23 @@ const SUITES = [
       const arrowHtml = renderPreview(arrowLines.join('\n'));
       results.push({ name: '框右紧贴箭头不被覆盖', ok: arrowHtml.includes('→') });
 
+      // ── 10. 形状框着色（回归：findBoxAt 不认 d:编号 左角，导致 Shift+色码 静默失败）──
+      initGrid(); renderGrid();
+      const shapeLines = ['┌──────┐', '│  sh  │', '│      │', 'd:db───┘'];
+      for (let r = 0; r < shapeLines.length; r++) for (let c = 0; c < shapeLines[r].length; c++) grid[r][c] = shapeLines[r][c];
+      cursorR = 1; cursorC = 2; renderGrid();
+      const boxBefore = findBoxAt(cursorR, parseInt(getCell(cursorR, cursorC).dataset.dispCol));
+      results.push({ name: '形状框 findBoxAt 识别', ok: !!boxBefore && boxBefore.topR === 0 && boxBefore.botR === 3 });
+      const saved = activeColor; activeColor = 'g'; activeShade = 3;
+      colorAtCursor();
+      const tlAfter = getCellText(0, findCellByDispCol(0, 0));
+      const brAfter = getCellText(3, findCellByDispCol(3, 7));
+      const blAfter = getCellText(3, findCellByDispCol(3, 0));
+      results.push({ name: '形状框着色左上角', ok: tlAfter === 'g' });
+      results.push({ name: '形状框着色右下角', ok: brAfter === 'g' });
+      results.push({ name: '形状框着色保留下:编号', ok: blAfter === 'd' });
+      activeColor = saved;
+
       return results;
     },
   },

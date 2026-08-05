@@ -43,6 +43,12 @@ SHAPES_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shape
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
+    def end_headers(self):
+        # 所有响应统一加防缓存头：避免浏览器缓存旧版 ascii-editor.html / shapes.json
+        # 导致改完代码后主人浏览器仍在用旧版（功能莫名失效）
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        super().end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)

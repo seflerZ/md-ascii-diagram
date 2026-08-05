@@ -1612,7 +1612,7 @@ function findBoxAt(r, d) {
       for (let rr2 = rr + 1; rr2 < ROWS; rr2++) {
         const bl = findCellByDispCol(rr2, tlD);
         const br = findCellByDispCol(rr2, trD);
-        if (bl >= 0 && br >= 0 && isCorner(getCellText(rr2, bl)) && isCorner(getCellText(rr2, br))) {
+        if (bl >= 0 && br >= 0 && (isCorner(getCellText(rr2, bl)) || getCellText(rr2, bl) === 'd'/* d:编号 形状左角 */) && isCorner(getCellText(rr2, br))) {
           const hT = hasHorizontalEdge(rr, tlD, trD), hB = hasHorizontalEdge(rr2, tlD, trD), w = hasWalls(rr, rr2, tlD, trD);
           if (rr2 >= r && tlD <= d && d <= trD && hT && hB && w) {
             const area = (rr2 - rr) * (trD - tlD);
@@ -3496,7 +3496,8 @@ function renderPreview(text) {
     if (b.hex) {
       // 填充用框色（fill="none" 或原本无 fill 的不强加，保持原样）
       svg = svg.replace(/fill="([^"]*)"/g, (m, c) => c === 'none' ? m : `fill="${b.hex}"`);
-      if (svg.includes('stroke="')) svg = svg.replace(/stroke="[^"]*"/g, 'stroke="#000000"');
+      // 描边强制黑色（让形状轮廓清晰），但保留 stroke="none"（纯填充元素不描边）
+      if (svg.includes('stroke="')) svg = svg.replace(/stroke="(?!none)[^"]*"/g, 'stroke="#000000"');
       // 描边类 ellipse（无 fill 或 fill="none"）移到末尾，避免下边框被后面 path 覆盖；有实际填充色的不动
       const ellipseLayers = [];
       svg = svg.replace(/<ellipse([^>]*?)\/>/g, (m, attrs) => {

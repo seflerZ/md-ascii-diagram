@@ -568,7 +568,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       if (b.hex) {
         // 填充用框色（fill="none" 或原本无 fill 的不强加，保持原样）
         svg = svg.replace(/fill="([^"]*)"/g, (m, c) => c === 'none' ? m : `fill="${b.hex}"`);
-        if (svg.includes('stroke="')) svg = svg.replace(/stroke="[^"]*"/g, 'stroke="#000000"');
+        if (svg.includes('stroke="')) svg = svg.replace(/stroke="(?!none)[^"]*"/g, 'stroke="#000000"');
         // 描边类 ellipse（无 fill 或 fill="none"）移到末尾，避免下边框被后面 path 覆盖；有实际填充色的不动
         const ellipseLayers = [];
         svg = svg.replace(/<ellipse([^>]*?)\/>/g, (m, attrs) => {
