@@ -891,8 +891,137 @@ const SUITES = [
       const inp = document.getElementById('ime-input');
       inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
       results.push({ name: '中文后Esc退出文字工具', ok: activeTool === 'select' && !(document.activeElement && document.activeElement.id === 'ime-input') });
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true }));
       results.push({ name: 'Esc后快捷键恢复', ok: activeTool === 'box' });
+      return results;
+    },
+  },
+  {
+    name: '键盘绘制矩形/圆角 + Ctrl+Shift+B形状替换',
+    fn: () => {
+      const results = [];
+      const dispatchKey = (key, opts) => document.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key, bubbles: true, cancelable: true }, opts || {})));
+      const kd = (key) => dispatchKey(key);
+
+      // ── 1. 矩形键盘绘制：方向键扩展（起点固定）+ Enter 确认 ──
+      initGrid(); renderGrid();
+      setTool('box');
+      cursorR = 0; cursorC = 0;
+      ['ArrowRight','ArrowRight','ArrowRight','ArrowRight','ArrowRight'].forEach(kd);  // 宽 6
+      ['ArrowDown','ArrowDown','ArrowDown'].forEach(kd);  // 高 4
+      kd('Enter');
+      results.push({ name: '键盘绘制矩形落格', ok: grid[0][0]==='┌' && grid[0][5]==='┐' && grid[3][0]==='└' && grid[3][5]==='┘' });
+      results.push({ name: '键盘绘制矩形边', ok: grid[0][1]==='─' && grid[1][0]==='│' });
+
+      // ── 2. 圆角键盘绘制 ──
+      initGrid(); renderGrid();
+      setTool('rounded');
+      cursorR = 0; cursorC = 0;
+      ['ArrowRight','ArrowRight','ArrowRight','ArrowRight'].forEach(kd);  // 宽 5
+      ['ArrowDown','ArrowDown','ArrowDown'].forEach(kd);  // 高 4
+      kd('Enter');
+      results.push({ name: '键盘绘制圆角落格', ok: grid[0][0]==='╭' && grid[0][4]==='╮' && grid[3][0]==='╰' && grid[3][4]==='╯' });
+
+      // ── 3. Esc 取消键盘绘制，留在工具内可重画 ──
+      initGrid(); renderGrid();
+      setTool('box');
+      cursorR = 0; cursorC = 0;
+      kd('ArrowRight'); kd('ArrowRight'); kd('ArrowDown');
+      kd('Escape');
+      results.push({ name: 'Esc取消矩形键盘绘制', ok: activeTool === 'box' && selStart === null && selEnd === null && (grid[0][0]==='' || grid[0][0]===undefined) });
+
+      // ── 4. Ctrl+Shift+B 打开形状选择弹窗并替换 ──
+      shapes = { db: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10h80v80h-80z"/></svg>' };  // 手工构造，不依赖 /shapes 异步
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 6, dispCol: 6 };
+      drawBox();
+      cursorR = 1; cursorC = 1; renderGrid();
+      dispatchKey('b', { ctrlKey: true, shiftKey: true });
+      results.push({ name: 'Ctrl+Shift+B打开形状弹窗', ok: document.getElementById('modal-shape-pick').classList.contains('active') && pendingShapeBox && pendingShapeBox.botR === 3 && pendingShapeBox.topR === 0 });
+      applyShapePick('db');
+      results.push({ name: '替换后左下角写d:编号', ok: grid[3][0]==='d' && grid[3][1]===':' && grid[3][2]==='d' && grid[3][3]==='b' });
+      results.push({ name: '替换后右下角保留', ok: getCellText(3, 6) === '┘' });
+      results.push({ name: '替换后弹窗关闭', ok: !document.getElementById('modal-shape-pick').classList.contains('active') });
+      results.push({ name: '替换可撤销回矩形', ok: (function(){ undo(); return grid[3][0] === '└'; })() });
+
+      // ── 5. 光标不在框内 → 不开弹窗 ──
+      initGrid(); renderGrid();
+      cursorR = 5; cursorC = 5;
+      dispatchKey('b', { ctrlKey: true, shiftKey: true });
+      results.push({ name: '无框时不打开弹窗', ok: !document.getElementById('modal-shape-pick').classList.contains('active') });
+
+      // ── 6. 太窄的框拒绝替换（标记+右下角放不下）──
+      initGrid(); renderGrid();
+      selStart = { r: 0, c: 0, dispCol: 0 }; selEnd = { r: 3, c: 2, dispCol: 2 };  // 宽 3
+      drawBox();
+      cursorR = 1; cursorC = 1; renderGrid();
+      dispatchKey('b', { ctrlKey: true, shiftKey: true });
+      results.push({ name: '窄框弹窗正常打开', ok: document.getElementById('modal-shape-pick').classList.contains('active') });
+      applyShapePick('db');  // 宽度校验拦截（alert 由 Playwright 自动吞掉）
+      results.push({ name: '窄框拒绝替换并保持弹窗', ok: document.getElementById('modal-shape-pick').classList.contains('active') && grid[3][0] === '└' });
+      document.getElementById('modal-shape-pick').classList.remove('active');
+      pendingShapeBox = null;
+
+      return results;
+    },
+  },
+  {
+    name: '行列快捷键 Shift+V/H 插入 + Ctrl+Shift+V/H 删除',
+    fn: () => {
+      const results = [];
+      const dispatchKey = (key, opts) => document.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key, bubbles: true, cancelable: true }, opts || {})));
+      const setSel = () => { selStart = { r: cursorR, c: cursorC, dispCol: cursorC }; selEnd = { r: cursorR, c: cursorC, dispCol: cursorC }; };
+
+      // ── 1. Shift+V 插入列 / Ctrl+Shift+V 删除列 ──
+      initGrid(); renderGrid();
+      cursorR = 1; cursorC = 2; setSel();
+      const cols0 = COLS;
+      dispatchKey('V', { shiftKey: true });
+      results.push({ name: 'Shift+V插入列', ok: COLS === cols0 + 1 && grid[1][2] === '' });
+      setSel();
+      dispatchKey('v', { ctrlKey: true, shiftKey: true });
+      results.push({ name: 'Ctrl+Shift+V删除列', ok: COLS === cols0 });
+
+      // ── 2. Shift+H 插入行 / Ctrl+Shift+H 删除行 ──
+      initGrid(); renderGrid();
+      cursorR = 1; cursorC = 0; setSel();
+      const rows0 = ROWS;
+      dispatchKey('H', { shiftKey: true });
+      results.push({ name: 'Shift+H插入行', ok: ROWS === rows0 + 1 });
+      // deleteRow 语义：删光标行内容上移、底部补空行，高度不变（Ctrl+Delete 同款）
+      initGrid(); renderGrid();
+      cursorR = 1; cursorC = 0;
+      grid[1][0] = 'X'; grid[1][1] = 'Y'; renderGrid();
+      const rowsD = ROWS;
+      setSel();
+      dispatchKey('h', { ctrlKey: true, shiftKey: true });
+      results.push({ name: 'Ctrl+Shift+H删除行', ok: ROWS === rowsD && grid[1][0] === '' && grid[1][1] === '' });
+
+      // ── 3. 小写 v 仍切回选择工具（Shift+V 让位后不破坏原选择键）──
+      initGrid(); renderGrid();
+      setTool('box');
+      dispatchKey('v');
+      results.push({ name: '小写v切回选择工具', ok: activeTool === 'select' });
+
+      // ── 4. 旧 I 插入列已移除（回归：换成 Shift+V）──
+      initGrid(); renderGrid();
+      cursorR = 0; cursorC = 0; setSel();
+      const colsI = COLS;
+      dispatchKey('I', { shiftKey: true });
+      results.push({ name: 'I不再插入列', ok: COLS === colsI });
+
+      // ── 5. r 切矩形工具（原为圆角）；b 快捷键已移除 ──
+      setTool('rounded');
+      dispatchKey('r');
+      results.push({ name: 'r切矩形工具', ok: activeTool === 'box' });
+      setTool('select');
+      dispatchKey('b');
+      results.push({ name: 'b快捷键已移除', ok: activeTool === 'select' });
+      setTool('box');
+      dispatchKey('R', { shiftKey: true });
+      // Shift+R 无 ctrl 时是着色色码守卫（红色），不切换工具——确认 r/R 语义不变
+      results.push({ name: 'Shift+R不切工具', ok: activeTool === 'box' });
+
       return results;
     },
   },

@@ -113,14 +113,16 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `v` | 选择工具，再次按进入/退出 Visual 模式 |
 | `f` | 自由绘制（横─竖│） |
 | `l` | 直线（支持 L 型拐弯） |
-| `b` | 矩形框 |
-| `r` | 圆角矩形 |
+| `r` | 矩形框 |
 | `a` | 箭头连线（L 型 + 方向箭头） |
 | `i` | 文字输入（Vim 进入插入模式） |
 | `w` | 梳子理线（对齐散落的横线/竖线） |
 | `m` | 移动工具 |
 | `e` | 擦除 |
 | `Esc` | 回到 Normal 模式（取消 Visual，切回选择工具） |
+
+> **圆角矩形**：不设快捷键，工具栏选择；画好后可用 `Ctrl+Shift+R` 圆角⇄方角转换。
+> **键盘绘制**：`l` 直线 / `r` 矩形 / `a` 箭头 / `k` 粗箭头 工具下，用**方向键**扩展路径（起点固定），**Enter** 确认绘制，**Esc** 取消重画——与鼠标拖拽一致。
 
 #### Visual 模式（`v` 激活）
 
@@ -142,10 +144,10 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `Delete` | 清空当前格子 |
 | `框选 + Delete/Backspace` | 对框选行删 C 列，右侧左移 |
 | `框选 + Space` | 对框选行插 C 列空格，右侧右移 |
-| `I` / `Shift+I` | 插入列 |
-| `Ctrl+Shift+I` | 插入行 |
-| `Shift+Delete` | 删除列（全画面） |
-| `Ctrl+Delete` | 删除行 |
+| `Shift+V` | 插入列（V=纵向） |
+| `Shift+H` | 插入行（H=横向） |
+| `Ctrl+Shift+V` | 删除列（全画面） |
+| `Ctrl+Shift+H` | 删除行 |
 | `Insert` | 切换文字插入/覆盖模式 |
 
 #### Vim 风格
@@ -159,6 +161,7 @@ http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 | `Shift+色码`（如 `Shift+G`） | 着色光标所在框 |
 | `Ctrl+Shift+D` | 光标所在矩形/圆角框 实线⇄虚线转换 |
 | `Ctrl+Shift+R` | 光标所在矩形框 圆角⇄方角转换（循环） |
+| `Ctrl+Shift+B` | 光标所在矩形/圆角框 → 替换成自定义形状（弹窗选择，左下角写 `d:编号`） |
 | `Ctrl+[` / `Ctrl+]` | 上一张图 / 下一张图 |
 | 原色按钮（原） | 还原着色为未着色状态 |
 

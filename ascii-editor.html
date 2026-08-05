@@ -203,19 +203,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="modal-box" style="max-width:600px;font-size:14px">
     <h3>⌨️ 快捷键一览</h3>
     <table style="width:100%;border-collapse:collapse;line-height:2">
-      <tr><td style="padding:2px 8px"><b>V</b></td><td>选择</td><td style="padding:2px 8px"><b>Ctrl+Z</b></td><td>撤销</td></tr>
+      <tr><td style="padding:2px 8px"><b>v</b></td><td>选择/Visual</td><td style="padding:2px 8px"><b>Ctrl+Z</b></td><td>撤销</td></tr>
       <tr><td style="padding:2px 8px"><b>F</b></td><td>自由绘制</td><td style="padding:2px 8px"><b>Ctrl+C</b></td><td>复制</td></tr>
       <tr><td style="padding:2px 8px"><b>L</b></td><td>直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td>剪切</td></tr>
-      <tr><td style="padding:2px 8px"><b>B</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
-      <tr><td style="padding:2px 8px"><b>R</b></td><td>圆角矩形</td><td style="padding:2px 8px"><b>I</b></td><td>插入列</td></tr>
+      <tr><td style="padding:2px 8px"><b>R</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
+      <tr><td style="padding:2px 8px"><b>—</b></td><td>圆角矩形（工具栏选择）</td><td style="padding:2px 8px"><b>Shift+V</b></td><td>插入列</td></tr>
       <tr><td style="padding:2px 8px"><b>Ctrl+Shift+D</b></td><td>光标所在框 实线⇄虚线</td><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>光标所在框 圆角⇄方角</td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+B</b></td><td>光标所在框→自定义形状</td><td style="padding:2px 8px"><b>方向键+Enter</b></td><td>直线/矩形/圆角等键盘绘制</td></tr>
       <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td>插入行</td></tr>
       <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Insert</b></td><td>切换插入/覆盖</td></tr>
       <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
       <tr><td style="padding:2px 8px"><b>M</b></td><td>移动</td><td style="padding:2px 8px"><b>Shift+色码</b></td><td>着色</td></tr>
       <tr><td style="padding:2px 8px"><b>E</b></td><td>擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td>各颜色</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td>清空/框选删C列</td><td style="padding:2px 8px"><b>Shift+Delete</b></td><td>删除列</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td>删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Delete</b></td><td>删除行</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td>清空/框选删C列</td><td style="padding:2px 8px"><b>Ctrl+Shift+V</b></td><td>删除列</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td>删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Shift+H</b></td><td>删除行</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td>保存</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Ctrl+[</b></td><td>上一张图</td><td style="padding:2px 8px"><b>Ctrl+]</b></td><td>下一张图</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Esc</b></td><td>退出文字模式</td></tr>
@@ -243,6 +244,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-buttons">
       <button class="primary" id="btn-add-shape">➕ 添加形状</button>
       <button class="cancel" id="btn-close-shapes">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 形状替换选择弹窗（Ctrl+Shift+B） -->
+<div class="modal-overlay" id="modal-shape-pick">
+  <div class="modal-box" style="max-width:560px">
+    <h3>🧩 替换为自定义形状</h3>
+    <div class="hint">选择形状替换光标所在矩形：将在框<b>左下角</b>写入 <b>d:编号</b> 标记，渲染时该框替换成所选形状（大小自适应框）。</div>
+    <div id="shape-pick-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:300px;overflow:auto;align-items:flex-start"></div>
+    <div class="modal-buttons">
+      <button class="cancel" id="btn-close-shape-pick">取消</button>
     </div>
   </div>
 </div>
@@ -1895,14 +1908,13 @@ document.addEventListener('keydown', (e) => {
   // Tool shortcuts (在文字工具下输入字符时不触发快捷键)
   if (!e.ctrlKey && !e.metaKey && !e.altKey && !(activeTool === 'text' && e.key.length === 1)) {
     switch (e.key) {
-      case 'r': case 'R': setTool('rounded'); e.preventDefault(); return;
-      case 'v': case 'V':
+      case 'r': case 'R': setTool('box'); e.preventDefault(); return;   // r = 矩形（圆角矩形走工具栏，无快捷键）
+      case 'v':
         if (activeTool === 'select' || activeTool === 'text') { isVisual = !isVisual; updateStatus(); }
         else { setTool('select'); }
         e.preventDefault(); return;
       case 'f': case 'F': setTool('free'); e.preventDefault(); return;
       case 'l': case 'L': setTool('line'); e.preventDefault(); return;
-      case 'b': case 'B': setTool('box'); e.preventDefault(); return;
             case 'a': case 'A': setTool('arrow'); e.preventDefault(); return;
       case 'i': setTool('text'); e.preventDefault(); return;
       case 't': case 'T': setTool('text'); e.preventDefault(); return;
@@ -2046,6 +2058,24 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  // Ctrl+Shift+B 将光标所在矩形/圆角框替换成自定义形状（弹出形状选择，左下角写 d:编号）
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+    e.preventDefault();
+    openShapePicker();
+    return;
+  }
+
+  // Ctrl+Shift+V 删除整列（V=纵向）；Ctrl+Shift+H 删除整行（H=横向）——与 Shift+V/H 插入对称
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+    e.preventDefault();
+    deleteColumn();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+    e.preventDefault();
+    deleteRow();
+    return;
+  }
 
   // Ctrl+C copy / Ctrl+X cut / Ctrl+V paste
   if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -2093,13 +2123,12 @@ document.addEventListener('keydown', (e) => {
     updateStatus();
     return;
   }
-  // Shift+H 插入整行
+  // Shift+V 插入列（V=纵向）；Shift+H 插入行（H=横向）——与 Ctrl+Shift+V/H 删除对称
+  if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'V') {
+    insertColumn(); e.preventDefault(); return;
+  }
   if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'H') {
     insertRow(); e.preventDefault(); return;
-  }
-  // I 插入列
-  if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'I') {
-    insertColumn(); e.preventDefault(); return;
   }
 
   // Delete/Backspace：框选→局部删C列左移；单格Backspace→删前一个左移；单格Delete→清空当前
@@ -2157,9 +2186,16 @@ document.addEventListener('keydown', (e) => {
 
   // Esc 回到 Normal 模式（选择工具，取消 Visual）
   if (e.key === 'Escape') {
+    // 形状选择弹窗打开时：Esc 关闭弹窗，不做其他操作
+    const pickModal = document.getElementById('modal-shape-pick');
+    if (pickModal && pickModal.classList.contains('active')) {
+      pickModal.classList.remove('active');
+      pendingShapeBox = null;
+      e.preventDefault(); return;
+    }
     if (isVisual) { isVisual = false; clearSelection(); }
-    else if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') && selStart) {
-      // 箭头/直线/粗箭头键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
+    else if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') && selStart) {
+      // 箭头/直线/粗箭头/矩形/圆角键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
       cursorR = selStart.r; cursorC = selStart.c;
       clearPreview();
       clearSelection();
@@ -2194,8 +2230,8 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
-    // 箭头/直线/粗箭头工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
-    if (activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') {
+    // 箭头/直线/粗箭头/矩形/圆角工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
+    if (activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') {
       e.preventDefault();
       const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
@@ -2278,12 +2314,14 @@ document.addEventListener('keydown', (e) => {
   // Enter - new row (or stay, for our grid)
   if (e.key === 'Enter') {
     e.preventDefault();
-    // 箭头/直线/粗箭头工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
-    if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick') && selStart && selEnd) {
+    // 箭头/直线/粗箭头/矩形/圆角工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
+    if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') && selStart && selEnd) {
       clearPreview();
       if (activeTool === 'arrow') drawArrow();
       else if (activeTool === 'line') drawLine();
       else if (activeTool === 'thick') drawThick();
+      else if (activeTool === 'box') drawBox();
+      else if (activeTool === 'rounded') drawRoundedBox();
       updateStatus();
       return;
     }
@@ -2772,6 +2810,7 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
 
 // ═══ 形状库（自定义贴纸）═══
 let shapes = {};  // {"编号": "<svg>..."}
+let pendingShapeBox = null;  // Ctrl+Shift+B 待替换的矩形（findBoxAt 结果），选中形状后落标记
 
 function loadShapes() {
   return fetch('/shapes').then(r => r.json()).then(d => { shapes = d || {}; renderShapesList(); }).catch(() => { shapes = {}; });
@@ -2828,6 +2867,73 @@ function removeShape(id) {
   delete shapes[id];
   saveShapes().then(renderShapesList).catch(() => alert('保存失败'));
 }
+
+// ═══ Ctrl+Shift+B：矩形替换成自定义形状 ═══
+// 复用上色逻辑：上色是把框角替换成色码，这里把框「左下角」替换成 d:编号 标记
+function openShapePicker() {
+  const cell = getCell(cursorR, cursorC);
+  if (!cell) { alert('请先把光标移到矩形/圆角框内'); return; }
+  const d = parseInt(cell.dataset.dispCol);
+  const box = findBoxAt(cursorR, d);
+  if (!box) { alert('光标处没有可替换的矩形/圆角框'); return; }
+  pendingShapeBox = box;
+  renderShapePickList();
+  document.getElementById('modal-shape-pick').classList.add('active');
+}
+
+// 渲染形状选择列表（缩略图，单击即选中替换）
+function renderShapePickList() {
+  const list = document.getElementById('shape-pick-list');
+  if (!list) return;
+  const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
+  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">形状库为空，请先点击「🧩 形状」按钮添加 SVG 形状</div>'; return; }
+  list.innerHTML = ids.map(id => {
+    // 与画布渲染一致的变换：线宽不缩放 + 填满容器
+    let svg = shapes[id];
+    svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
+    svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
+    return `
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="applyShapePick('${id}')" title="替换为 #${id}">
+      <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
+      <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
+    </div>`}).join('');
+}
+
+// 选中形状：把待替换矩形的左下角写成 d:编号 标记（覆盖 └/╰/色码 与随后的底边格）
+function applyShapePick(id) {
+  const box = pendingShapeBox;
+  const pickModal = document.getElementById('modal-shape-pick');
+  pendingShapeBox = null;
+  if (!box || !shapes[id]) { if (pickModal) pickModal.classList.remove('active'); return; }
+  const marker = 'd:' + id;
+  // 宽度校验：标记 + 底边右角 ┘ 需能容纳，否则渲染器识别不到右边界
+  if (box.rightD - box.leftD + 1 < marker.length + 1) {
+    alert(`当前矩形宽度 ${box.rightD - box.leftD + 1} 格，容纳不下标记「${marker}」+ 右下角，请换更宽的框或更短的形状名`);
+    return;
+  }
+  const c = findCellByDispColAny(box.botR, box.leftD);
+  if (c < 0) { if (pickModal) pickModal.classList.remove('active'); return; }
+  saveHistory();
+  for (let i = 0; i < marker.length; i++) {
+    const cc = c + i;
+    if (cc < COLS) grid[box.botR][cc] = marker[i];
+  }
+  renderGrid();
+  refreshPreview();
+  if (pickModal) pickModal.classList.remove('active');
+}
+
+// 点击弹窗外背景关闭（该弹窗无输入框，丢失选择无成本）
+document.getElementById('modal-shape-pick').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-shape-pick') {
+    document.getElementById('modal-shape-pick').classList.remove('active');
+    pendingShapeBox = null;
+  }
+});
+document.getElementById('btn-close-shape-pick').addEventListener('click', () => {
+  document.getElementById('modal-shape-pick').classList.remove('active');
+  pendingShapeBox = null;
+});
 
 document.getElementById('btn-shapes').addEventListener('click', () => {
   document.getElementById('modal-shapes').classList.add('active');
@@ -2945,7 +3051,7 @@ function ensureCapacity(r, c) {
     resizeGrid(newRows, newCols);
     renderGrid();
     // Re-apply live preview after re-render
-    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'arrow' || activeTool === 'thick') {
+    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'rounded' || activeTool === 'arrow' || activeTool === 'thick') {
       setPreview(previewPositions());
     }
   }
