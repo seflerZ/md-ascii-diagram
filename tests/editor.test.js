@@ -4,14 +4,16 @@
 //
 // 运行：
 //   node tests/editor.test.js
-// 说明：自动检测 8000 端口，若未启动则自动拉起 python server.py
+// 说明：自动检测自测端口，若未启动则自动拉起 python server.py
+//       ⚠️ 自测端口用 8765，勿用 8000（8000 是主人自己绘图用的编辑器）
 // ═══════════════════════════════════════════════════════════════
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const net = require('net');
 const path = require('path');
 
-const BASE = 'http://127.0.0.1:8000/ascii-editor.html';
+const TEST_PORT = 8765;   // 自测专用端口（8000 留给主人绘图）
+const BASE = `http://127.0.0.1:${TEST_PORT}/ascii-editor.html`;
 const ROOT = path.resolve(__dirname, '..');
 
 // ── 工具 ──
@@ -25,11 +27,11 @@ function isPortOpen(port) {
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function ensureServer() {
-  if (await isPortOpen(8000)) return null;
-  const child = spawn('python', ['server.py', '8000'], { cwd: ROOT, stdio: 'ignore', windowsHide: true });
+  if (await isPortOpen(TEST_PORT)) return null;
+  const child = spawn('python', ['server.py', String(TEST_PORT)], { cwd: ROOT, stdio: 'ignore', windowsHide: true });
   for (let i = 0; i < 30; i++) {
     await sleep(300);
-    if (await isPortOpen(8000)) return child;
+    if (await isPortOpen(TEST_PORT)) return child;
   }
   child.kill();
   throw new Error('无法启动 python server.py（请确认 python 在 PATH 中）');
