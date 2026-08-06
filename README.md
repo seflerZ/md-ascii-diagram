@@ -21,9 +21,7 @@ The result: AI can edit the diagram, and when you share the document or upload i
 | AI-native, text-based drafting | ✅ Char-native — AI writes ASCII directly | ⚠️ AI emits XML, not native | ❌ Manual drag & drop | ✅ Text-based, AI-friendly |
 | Fine-tune with a built-in editor | ✅ Built-in editor | ✅ draw.io editor | ✅ Full-featured editor | ⚠️ Text-only edits, can't control space and relations |
 | Skill integration into AI tools, auto re-render on edit | ✅ Install as a Claude Code skill — AI edits, PNG re-renders automatically | ⚠️ Via MCP/tool glue | ❌ No AI workflow | ⚠️ Markdown viewers only |
-| AI img2img beautify → any style | ✅ GPT Image / SeedDance, any style | ❌ Single style | ❌ Single style | ❌ Single style |
-
-> Note: Style is about the rendering, not colors. Such as hand writing, technique metal, and more.
+| AI img2img beautify integration | ✅ Coming soon | ❌ Not available | ❌ Not available | ❌ Not available |
 
 ## ScreenShots
 

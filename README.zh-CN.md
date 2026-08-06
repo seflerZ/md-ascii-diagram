@@ -21,13 +21,48 @@ AI 模型缺乏空间感知，因此用 `draw.io` 这类可视化原生工具难
 | 面向 AI、基于字符的草稿 | ✅ 字符原生，AI 直接写 ASCII | ⚠️ AI 生成 XML，非原生 | ❌ 手动拖拽 | ✅ 文本语法，AI 友好 |
 | 内置编辑器人工精细调整 | ✅ 内置编辑器 | ✅ draw.io 编辑器 | ✅ 功能完善的编辑器 | ⚠️ 只能改文本，无法控制空间与关系 |
 | 以技能集成进 AI 工具，改后自动重渲染 | ✅ 作为 Claude Code skill 安装——AI 改完 PNG 自动重新渲染 | ⚠️ 靠 MCP 胶水 | ❌ 无 AI 工作流 | ⚠️ 仅 Markdown 渲染器 |
-| AI 图生图，任意风格美化 | ✅ GPT Image / SeedDance，任意风格 | ❌ 单一风格 | ❌ 单一风格 | ❌ 单一风格 |
-
-> 说明：风格指渲染方式，而非颜色，例如手写风、技术金属风等。
+| AI 图生图美化集成 | ✅ 即将推出 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
 
 ## 截图
 
-<img width="642" height="642" alt="image" src="https://github.com/user-attachments/assets/c04dd6b7-bd50-481e-9db1-fb216a095f5f" />
+1. 提示 AI 自动生成图表：
+<img width="2232" height="1082" alt="image" src="https://github.com/user-attachments/assets/8991082c-d38c-45f0-87ed-30bed64cd527" />
+
+2. 在内置编辑器中精细调整（i18n 稍后推出）：
+<img width="2112" height="1210" alt="image" src="https://github.com/user-attachments/assets/7218a824-220a-4403-8af5-ba5fafe2f9db" />
+
+3. GPT Image-2 生成的最终效果：
+<table>
+  <tr>
+    <th width="500px">明亮风格</th>
+    <th>黑金金属风格</th>
+  </tr>
+  <tr>
+    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/6cc1a12f-4922-4bf1-97aa-02a564fcaa91" /></td>
+    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/cdd41ff8-21e6-4c7a-9225-2846eaf6ecef" />
+</td>
+  </tr>
+  <tr>
+    <td>
+    提示词： <br/>
+   1. 文字必须保持清晰，箭头线的形状和矩形的位置不得改动。<br/>
+   2. 根据每个矩形的内容添加图标以辅助理解（图标必须与内容相关——可以是产品描述性图标或示意图），突出其作用/功能。<br/>
+   3. 不要删除或截断任何原始文字。<br/>
+   4. 保留现有配色方案。背景保持纯白，不要给形状添加额外着色（其他元素允许）。<br/>
+   5. 使用科技小报风格。</td>
+    <td>
+    提示词： <br/>
+      1. 文字必须保持清晰，箭头线的形状和矩形的位置不得改动。<br/>
+      2. 根据每个矩形的内容添加图标以辅助理解（图标必须与内容相关——可以是产品描述性图标或示意图），突出其作用/功能。<br/>
+      3. 不要删除或截断任何原始文字。<br/>
+      4. 保留现有配色方案。背景保持纯黑，不要给形状添加额外着色（其他元素允许）。<br/>
+      5. 适当调整颜色明度以适配深色背景。<br/>
+      6. 使用金属科技风格。<br/>
+    </td>
+  </tr>
+</table>
+
+> ⚠️ 注意：GPT Image-2 或 SeedDance 不包含在本项目中，你需要自备访问权限。
 
 ## 如何安装
 
