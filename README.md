@@ -27,9 +27,44 @@ The result: AI can edit the diagram, and when you share the document or upload i
 
 ## ScreenShots
 
-<img width="642" height="642" alt="image" src="https://github.com/user-attachments/assets/c04dd6b7-bd50-481e-9db1-fb216a095f5f" />
+1. Prompt to AI to auto generate the diagram:
+<img width="2232" height="1082" alt="image" src="https://github.com/user-attachments/assets/8991082c-d38c-45f0-87ed-30bed64cd527" />
 
+2. Fine tune it within the build in editor (i18n comes later):
+<img width="2112" height="1210" alt="image" src="https://github.com/user-attachments/assets/7218a824-220a-4403-8af5-ba5fafe2f9db" />
 
+3. GPT Image-2 generated final results：
+<table>
+  <tr>
+    <th width="500px">Light Style</th>
+    <th>Black Metal Style</th>
+  </tr>
+  <tr>
+    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/6cc1a12f-4922-4bf1-97aa-02a564fcaa91" /></td>
+    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/cdd41ff8-21e6-4c7a-9225-2846eaf6ecef" />
+</td>
+  </tr>
+  <tr>
+    <td>
+Prompts: <br/>
+   1. Text must remain clear. The shapes of the arrow lines and the positions of the rectangles must not be altered.<br/>
+   2. Add icons to each rectangle based on its content to aid comprehension (icons must be relevant to the content — they can be product-describing icons or illustrative diagrams), highlighting its role/function.<br/>
+   3. Do not remove or cut any of the original text.<br/>
+   4. Preserve the existing color scheme. Keep the background pure white, and do not apply additional coloring to the shapes (other elements are allowed).<br/>
+   5. Use a tech-newsletter style (科技小报风).</td>
+    <td>
+    Prompts: <br/>
+      1. Text must remain clear. The shapes of the arrow lines and the positions of the rectangles must not be altered.<br/>
+      2. Add icons to each rectangle based on its content to aid comprehension (icons must be relevant to the content — they can be product-describing icons or illustrative diagrams), highlighting its role/function.<br/>
+      3. Do not remove or cut any of the original text.<br/>
+      4. Preserve the existing color scheme. Keep the background pure black, and do not apply additional coloring to the shapes (other elements are allowed).<br/>
+      5. Adjust the color lightness appropriately to suit the dark background.<br/>
+      6. Use a metallic tech style (金属科技风).<br/>
+    </td>
+  </tr>
+</table>
+
+> ⚠️ Note: GPT Image-2 or SeedDance is not included in this project, you must bring you own access.
 ## How to install
 
 Just tell ClaudeCode or you code tools to read this page and it should be able to install all it and all the dependencies.
