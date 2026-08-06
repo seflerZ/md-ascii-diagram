@@ -1,4 +1,7 @@
 # MD ASCII Diagram
+
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ## Motivation
 
 When writing technical proposals in Markdown with Claude Code, it can generate ASCII diagrams. However, when sharing these documents with others, the ASCII art often gets misaligned due to different fonts, editors, or platforms.
@@ -39,4 +42,11 @@ npx playwright install msedge  # or chromium / firefox
 
 ### 3. Optional: Install the recommended font
 
-Download [Sarasa Mono SC Nerd](https://github.com/be5invis/Sarasa-Gothic) and place the `.ttf` files into `~/.claude/skills/md-ascii-diagram/fonts/`. The editor will load them automatically. If the font is missing, it falls back to Consolas / Courier New — diagrams will still work but some arrow characters may misalign.
+**A monospace (fixed-width) font is a hard requirement for ASCII art to align correctly.** Every glyph must advance the same width so that box-drawing characters, arrows, and nested shapes land on a shared grid — this is exactly what "drawing by characters" relies on for visual layout. With a proportional font, characters sit at different widths, rows drift, and the diagram visually falls apart even though the text looks fine.
+
+Recommended fonts:
+
+- **For all users**: install any **monospace Nerd Font** family — Nerd Fonts bundle the extra glyphs (box-drawing, arrows, powerline, icons) that plain monospace fonts often lack.
+- **For Chinese users**: we recommend [**Sarasa Terminal SC Nerd** (更纱终端书呆黑体-简)](https://github.com/laishulu/Sarasa-Term-SC-Nerd) — a monospaced terminal font that harmonizes ASCII with CJK glyphs, so mixed Chinese/English labels stay perfectly aligned.
+
+Download the `.ttf` files and place them into `~/.claude/skills/md-ascii-diagram/fonts/`. The editor will load them automatically. If the font is missing, it falls back to Consolas / Courier New — diagrams will still work but some arrow characters may misalign.
