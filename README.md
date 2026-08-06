@@ -21,7 +21,7 @@ The result: AI can edit the diagram, and when you share the document or upload i
 | AI-native, text-based drafting | ✅ Char-native — AI writes ASCII directly | ⚠️ AI emits XML, not native | ❌ Manual drag & drop | ✅ Text-based, AI-friendly |
 | Fine-tune with a built-in editor | ✅ Built-in editor | ✅ draw.io editor | ✅ Full-featured editor | ⚠️ Text-only edits, can't control space and relations |
 | Skill integration into AI tools, auto re-render on edit | ✅ Install as a Claude Code skill — AI edits, PNG re-renders automatically | ⚠️ Via MCP/tool glue | ❌ No AI workflow | ⚠️ Markdown viewers only |
-| AI img2img beautify integration | ✅ Coming soon | ❌ Not available | ❌ Not available | ❌ Not available |
+| AI img2img beautify integration | ✅ Comming soon | ❌ Not availble | ❌ Not available | ❌ Not available |
 
 ## ScreenShots
 
@@ -38,8 +38,8 @@ The result: AI can edit the diagram, and when you share the document or upload i
     <th>Black Metal Style</th>
   </tr>
   <tr>
-    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/6cc1a12f-4922-4bf1-97aa-02a564fcaa91" /></td>
-    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/cdd41ff8-21e6-4c7a-9225-2846eaf6ecef" />
+    <td><img width="500px" alt="image" src="https://github.com/user-attachments/assets/6cc1a12f-4922-4bf1-97aa-02a564fcaa91" /></td>
+    <td><img width="500px" alt="image" src="https://github.com/user-attachments/assets/cdd41ff8-21e6-4c7a-9225-2846eaf6ecef" />
 </td>
   </tr>
   <tr>
