@@ -580,7 +580,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       const wc = b.toCol - b.fromCol, hc = b.toRow - b.fromRow + 1;
       // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
       svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
-      return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden"`);
+      return svg.replace(/<svg/i, `<svg preserveAspectRatio="xMidYMid meet" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden"`);
     }).join('');
 
     // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）
@@ -607,16 +607,20 @@ pre span{padding:0}
   var probe=document.createElement('span');
   probe.style.cssText='font-family:inherit;font-size:16px;position:absolute;visibility:hidden;white-space:pre';
   probe.textContent='0';
-  document.body.appendChild(probe);
+  pre.appendChild(probe);   // 挂到 pre 下，继承 pre 的等宽字体，字符宽与内容一致
   var cw=probe.getBoundingClientRect().width;
-  document.body.removeChild(probe);
+  pre.removeChild(probe);
   var lh=parseFloat(getComputedStyle(pre).lineHeight)||20;
+  // 形状 SVG 在框内居中，四周留边距：图标不触框边，避免与框外文字贴合/重叠
+  var SHAPE_PAD_X = cw * 0.5;      // 左右各留 0.5 字符
+  var SHAPE_PAD_TOP = lh * 0.3;    // 顶部留 0.3 行
+  var SHAPE_PAD_BOTTOM = lh * 0.7; // 底部留 0.7 行（与框外下方文字/标签拉开间距）
   document.querySelectorAll('svg[data-shape]').forEach(function(svg){
     var p=svg.getAttribute('data-shape').split(',');
-    svg.style.left=(20+(+p[0])*cw)+'px';
-    svg.style.top=(20+(+p[1])*lh)+'px';
-    svg.style.width=(+p[2])*cw+'px';
-    svg.style.height=(+p[3])*lh+'px';
+    svg.style.left=(20+(+p[0])*cw + SHAPE_PAD_X)+'px';
+    svg.style.top=(20+(+p[1])*lh + SHAPE_PAD_TOP)+'px';
+    svg.style.width=((+p[2])*cw - 2*SHAPE_PAD_X)+'px';
+    svg.style.height=((+p[3])*lh - SHAPE_PAD_TOP - SHAPE_PAD_BOTTOM)+'px';
   });
   document.querySelectorAll('span[data-text]').forEach(function(sp){
     var p=sp.getAttribute('data-text').split(',');

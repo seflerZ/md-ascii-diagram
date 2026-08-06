@@ -23,6 +23,26 @@ The result: AI can edit the diagram, and when you share the document or upload i
 | Skill integration into AI tools, auto re-render on edit | ✅ Install as a Claude Code skill — AI edits, PNG re-renders automatically | ⚠️ Via MCP/tool glue | ❌ No AI workflow | ⚠️ Markdown viewers only |
 | AI img2img beautify integration | ✅ Supported | ❌ Not availble | ❌ Not available | ❌ Not available |
 
+## Extended shapes supported
+Despite of Unicode chars, you can also draw SVG shapes. Just define you own shapes in the editor and draw it with the tags. For example:
+
+```
+┌──────────────┐
+│              │
+│              │
+│              │
+│              │
+│              │
+d:db───────────┘
+    Database
+```
+
+becomes:
+
+<img width="308" height="380" alt="image" src="https://github.com/user-attachments/assets/9be25a0d-ecdf-4c56-9702-b40dac5a7d4c" />
+
+And you should notice the rectangle is the boundary of the shape.
+
 ## Beautify Backends
 
 The final beautify step supports pluggable image-generation backends:
