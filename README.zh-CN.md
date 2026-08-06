@@ -24,10 +24,16 @@ AI 模型缺乏空间感知，因此用 `draw.io` 这类可视化原生工具难
 | AI 图生图美化集成 | ✅ 即将推出 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
 
 ## 扩展形状支持
-
 除了 Unicode 字符，你还可以绘制 SVG 形状。在编辑器中定义你自己的形状，然后用标签绘制它。例如：
 
-```
+<table>
+  <tr>
+    <th width="50%">ASCII（输入）</th>
+    <th>渲染结果（输出）</th>
+  </tr>
+  <tr>
+    <td>
+<pre>
 ┌──────────────┐
 │              │
 │              │
@@ -36,11 +42,11 @@ AI 模型缺乏空间感知，因此用 `draw.io` 这类可视化原生工具难
 │              │
 d:db───────────┘
     Database
-```
-
-会变成：
-
-<img width="308" height="380" alt="image" src="https://github.com/user-attachments/assets/9be25a0d-ecdf-4c56-9702-b40dac5a7d4c" />
+</pre>
+    </td>
+    <td><img width="308" height="380" alt="image" src="https://github.com/user-attachments/assets/9be25a0d-ecdf-4c56-9702-b40dac5a7d4c" /></td>
+  </tr>
+</table>
 
 请注意，矩形是形状的边界。
 

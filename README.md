@@ -26,7 +26,14 @@ The result: AI can edit the diagram, and when you share the document or upload i
 ## Extended shapes supported
 Despite of Unicode chars, you can also draw SVG shapes. Just define you own shapes in the editor and draw it with the tags. For example:
 
-```
+<table>
+  <tr>
+    <th width="50%">ASCII (input)</th>
+    <th>Rendered (output)</th>
+  </tr>
+  <tr>
+    <td>
+<pre>
 ┌──────────────┐
 │              │
 │              │
@@ -35,11 +42,11 @@ Despite of Unicode chars, you can also draw SVG shapes. Just define you own shap
 │              │
 d:db───────────┘
     Database
-```
-
-becomes:
-
-<img width="308" height="380" alt="image" src="https://github.com/user-attachments/assets/9be25a0d-ecdf-4c56-9702-b40dac5a7d4c" />
+</pre>
+    </td>
+    <td><img width="308" height="380" alt="image" src="https://github.com/user-attachments/assets/9be25a0d-ecdf-4c56-9702-b40dac5a7d4c" /></td>
+  </tr>
+</table>
 
 And you should notice the rectangle is the boundary of the shape.
 
