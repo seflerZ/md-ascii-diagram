@@ -28,7 +28,7 @@ metadata:
 | `beautify-cmd.js` | 文档级美化命令（渲染 + 美化 + 更新引用） |
 | `convert.js` | 代码块风格 → 注释块风格转换脚本 |
 | `styles/` | 风格配置目录：每种风格 = 参考图组 + 提示词组 |
-| `server.py` | HTTP 服务器 + `/save` `/generate` `/beautify` API（Python3） |
+| `server.py` | HTTP 服务器 + `/save` `/generate` `/beautify/start\|status\|insert\|check` API（Python3） |
 
 ---
 
@@ -333,7 +333,51 @@ node beautify.js 图.png --provider=yuntts
 
 ### 与服务器集成
 
-`server.py` 提供 `POST /beautify`：保存注释块 → 渲染 PNG → `beautify.js` 美化 → 返回输出路径，编辑器「✨ 美化」按钮调用。
+`server.py` 提供 `POST /beautify`（异步任务）：保存注释块 → 渲染 PNG → `beautify.js` 美化 → 返回输出路径，编辑器「✨ 美化」按钮调用。
+
+### 编辑器「✨ AI 美化」配置（四项）
+
+编辑器点「✨ AI 美化」时，`server.py` 调 `beautify.js` 只传 `--style`，其余四项**全部从环境变量读取**（与 beautify.js 同逻辑）：
+
+| 配置 | 环境变量 | 默认值 | 说明 |
+|------|---------|--------|------|
+| Provider | `BEAUTIFY_PROVIDER` | `openai` | `openai`（官方/兼容/中转）或 `yuntts`（国内直连） |
+| Model | `BEAUTIFY_MODEL` | `gpt-image-2` | 图像生成模型名 |
+| Base URL | `BEAUTIFY_BASE_URL` | 按 provider：openai→`https://api.openai.com/v1`，yuntts→`https://www.yuntts.com/api/v1` | 服务地址，改 provider 时通常需同步 |
+| API Key | `BEAUTIFY_API_KEY` 或 `OPENAI_API_KEY` | 无（必配） | 服务商密钥，不落盘 |
+
+**设置方法（Windows/PowerShell）：**
+```powershell
+# 一次性（当前会话）
+$env:BEAUTIFY_PROVIDER = "yuntts"
+$env:BEAUTIFY_MODEL = "gpt-image-2"
+$env:BEAUTIFY_API_KEY = "sk-xxx"
+# 持久化（写入用户环境变量，重开终端生效）
+[Environment]::SetEnvironmentVariable("BEAUTIFY_PROVIDER", "yuntts", "User")
+[Environment]::SetEnvironmentVariable("BEAUTIFY_API_KEY", "sk-xxx", "User")
+```
+
+**常见组合示例：**
+```powershell
+# 官方 OpenAI
+$env:BEAUTIFY_API_KEY = "sk-xxx"          # 只配 key，其余用默认（provider=openai）
+# 国内直连（yuntts，已实测跑通）
+$env:BEAUTIFY_PROVIDER = "yuntts"
+$env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts 的 key（base-url 自动切到 yuntts）
+```
+
+### 配置自检（问题排查）
+
+编辑器点「✨ AI 美化」时会先请求 `GET /beautify/check` 自动预检，未就绪会弹出具体缺哪项。人工排查：
+
+```bash
+curl http://localhost:<端口>/beautify/check
+# 返回示例：
+# {"ready":false,"has_api_key":true,"provider":"yuntts","model":"gpt-image-2",
+#  "base_url":"https://www.yuntts.com/api/v1","issues":["缺少 API Key（需设置 BEAUTIFY_API_KEY 或 OPENAI_API_KEY）"]}
+```
+
+**判断标准：`ready: true` 才可正常美化。** 若 `false`，看 `issues` 列出的缺项，按上表补对应环境变量后重启 server.py。改环境变量后**必须重启 server** 才生效（进程启动时读取一次）。
 
 ---
 

@@ -117,6 +117,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-box .modal-buttons .cancel{background:#fff;border:1px solid #ccc}
 .modal-box .modal-buttons .cancel:hover{background:#eee}
 .modal-box .hint{font-size:12px;color:#999;margin-bottom:8px}
+
+/* 美化 UI */
+.beautify-style-card{border:2px solid #ddd;border-radius:8px;padding:10px;cursor:pointer;width:170px;text-align:center;background:#fff}
+.beautify-style-card:hover{border-color:#4a90d9}
+.beautify-style-card.active{border-color:#4a90d9;background:#eef5ff}
+.beautify-style-card img{width:150px;height:190px;object-fit:contain;border-radius:4px;margin-bottom:6px;background:#fff;border:1px solid #eee}
+.beautify-style-card .name{font-size:13px;font-weight:600}
+.beautify-style-card .desc{font-size:11px;color:#999;margin-top:2px}
+
 #diagram-list .diag-item{padding:8px 12px;border-radius:4px;cursor:pointer;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;border-bottom:1px solid #f0f0f0}
 #diagram-list .diag-item:hover{background:#e8f0ff}
 #diagram-list .diag-item .name{font-weight:bold;color:#333;margin-bottom:3px}
@@ -191,9 +200,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="primary" id="btn-save" style="display:none" title="保存到当前 Markdown 文档">💿 保存</button>
     <button class="primary" id="btn-refresh" style="display:none" title="从文件重新读取当前图">🔄 刷新</button>
     <button class="primary" id="btn-generate" title="🖼 生成 PNG 图片（需通过 server.py 访问）">🖼 生成</button>
+    <button class="primary" id="btn-beautify" title="✨ AI 图生图美化（后台异步，进度看工具栏）">✨ AI 美化</button>
     <button class="primary" id="btn-shapes" title="🧩 自定义形状库（框角 /d:编号 引用）">🧩 形状</button>
     <button class="primary" id="btn-import">📥 导入</button>
     <button id="btn-clear">🗑 清空</button>
+  </div>
+  <div id="beautify-toolbar-progress" style="display:none;margin-left:auto;align-items:center;gap:6px;font-size:12px;color:#4a90d9">
+    <span>✨ AI 美化中</span>
+    <div style="width:100px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
+      <div id="beautify-toolbar-bar" style="height:100%;width:0%;background:#4a90d9;transition:width .3s"></div>
+    </div>
+    <span id="beautify-toolbar-pct">0%</span>
   </div>
   <button id="btn-shortcuts" title="快捷键" style="margin-left:auto;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:18px">⌨️</button>
 </div>
@@ -231,6 +248,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- 美化：样式选择浮层 -->
+<div class="modal-overlay" id="modal-beautify">
+  <div class="modal-box" style="max-width:900px;width:94%">
+    <h3>✨ 美化图表</h3>
+    <div class="hint">点击风格卡片查看大图，选定后点「开始美化」（后台运行，期间可继续编辑）</div>
+    <div id="beautify-style-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"></div>
+    <div class="modal-buttons">
+      <button class="primary" id="btn-beautify-start">✨ 开始美化</button>
+      <button class="cancel" id="btn-beautify-cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 美化：进度浮层 -->
+<div class="modal-overlay" id="modal-beautify-big" style="z-index:1100">
+  <div class="modal-box" style="max-width:90%;width:auto;max-height:90vh;align-items:center">
+    <img id="beautify-big-full" alt="style big preview" style="max-width:100%;max-height:82vh;object-fit:contain;border-radius:4px" />
+    <div class="modal-buttons">
+      <button class="cancel" id="btn-beautify-big-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 美化：结果浮层 -->
+<div class="modal-overlay" id="modal-beautify-result">
+  <div class="modal-box" style="max-width:640px">
+    <h3>✅ 美化完成</h3>
+    <div style="text-align:center;background:#f8f8f8;border-radius:6px;padding:10px;margin-bottom:10px;flex:none">
+      <img id="beautify-result-img" style="max-width:100%;max-height:55vh;border-radius:4px" alt="美化结果" />
+    </div>
+    <div style="font-size:12px;color:#999;margin-bottom:10px" id="beautify-result-path"></div>
+    <div class="modal-buttons">
+      <button class="cancel" id="btn-beautify-redo">🔁 再生成</button>
+      <button class="primary" id="btn-beautify-insert">💾 插入文档</button>
+      <button class="cancel" id="btn-beautify-done">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 美化：右下角最小化小条 -->
 <!-- 形状库浮层 -->
 <div class="modal-overlay" id="modal-shapes">
   <div class="modal-box" style="max-width:720px">
@@ -3586,6 +3643,214 @@ document.getElementById('canvas-wrap').addEventListener('mousedown', (e) => {
     if (isVisual) { isVisual = false; updateStatus(); }
   }
 });
+
+/* ============ 美化功能 ============ */
+let beautifyCurrentTask = null;
+let beautifyPollTimer = null;
+let beautifySelectedStyle = null;
+let beautifyResultData = null;
+
+// 从当前图/文件收集美化参数
+function beautifyCollectParams() {
+  const name = document.getElementById('diagram-name').value.trim();
+  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return null; }
+  if (!currentFilePath) { alert('请通过 ?file= 参数打开文档才能美化。直接打开 HTML 不支持。'); return null; }
+  const content = getGridText();
+  if (!content.trim()) { alert('图表为空，没什么好美化的'); return null; }
+  return { file: currentFilePath, name, content };
+}
+
+// 加载可用风格列表
+function beautifyLoadStyles() {
+  return fetch('/beautify/styles')
+    .then(r => r.json())
+    .then(d => d.styles || [])
+    .catch(() => []);
+}
+
+// 点击「AI 美化」：先预检后端是否已配置 API Key，未配置直接提示、不弹窗
+function beautifyOpenWithCheck() {
+  const params = beautifyCollectParams();
+  if (!params) return;
+  fetch('/beautify/check')
+    .then(r => r.json())
+    .then(d => {
+      if (d.ready) {
+        beautifyOpen();
+      } else {
+        const issues = (d.issues && d.issues.length) ? d.issues.join('\n') : '配置不完整';
+        alert('⚠️ AI 美化后端未就绪，请先在 server.py 所在环境配置：\n\n' + issues + '\n\n当前 provider=' + d.provider + '，model=' + d.model + '，base-url=' + d.base_url);
+      }
+    })
+    .catch(() => {
+      alert('⚠️ 无法连接后端，请确认 server.py 已启动');
+    });
+}
+
+// 打开风格选择浮层
+function beautifyOpen() {
+  const params = beautifyCollectParams();
+  if (!params) return;
+  const listEl = document.getElementById('beautify-style-list');
+  listEl.innerHTML = '<div style="color:#999;font-size:13px">加载风格中…</div>';
+  beautifyLoadStyles().then(styles => {
+    if (!styles.length) {
+      listEl.innerHTML = '<div style="color:#c00;font-size:13px">未找到可用风格（styles/ 目录下需有 style.json）</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    beautifySelectedStyle = styles[0];
+    styles.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'beautify-style-card' + (i === 0 ? ' active' : '');
+      card.dataset.style = s;
+      card.innerHTML = '<img src="/styles/' + s + '/ref-1.png" onerror="this.style.visibility=\'hidden\'"><div class="name">' + s + '</div>';
+      card.addEventListener('click', () => {
+        listEl.querySelectorAll('.beautify-style-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        beautifySelectedStyle = s;
+        // 点击卡片 → 弹出独立大图浮层
+        const bigImg = document.getElementById('beautify-big-full');
+        bigImg.src = '/styles/' + s + '/ref-1.png';
+        bigImg.onerror = function() { this.style.visibility = 'hidden'; };
+        document.getElementById('modal-beautify-big').classList.add('active');
+      });
+      listEl.appendChild(card);
+    });
+    document.getElementById('modal-beautify').classList.add('active');
+  });
+}
+
+// 开始美化任务
+function beautifyStart() {
+  const params = beautifyCollectParams();
+  if (!params) return;
+  if (!beautifySelectedStyle) { alert('请先选择风格'); return; }
+  document.getElementById('modal-beautify').classList.remove('active');
+  // 立即显示进度条（启动中），不等后端返回，避免用户干等
+  beautifyShowProgress(0, '启动中…');
+  fetch('/beautify/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign(params, { style: beautifySelectedStyle }))
+  }).then(r => {
+    if (!r.ok) throw new Error('启动任务失败 ' + r.status);
+    return r.json();
+  }).then(d => {
+    beautifyCurrentTask = d.task_id;
+    beautifyPoll();
+  }).catch(err => beautifyFail('启动美化失败：' + err));
+}
+
+// 显示进度到工具栏（pct/阶段可选，默认只显示）
+function beautifyShowProgress(pct, label) {
+  const bar = document.getElementById('beautify-toolbar-progress');
+  bar.style.display = 'flex';
+  if (typeof pct === 'number') {
+    document.getElementById('beautify-toolbar-bar').style.width = pct + '%';
+    document.getElementById('beautify-toolbar-pct').textContent = pct + '%';
+  }
+  if (label) {
+    const span = bar.querySelector('span');
+    if (span) span.textContent = '✨ AI 美化中 (' + label + ')';
+  }
+}
+
+// 轮询任务状态
+function beautifyPoll() {
+  if (!beautifyCurrentTask) return;
+  fetch('/beautify/status?id=' + encodeURIComponent(beautifyCurrentTask))
+    .then(r => r.json())
+    .then(task => {
+      if (!task || task.status === 'notfound') { beautifyFail('任务丢失（服务器可能已重启）'); return; }
+      beautifyUpdateProgress(task);
+      if (task.status === 'running' || task.status === 'queued') {
+        beautifyPollTimer = setTimeout(beautifyPoll, 1500);
+      } else if (task.status === 'done') {
+        beautifyResultData = task;
+        beautifyFinish();
+      } else if (task.status === 'error') {
+        beautifyFail(task.error || task.stderr || '未知错误');
+      }
+    }).catch(err => {
+      beautifyFail('轮询失败：' + err);
+    });
+}
+
+// 更新工具栏进度条
+function beautifyUpdateProgress(task) {
+  const pct = task.pct || 0;
+  document.getElementById('beautify-toolbar-bar').style.width = pct + '%';
+  document.getElementById('beautify-toolbar-pct').textContent = pct + '%';
+  // 更新阶段标签
+  const stageMap = { save: '保存内容', render: '渲染 PNG', beautify: 'AI 生成', done: '完成', failed: '失败', queued: '排队中' };
+  const label = stageMap[task.stage] || '';
+  const span = document.querySelector('#beautify-toolbar-progress span');
+  if (span && label) span.textContent = '✨ AI 美化中 (' + label + ')';
+}
+
+// 任务完成
+function beautifyFinish() {
+  clearTimeout(beautifyPollTimer);
+  beautifyPollTimer = null;
+  beautifyCurrentTask = null;
+  document.getElementById('beautify-toolbar-progress').style.display = 'none';
+  const out = beautifyResultData.output;
+  if (!out) { beautifyFail('未生成结果文件'); return; }
+  // 显示结果预览
+  const img = document.getElementById('beautify-result-img');
+  img.src = '/' + out.replace(/\\/g, '/');
+  document.getElementById('beautify-result-path').textContent = '输出: ' + out;
+  document.getElementById('modal-beautify-result').classList.add('active');
+}
+
+// 任务失败
+function beautifyFail(msg) {
+  clearTimeout(beautifyPollTimer);
+  beautifyPollTimer = null;
+  beautifyCurrentTask = null;
+  document.getElementById('beautify-toolbar-progress').style.display = 'none';
+  alert('美化失败：' + msg);
+}
+
+// 插入文档（用户确认后）
+function beautifyInsert() {
+  if (!beautifyResultData || !beautifyResultData.output) return;
+  const params = beautifyCollectParams();
+  if (!params) return;
+  fetch('/beautify/insert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: params.file, name: params.name, output: beautifyResultData.output })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      alert('已插入美化图到文档');
+      document.getElementById('modal-beautify-result').classList.remove('active');
+      if (document.getElementById('btn-refresh').style.display !== 'none') {
+        document.getElementById('btn-refresh').click();
+      }
+    } else {
+      alert('插入失败');
+    }
+  }).catch(err => alert('插入失败：' + err));
+}
+
+// 绑定事件
+document.getElementById('btn-beautify').addEventListener('click', beautifyOpenWithCheck);
+document.getElementById('btn-beautify-start').addEventListener('click', beautifyStart);
+document.getElementById('btn-beautify-big-close').addEventListener('click', () => document.getElementById('modal-beautify-big').classList.remove('active'));
+document.getElementById('modal-beautify-big').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
+document.getElementById('btn-beautify-cancel').addEventListener('click', () => document.getElementById('modal-beautify').classList.remove('active'));
+document.getElementById('btn-beautify-insert').addEventListener('click', beautifyInsert);
+document.getElementById('btn-beautify-redo').addEventListener('click', () => {
+  document.getElementById('modal-beautify-result').classList.remove('active');
+  beautifyStart();
+});
+document.getElementById('btn-beautify-done').addEventListener('click', () => document.getElementById('modal-beautify-result').classList.remove('active'));
+// 背景点击关闭（样式/结果浮层）
+document.getElementById('modal-beautify').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
+document.getElementById('modal-beautify-result').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
+
 console.log('ASCII 图编辑器已加载');
 console.log('快捷键: V=选择, F=自由, L=直线, B=矩形, A=箭头, T=文字, W=梳子, E=擦除, Ctrl+Z=撤销, Ctrl+C/X/V=复制剪切粘贴');
 </script>
