@@ -2,21 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-## 为什么做这个工具
+## 工作原理
 
-在用 Claude Code 编写技术提案时，它经常会在 Markdown 中生成 ASCII 图表。但当这些文档分享给他人时，由于字体、编辑器或平台各不相同，ASCII 图经常会对不齐。
-
-这个工具通过以下方式解决这个问题：
+AI 模型缺乏空间感知，因此用 `draw.io` 这类可视化原生工具难以生成好的图表。事实上，如今的 AI 都是「字符原生」的，所以最佳实践是：
 
 1. 将原始 ASCII 图保留在 Markdown 的注释块中（这样 AI 仍然可以编辑它）
 2. 自动将其渲染为漂亮的彩色 PNG 图片
-3. 在文档中把图片引用直接嵌在图表旁边
+3. 用内置编辑器人工精细调整
+4. 在文档中把图片引用直接嵌在图表旁边
+5. 用图片生成 AI（如 GPT Image-2、SeedDance）做最终美化
 
 结果就是：AI 可以编辑图表，而你分享文档或上传到服务器时，图始终看起来完美。
+
+## 对比
+
+| | md-ascii-diagram | next-ai-drawio | draw.io | Mermaid |
+|---- | ---- | ---- | ---- | ---- |
+| 面向 AI、基于字符的草稿 | ✅ 字符原生，AI 直接写 ASCII | ⚠️ AI 生成 XML，非原生 | ❌ 手动拖拽 | ✅ 文本语法，AI 友好 |
+| 内置编辑器人工精细调整 | ✅ 内置编辑器 | ✅ draw.io 编辑器 | ✅ 功能完善的编辑器 | ⚠️ 只能改文本，无法控制空间与关系 |
+| 以技能集成进 AI 工具，改后自动重渲染 | ✅ 作为 Claude Code skill 安装——AI 改完 PNG 自动重新渲染 | ⚠️ 靠 MCP 胶水 | ❌ 无 AI 工作流 | ⚠️ 仅 Markdown 渲染器 |
+| AI 图生图，任意风格美化 | ✅ GPT Image / SeedDance，任意风格 | ❌ 单一风格 | ❌ 单一风格 | ❌ 单一风格 |
+
+> 说明：风格指渲染方式，而非颜色，例如手写风、技术金属风等。
+
+## 截图
 
 <img width="642" height="642" alt="image" src="https://github.com/user-attachments/assets/c04dd6b7-bd50-481e-9db1-fb216a095f5f" />
 
 ## 如何安装
+
+只需让 Claude Code 或你的代码工具读取本页，它就能自动安装好全部组件和依赖。
 
 ### 1. 作为 Claude Code skill 安装
 
