@@ -8,4 +8,8 @@ fonts/
 .claude/
 .playwright-mcp/
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+
 shapes.json
