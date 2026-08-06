@@ -23,6 +23,17 @@ AI 模型缺乏空间感知，因此用 `draw.io` 这类可视化原生工具难
 | 以技能集成进 AI 工具，改后自动重渲染 | ✅ 作为 Claude Code skill 安装——AI 改完 PNG 自动重新渲染 | ⚠️ 靠 MCP 胶水 | ❌ 无 AI 工作流 | ⚠️ 仅 Markdown 渲染器 |
 | AI 图生图美化集成 | ✅ 即将推出 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
 
+## 美化后端服务商
+
+最后的美化步骤支持可插拔的图像生成后端：
+
+| 后端 | 说明 | 用法 | 特点 |
+|---|---|---|---|
+| `openai`（默认） | 任意 OpenAI 兼容图像接口——官方、国内聚合或中转 | `--provider=openai` + `--base-url=<地址>` + `--model=gpt-image-2` | 无参考图走 `/images/edits`；带参考图走 `/chat/completions` |
+| `yuntts` | 云音工坊（云声配音）GPT Image 2，国内直连 | `--provider=yuntts` | 参考图编辑模式 + 任务轮询；约 0.2 元/张（1K 默认通道） |
+
+API Key 从环境变量 `OPENAI_API_KEY` / `BEAUTIFY_API_KEY` 或 `--api-key=<key>` 读取，不落盘。风格（提示词 + 参考图）存放在 `styles/`，详见 `styles/README.md`。
+
 ## 截图
 
 1. 提示 AI 自动生成图表：

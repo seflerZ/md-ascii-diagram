@@ -1,0 +1,9 @@
+{
+  "label": "Light Style (科技小报风)",
+  "refs": ["ref-1.png"],
+  "refsUrl": ["https://github.com/user-attachments/assets/6cc1a12f-4922-4bf1-97aa-02a564fcaa91"],
+  "rules": [
+    "Keep the background pure white, and do not apply additional coloring to the shapes (other elements are allowed).",
+    "Use a tech-newsletter style (科技小报风)."
+  ]
+}

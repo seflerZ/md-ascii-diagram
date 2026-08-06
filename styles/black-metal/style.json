@@ -1,0 +1,10 @@
+{
+  "label": "Black Metal Style (金属科技风)",
+  "refs": ["ref-1.png"],
+  "refsUrl": ["https://github.com/user-attachments/assets/cdd41ff8-21e6-4c7a-9225-2846eaf6ecef"],
+  "rules": [
+    "Keep the background pure black, and do not apply additional coloring to the shapes (other elements are allowed).",
+    "Adjust the color lightness appropriately to suit the dark background.",
+    "Use a metallic tech style (金属科技风)."
+  ]
+}

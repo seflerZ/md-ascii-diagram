@@ -632,13 +632,29 @@ pre span{padding:0}
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 2 });
     await page.goto('file:///' + htmlPath.replace(/\\/g, '/'), { waitUntil: 'networkidle' });
     await page.waitForTimeout(200);
-    const pre = page.locator('pre');
-    const box = await pre.boundingBox();
-    if (box) {
+    // 截图范围取 pre + 形状 SVG + 文字叠加层的并集：
+    // 形状框场景下框内字符被替换成空格、SVG/文字是 absolute 定位，pre.boundingBox 会缩水导致只截到左上角
+    const bounds = await page.evaluate(() => {
+      const els = [document.querySelector('pre'),
+        ...document.querySelectorAll('svg[data-shape]'),
+        ...document.querySelectorAll('span[data-text]')];
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const el of els) {
+        const b = el.getBoundingClientRect();
+        if (!b.width && !b.height) continue;
+        minX = Math.min(minX, b.left); minY = Math.min(minY, b.top);
+        maxX = Math.max(maxX, b.right); maxY = Math.max(maxY, b.bottom);
+      }
+      return { minX, minY, maxX, maxY };
+    });
+    if (isFinite(bounds.minX)) {
       const pngPath = htmlPath.replace('.html', '.png');
       await page.screenshot({
         path: pngPath,
-        clip: { x: Math.max(0, box.x - 5), y: Math.max(0, box.y - 5), width: box.width + 10, height: box.height + 10 },
+        clip: {
+          x: Math.max(0, bounds.minX - 5), y: Math.max(0, bounds.minY - 5),
+          width: bounds.maxX - bounds.minX + 10, height: bounds.maxY - bounds.minY + 10,
+        },
       });
     }
     const ci = boxes.map(b => b.color).join(',');

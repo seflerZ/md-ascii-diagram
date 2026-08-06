@@ -21,7 +21,18 @@ The result: AI can edit the diagram, and when you share the document or upload i
 | AI-native, text-based drafting | ✅ Char-native — AI writes ASCII directly | ⚠️ AI emits XML, not native | ❌ Manual drag & drop | ✅ Text-based, AI-friendly |
 | Fine-tune with a built-in editor | ✅ Built-in editor | ✅ draw.io editor | ✅ Full-featured editor | ⚠️ Text-only edits, can't control space and relations |
 | Skill integration into AI tools, auto re-render on edit | ✅ Install as a Claude Code skill — AI edits, PNG re-renders automatically | ⚠️ Via MCP/tool glue | ❌ No AI workflow | ⚠️ Markdown viewers only |
-| AI img2img beautify integration | ✅ Comming soon | ❌ Not availble | ❌ Not available | ❌ Not available |
+| AI img2img beautify integration | ✅ Supported | ❌ Not availble | ❌ Not available | ❌ Not available |
+
+## Beautify Backends
+
+The final beautify step supports pluggable image-generation backends:
+
+| Backend | Description | How to use | Notes |
+|---|---|---|---|
+| `openai` (default) | Any OpenAI-compatible image API — official, domestic aggregators, or relays | `--provider=openai` + `--base-url=<url>` + `--model=gpt-image-2` | No reference images → `/images/edits`; with reference images → `/chat/completions` |
+| `yuntts` | YunTTs (云音工坊) GPT Image 2 — domestic direct access | `--provider=yuntts` | Reference-image edit mode + task polling; ~¥0.2/image (1K default channel) |
+
+API key is read from `OPENAI_API_KEY` / `BEAUTIFY_API_KEY` env vars or `--api-key=<key>` — never stored in files. Styles (prompt + reference images) live in `styles/` — see `styles/README.md`.
 
 ## ScreenShots
 

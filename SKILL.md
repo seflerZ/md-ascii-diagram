@@ -24,7 +24,11 @@ metadata:
 |------|------|
 | `ascii-editor.html` | 可视化编辑器（单 HTML 文件，浏览器直接打开） |
 | `render_color.js` | 批量渲染脚本（Node.js + Playwright） |
-| `server.py` | HTTP 服务器 + `/save` API（Python3） |
+| `beautify.js` | 图生图美化脚本（Node.js，OpenAI 兼容 /images 接口） |
+| `beautify-cmd.js` | 文档级美化命令（渲染 + 美化 + 更新引用） |
+| `convert.js` | 代码块风格 → 注释块风格转换脚本 |
+| `styles/` | 风格配置目录：每种风格 = 参考图组 + 提示词组 |
+| `server.py` | HTTP 服务器 + `/save` `/generate` `/beautify` API（Python3） |
 
 ---
 
@@ -270,3 +274,134 @@ wait
 渲染使用 **Sarasa Mono SC Nerd** 字体（等宽中文字体）。
 如未安装，脚本 fallback 到 Consolas / Courier New。
 建议安装 [Sarasa Mono SC Nerd](https://github.com/be5invis/Sarasa-Gothic)，或将 `.ttf` 放入 `fonts/` 目录自动加载。
+
+---
+
+## 命令三：md-ascii-diagram-beautify
+
+对渲染好的 PNG 做图生图整体美化（流程第 5 步）：把**原图 + 风格参考图 + 既定提示词**投喂给图像生成模型，输出风格化成品。
+
+### 语法
+
+```bash
+cd ~/.claude/skills/md-ascii-diagram/
+node beautify.js <输入.png> [--style=light|black-metal] [--model=gpt-image-2] [--base-url=https://api.openai.com/v1] [--out=<输出.png>]
+```
+
+### 参数
+
+| 参数 | 说明 |
+|------|------|
+| `<输入.png>` | 渲染好的 PNG（render_color.js 产物） |
+| `--style=<名>` | 美化风格：`light` / `black-metal`，或 `styles.json` 里自定义 |
+| `--model=<模型>` | 图像生成模型，默认 `gpt-image-2` |
+| `--base-url=<URL>` | OpenAI 兼容服务地址，默认官方；可切国内聚合/中转，实现多模型通用 |
+| `--ref=<参考图>` | 手动追加参考图（在风格自带 refs 之外） |
+| `--quality=<low\|medium\|high>` | 生成质量，默认 `high` |
+| `--out=<输出.png>` | 输出路径，默认 `输入名.beautified-风格.png` |
+
+### API Key
+
+不落盘，按以下优先级读取：
+
+1. `--api-key=sk-xxx`
+2. 环境变量 `OPENAI_API_KEY` 或 `BEAUTIFY_API_KEY`
+
+### 支持的服务商（provider）
+
+| provider | 说明 | 用法 |
+|----------|------|------|
+| `openai`（默认） | 任意 OpenAI 兼容图像接口：官方 / 国内聚合 / 中转 | `--provider=openai` + `--base-url` + `--model`（如 gpt-image-2） |
+| `yuntts` | 云音工坊 GPT Image 2，国内直连（已实测跑通） | `--provider=yuntts` |
+
+切换示例：
+
+```bash
+# 官方/兼容服务
+node beautify.js 图.png --provider=openai --base-url=https://api.openai.com/v1 --model=gpt-image-2
+# 国内直连（yuntts）
+node beautify.js 图.png --provider=yuntts
+```
+
+### 风格配置
+
+每个风格 = **一组提示词 + 一组参考图**：
+
+- 内置 `light`（科技小报风）、`black-metal`（金属科技风）
+- 参考图放 `styles/<风格名>/` 目录，在 `beautify.js` 的 `STYLES` 或外部 `styles.json` 里登记 `refs`
+- 无参考图时自动降级为单图模式（`/images/edits`），也能出图
+
+### 与服务器集成
+
+`server.py` 提供 `POST /beautify`：保存注释块 → 渲染 PNG → `beautify.js` 美化 → 返回输出路径，编辑器「✨ 美化」按钮调用。
+
+---
+
+## 命令四：md-ascii-diagram-convert
+
+把文档中「代码块风格」的 ASCII 图转成「注释块风格」（`<!--diagram NAME-->`），便于后续按名字编辑、渲染、美化。
+
+### 语法
+
+```bash
+cd ~/.claude/skills/md-ascii-diagram/
+node convert.js <文档.md> [--index=N] [--name=NAME] [--dry-run]
+```
+
+### 参数
+
+| 参数 | 说明 |
+|------|------|
+| `<文档.md>` | Markdown 文档 |
+| `--index=N` | 只转第 N 个代码块图（按文档顺序，1 起） |
+| `--name=NAME` | 指定图名（默认自动命名 p1/p2...，自动避开已存在的名字） |
+| `--dry-run` | 只预览，不写文件 |
+
+### 示例
+
+```bash
+# 转换所有代码块图（自动命名）
+node convert.js DESIGN.md
+
+# 只转第 2 个并命名为 d17
+node convert.js DESIGN.md --index=2 --name=d17
+```
+
+---
+
+## 命令五：md-ascii-diagram-beautify-doc
+
+文档级美化：对文档中指定图形做图生图美化，自动完成「渲染 PNG → beautify.js 美化 → 更新文档图片引用」闭环。
+
+### 语法
+
+```bash
+cd ~/.claude/skills/md-ascii-diagram/
+node beautify-cmd.js <文档.md> --list-styles
+node beautify-cmd.js <文档.md> --name=<图名> --style=<风格>
+node beautify-cmd.js <文档.md> --all --style=<风格>
+```
+
+### 参数
+
+| 参数 | 说明 |
+|------|------|
+| `--list-styles` | 列出所有可用风格（来自 `styles/*/style.json`） |
+| `--name=<图名>` | 美化指定单图（注释块名字） |
+| `--all` | 美化文档所有图 |
+| `--style=<风格>` | 美化风格，默认 `black-metal` |
+| `--provider=<provider>` | 默认 `yuntts` |
+
+### 环境变量
+
+需要 `OPENAI_API_KEY` 或 `BEAUTIFY_API_KEY`（beautify.js 自动读取，不落盘）。
+
+### 示例
+
+```bash
+# 列出可用风格
+node beautify-cmd.js DESIGN.md --list-styles
+
+# 美化单个图
+node beautify-cmd.js DESIGN.md --name=p1 --style=black-metal
+```

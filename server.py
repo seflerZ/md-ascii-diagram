@@ -194,6 +194,92 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(resp).encode('utf-8'))
             except Exception as e:
                 self.send_error(500, f'生成失败: {e}')
+        elif self.path == '/beautify':
+            # 图生图美化：保存注释块 → 渲染 PNG → beautify.js 美化 → 返回输出路径
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode('utf-8')
+            data = json.loads(body)
+            filepath = data.get('file')
+            name = data.get('name')
+            content = data.get('content')
+            style = data.get('style', 'black-metal')
+            if not filepath or not name:
+                self.send_error(400, '缺少 file 或 name 参数')
+                return
+            try:
+                # 1. 先把当前内容保存到文件（与 /generate 一致）
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    md = f.read()
+                new_block = f'<!--diagram {name}\n{content}\n-->'
+                pattern = r'(<!--\s*diagram\s+' + re.escape(name) + r'\s*\n)[\s\S]*?(-->)'
+                if re.search(pattern, md):
+                    new_md = re.sub(pattern, lambda m: m.group(1) + content + '\n' + m.group(2), md)
+                else:
+                    new_md = md.rstrip() + '\n\n' + new_block + '\n'
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(new_md)
+
+                # 2. 渲染彩色 PNG（复用 render_color.js）
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                render_js = os.path.join(script_dir, 'render_color.js')
+                beautify_js = os.path.join(script_dir, 'beautify.js')
+                file_dir = os.path.dirname(os.path.abspath(filepath))
+                out_dir = os.path.join(file_dir, 'diagrams_out')
+                render = subprocess.run(
+                    ['node', render_js, filepath, out_dir, '--only=' + name],
+                    capture_output=True, text=True, timeout=60, cwd=script_dir
+                )
+                if render.returncode != 0:
+                    raise RuntimeError('渲染失败: ' + (render.stderr or render.stdout))
+
+                # 定位渲染出的 PNG
+                png = os.path.join(out_dir, name + '.png')
+                if not os.path.exists(png):
+                    cands = [f for f in os.listdir(out_dir) if f.startswith(name) and f.endswith('.png')] if os.path.isdir(out_dir) else []
+                    if not cands:
+                        raise RuntimeError('渲染后未找到 PNG: ' + png)
+                    png = os.path.join(out_dir, sorted(cands)[0])
+
+                # 3. 图生图美化（beautify.js，自动序号去重，从 OUTPUT: 行取实际路径）
+                beautify = subprocess.run(
+                    ['node', beautify_js, png, '--style=' + style],
+                    capture_output=True, text=True, timeout=300, cwd=script_dir
+                )
+                ok = beautify.returncode == 0
+                out_png = None
+                if ok:
+                    for line in beautify.stdout.splitlines():
+                        if line.startswith('OUTPUT:'):
+                            out_png = line[len('OUTPUT:'):].strip()
+                    if not out_png:
+                        out_png = os.path.join(out_dir, name + '.beautified-' + style + '.png')
+                if ok:
+                    # 方案 B：把文档中指向原图的引用改为指向美化图（render_color.js 同款格式）
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        md_now = f.read()
+                    rel_beautified = os.path.relpath(out_png, file_dir).replace('\\', '/')
+                    md_img_beautified = f'![{name}]({rel_beautified})'
+                    img_re = re.compile(r'!\[%s\]\([^)]*\)' % re.escape(name))
+                    md_now, cnt = img_re.subn(lambda m: md_img_beautified, md_now)
+                    if cnt == 0:
+                        # 文档里还没有图片引用 → 追加到末尾
+                        md_now = md_now.rstrip() + '\n\n' + md_img_beautified + '\n'
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        f.write(md_now)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                resp = {
+                    'ok': ok,
+                    'png': png,
+                    'output': out_png if ok else None,
+                    'stdout': beautify.stdout,
+                    'stderr': beautify.stderr,
+                }
+                self.wfile.write(json.dumps(resp).encode('utf-8'))
+            except Exception as e:
+                self.send_error(500, f'美化失败: {e}')
         else:
             self.send_error(404)
 
