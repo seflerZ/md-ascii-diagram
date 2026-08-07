@@ -172,11 +172,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="color-picker" id="color-picker"></div>
     <label><span data-i18n="toolbar.shade">明度</span> <input type="number" id="shade-input" min="1" max="6" value="3" style="width:36px"></label>
     <label><span data-i18n="toolbar.font">字体</span> <select id="font-select" style="font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px">
-      <option value="'更纱终端书呆黑体-简','更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace" selected>更纱终端书呆黑体-简</option>
-      <option value="'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace">Sarasa Mono SC Nerd</option>
-      <option value="'Cascadia Code','Consolas','Courier New',monospace">Cascadia Code</option>
-      <option value="'Cascadia Mono','Consolas','Courier New',monospace">Cascadia Mono</option>
-      <option value="Consolas,'Courier New',monospace">Consolas</option>
     </select></label>
   </div>
 
@@ -3910,6 +3905,66 @@ document.getElementById('btn-lang').addEventListener('click', () => {
   }
   measureAmbiguousWidth();
 })();
+
+// 用服务端字体配置（fonts.json）重建字体下拉，并应用已选字体
+function populateFonts(fonts) {
+  const sel = document.getElementById('font-select');
+  const saved = localStorage.getItem('ascii-editor-font');
+  sel.innerHTML = '';
+  let chosen = null;
+  fonts.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.stack;
+    opt.textContent = f.name;
+    if (saved && f.stack === saved) chosen = f.stack;
+    sel.appendChild(opt);
+  });
+  if (!chosen && fonts.length) chosen = fonts[0].stack;
+  if (chosen) {
+    sel.value = chosen;
+    document.getElementById('canvas').style.fontFamily = chosen;
+    const previewPre = document.querySelector('.preview-wrap pre');
+    if (previewPre) previewPre.style.fontFamily = chosen;
+    document.getElementById('diagram-list').style.fontFamily = chosen;
+    document.getElementById('diagram-preview').style.fontFamily = chosen;
+    measureAmbiguousWidth();
+  }
+}
+
+// 动态注册 fonts/ 目录的 ttf 字体，让编辑器预览与 PNG 渲染使用同一字体
+function registerFontFaces(fonts) {
+  if (!fonts) return;
+  const css = fonts.map(f => {
+    const fam = (f.stack || '').split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+    let s = '';
+    if (f.ttf) s += `@font-face{font-family:'${fam}';src:url('/fonts/${f.ttf}') format('truetype');font-weight:normal;font-style:normal}\n`;
+    if (f.ttfBold) s += `@font-face{font-family:'${fam}';src:url('/fonts/${f.ttfBold}') format('truetype');font-weight:bold;font-style:normal}\n`;
+    return s;
+  }).join('');
+  if (css) {
+    let style = document.getElementById('font-faces');
+    if (!style) { style = document.createElement('style'); style.id = 'font-faces'; document.head.appendChild(style); }
+    style.textContent = css;
+  }
+}
+
+// 内置默认字体（直接打开 HTML、无 server 时的兜底；正常通过 server 时被 fonts.json 覆盖）
+const DEFAULT_FONTS = [
+  { name: '更纱终端书呆黑体-简', stack: "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace" },
+  { name: 'Sarasa Mono SC Nerd', stack: "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace" },
+  { name: 'Cascadia Code', stack: "'Cascadia Code','Consolas','Courier New',monospace" },
+  { name: 'Cascadia Mono', stack: "'Cascadia Mono','Consolas','Courier New',monospace" },
+  { name: 'Consolas', stack: "Consolas,'Courier New',monospace" }
+];
+
+// 启动：先用内置默认填充（保证直接打开也有字体），再从服务端加载 fonts.json 覆盖
+populateFonts(DEFAULT_FONTS);
+fetch('/fonts').then(r => r.json()).then(d => {
+  if (d && d.fonts && d.fonts.length) {
+    registerFontFaces(d.fonts);
+    populateFonts(d.fonts);
+  }
+}).catch(() => {});
 
 // 点击网格空白处取消选择
 document.getElementById('canvas-wrap').addEventListener('mousedown', (e) => {

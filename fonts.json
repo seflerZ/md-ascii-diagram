@@ -1,0 +1,27 @@
+{
+  "fonts": [
+    {
+      "name": "更纱终端书呆黑体-简",
+      "stack": "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace",
+      "ttf": "sarasa-mono-sc-nerd-regular.ttf",
+      "ttfBold": "sarasa-mono-sc-nerd-bold.ttf",
+      "render": true
+    },
+    {
+      "name": "Sarasa Mono SC Nerd",
+      "stack": "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace"
+    },
+    {
+      "name": "Cascadia Code",
+      "stack": "'Cascadia Code','Consolas','Courier New',monospace"
+    },
+    {
+      "name": "Cascadia Mono",
+      "stack": "'Cascadia Mono','Consolas','Courier New',monospace"
+    },
+    {
+      "name": "Consolas",
+      "stack": "Consolas,'Courier New',monospace"
+    }
+  ]
+}

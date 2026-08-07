@@ -278,9 +278,36 @@ Put color codes in the top-left and bottom-right corners of a box:
 
 ### Fonts
 
-Rendering uses the **Sarasa Mono SC Nerd** font (monospace CJK font).
-If it isn't installed, the script falls back to Consolas / Courier New.
-It is recommended to install [Sarasa Mono SC Nerd](https://github.com/be5invis/Sarasa-Gothic), or drop the `.ttf` into the `fonts/` directory for automatic loading.
+Font configuration lives in `fonts.json` (a list under the `fonts` key). Both the editor's **font dropdown** and the **PNG renderer** read from it.
+
+| Field | Description |
+|------|------|
+| `name` | Display name in the editor's font dropdown |
+| `stack` | CSS font-family stack used for rendering (e.g. `'MyFont','Consolas',monospace`) |
+| `ttf` | (optional) `.ttf` file in `fonts/` used to embed the font into the rendered PNG |
+| `ttfBold` | (optional) Bold variant of `ttf` |
+| `render` | `true` = primary render font (needs `ttf`); the renderer picks the first one with `render: true` |
+
+Built-in default:
+
+```json
+{
+  "fonts": [
+    { "name": "更纱终端书呆黑体-简", "stack": "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace", "ttf": "sarasa-mono-sc-nerd-regular.ttf", "ttfBold": "sarasa-mono-sc-nerd-bold.ttf", "render": true }
+  ]
+}
+```
+
+**To add a custom font:**
+
+1. Put the `.ttf` file (and a bold variant if you have one) into the skill package `fonts/` directory
+2. Add one entry to the `fonts` array in `fonts.json`, for example:
+   ```json
+   { "name": "MyFont", "stack": "'MyFont','Consolas',monospace", "ttf": "myfont.ttf", "render": true }
+   ```
+3. Restart `server.py` — the editor's font dropdown reloads from `GET /fonts`, and the PNG renderer uses the `render: true` font automatically
+
+> If the system already has the font installed, you can skip the `ttf` fields and just use it in the editor. Add `ttf` + `render: true` only when you also want it embedded in rendered PNGs.
 
 ---
 

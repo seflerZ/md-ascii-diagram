@@ -150,6 +150,31 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
             self.end_headers()
             self.wfile.write(content.encode('utf-8'))
+        elif parsed.path == '/fonts':
+            # 读取字体配置（fonts.json），供编辑器动态填充字体下拉
+            content = '{"fonts": []}'
+            try:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                fonts_file = os.path.join(script_dir, 'fonts.json')
+                fonts_dir = os.path.join(script_dir, 'fonts')
+                if os.path.exists(fonts_file):
+                    cfg = json.load(open(fonts_file, encoding='utf-8'))
+                    fonts = cfg.get('fonts', [])
+                    # 只保留实际存在的字体文件，避免前端 @font-face 请求 404
+                    for f in fonts:
+                        if f.get('ttf') and not os.path.exists(os.path.join(fonts_dir, f['ttf'])):
+                            f.pop('ttf', None)
+                        if f.get('ttfBold') and not os.path.exists(os.path.join(fonts_dir, f['ttfBold'])):
+                            f.pop('ttfBold', None)
+                    content = json.dumps({'fonts': fonts}, ensure_ascii=False)
+            except Exception:
+                content = '{"fonts": []}'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(content.encode('utf-8'))
         elif parsed.path == '/beautify/styles':
             # 列出可用美化风格（styles/ 目录下含 style.json 的子目录）
             script_dir = os.path.dirname(os.path.abspath(__file__))

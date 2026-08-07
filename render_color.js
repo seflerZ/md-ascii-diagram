@@ -17,6 +17,52 @@ const FONT_DIR = path.join(__dirname, 'fonts');
 const FONT_REG = url.pathToFileURL(path.join(FONT_DIR, 'sarasa-mono-sc-nerd-regular.ttf')).href;
 const FONT_BOLD = url.pathToFileURL(path.join(FONT_DIR, 'sarasa-mono-sc-nerd-bold.ttf')).href;
 
+// === 字体配置化（fonts.json）：用户可自定义渲染字体 ===
+// 加字体的方式：把 ttf 放进 fonts/ 目录，并在 fonts.json 的 fonts 数组加一项
+//   { "name": "Font Name", "stack": "'Font Name',monospace", "ttf": "xxx.ttf", "render": true }
+// 渲染脚本取第一个 render:true 且带 ttf 的字体生成 @font-face，并用它的 stack 渲染。
+const FONTS_FILE = path.join(__dirname, 'fonts.json');
+function loadFontsConfig() {
+  try {
+    if (fs.existsSync(FONTS_FILE)) {
+      const cfg = JSON.parse(fs.readFileSync(FONTS_FILE, 'utf8'));
+      if (cfg.fonts && cfg.fonts.length) return cfg.fonts;
+    }
+  } catch (e) {}
+  return null;
+}
+// @font-face 的 family 取 stack 第一项（去引号），如 "'Sarasa Mono SC Nerd',..." → Sarasa Mono SC Nerd
+function fontFaceName(stack) {
+  const first = (stack || '').split(',')[0].trim();
+  return first.replace(/^['"]|['"]$/g, '');
+}
+// 生成 @font-face（normal/bold），无 ttf 返回 null
+function buildFontFaces(font) {
+  if (!font) return null;
+  const fam = fontFaceName(font.stack);
+  let s = '';
+  if (font.ttf) {
+    s += `@font-face{font-family:'${fam}';src:url('${url.pathToFileURL(path.join(FONT_DIR, font.ttf)).href}') format('truetype');font-weight:normal;font-style:normal}\n`;
+  }
+  if (font.ttfBold) {
+    s += `@font-face{font-family:'${fam}';src:url('${url.pathToFileURL(path.join(FONT_DIR, font.ttfBold)).href}') format('truetype');font-weight:bold;font-style:normal}\n`;
+  }
+  return s || null;
+}
+// 渲染主字体（render:true 且带 ttf）
+const _renderFont = (() => {
+  const list = loadFontsConfig();
+  if (!list) return null;
+  return list.find(f => f.render && f.ttf) || null;
+})();
+// 最终 @font-face 与字体栈：有配置用配置，否则 fallback 到内置默认（Sarasa）
+const DEFAULT_FACES =
+  `@font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_REG}') format('truetype');font-weight:normal;font-style:normal}\n` +
+  `@font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_BOLD}') format('truetype');font-weight:bold;font-style:normal}\n`;
+const DEFAULT_STACK = "'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace";
+const FONT_FACES = buildFontFaces(_renderFont) || DEFAULT_FACES;
+const RENDER_STACK = _renderFont ? _renderFont.stack : DEFAULT_STACK;
+
 // === CLI args ===
 // Usage: node render_color.js <markdown-file> [output-dir] [--only=N1,N2,...]
 const args = process.argv.slice(2);
@@ -595,10 +641,9 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     const htmlPage = `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
-@font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_REG}') format('truetype');font-weight:normal;font-style:normal}
-@font-face{font-family:'Sarasa Mono SC Nerd';src:url('${FONT_BOLD}') format('truetype');font-weight:bold;font-style:normal}
+${FONT_FACES}
 *{margin:0;padding:0}body{background:#fff;display:inline-block}
-pre{font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace;font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
+pre{font-family:${RENDER_STACK};font-size:16px;line-height:1.25;white-space:pre;margin:0;padding:20px;font-variant-ligatures:none;font-kerning:none}
 pre span{padding:0}
 </style>
 </head><body><pre style="position:relative;display:inline-block">${html}${overlays}${textOverlays.join('')}</pre><script>
