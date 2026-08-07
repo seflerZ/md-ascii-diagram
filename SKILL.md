@@ -333,6 +333,7 @@ node beautify.js <input.png> [--style=light|black-metal] [--model=gpt-image-2] [
 | `--ref=<ref-image>` | Manually append a reference image (in addition to the style's own refs) |
 | `--quality=<low\|medium\|high>` | Generation quality, default `high` |
 | `--out=<output.png>` | Output path, default `<input-name>.beautified-<style>.png` |
+| `--prompt-stdin` | Read the **style rules** (one per line) from stdin instead of the style's preset `rules`; they are merged after the shared structure-locking rules (`structure`) and sent to the AI. Used by the editor's editable-prompt box |
 
 ### API Key
 
@@ -367,7 +368,10 @@ Each style = **a set of prompts + a set of reference images**:
 
 ### Server integration
 
-`server.py` provides `POST /beautify` (async task): save comment block → render PNG → `beautify.js` beautify → return the output path; the editor's **✨ Beautify** button calls it.
+
+`server.py` provides the async beautify pipeline: `POST /beautify/start` (save comment block → render PNG → `beautify.js` beautify, returns `task_id`) → poll `GET /beautify/status?id=` → `POST /beautify/insert` (write the result image reference into the doc). The editor's **✨ AI Beautify** button drives the whole flow.
+
+When the editor submits, it passes `file`, `name`, `content`, `style`, and optionally `prompt` (the user-edited style rules from the prompt box). If `prompt` is non-empty, `server.py` launches `beautify.js` with `--prompt-stdin` and feeds the text via stdin; the final prompt sent to the AI = shared `structure` rules + the user's rules. If `prompt` is empty, `beautify.js` falls back to the style's preset `rules`.
 
 ### Editor "✨ AI Beautify" configuration (four items)
 
@@ -399,6 +403,10 @@ $env:BEAUTIFY_API_KEY = "sk-xxx"          # just the key; everything else defaul
 $env:BEAUTIFY_PROVIDER = "yuntts"
 $env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts key (base-url switches to yuntts automatically)
 ```
+
+### Editor "✨ AI Beautify" — editable prompt box
+
+Clicking a style card shows an **editable prompt box** below the style list, pre-filled with that style's own rules only (the shared `structure` rules are NOT shown). The user can tweak the rules; on "Start Beautify" the edited text is sent as `prompt`, and `beautify.js` merges it after `structure`. Leave it empty to use the style's preset rules.
 
 ### Config self-check (troubleshooting)
 
