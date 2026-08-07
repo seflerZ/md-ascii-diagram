@@ -1,230 +1,237 @@
 ---
 name: md-ascii-diagram
-description: "Markdown ASCII 图表工具。用法: /md-ascii-diagram edit <文档.md>  打开编辑器编辑文档中的图；/md-ascii-diagram gen <文档.md>  批量渲染所有图为彩色 PNG。支持 9 种颜色、6 级明度、嵌套框、连接符自动合并、四边墙连续性检测。"
+description: "Markdown ASCII diagram tool. Usage: /md-ascii-diagram edit <doc.md> opens the editor to edit the diagrams in a document; /md-ascii-diagram gen <doc.md> batch-renders every diagram into a colored PNG. Supports 9 colors, 6 shade levels, nested boxes, auto-merged connectors, and continuous-wall detection."
 metadata:
   type: skill
   version: "2.1.0"
 ---
 
-# md-ascii-diagram — Markdown ASCII 图表编辑器与渲染
+# md-ascii-diagram — Markdown ASCII Diagram Editor & Renderer
 
-## 概述
+## Overview
 
-本技能包含两个工具：
-1. **可视化编辑器** — 网格化编辑 ASCII 图，支持框选、画线、画框、箭头、着色、线条理顺等
-2. **批量渲染器** — 将 Markdown 文档中的 ASCII 图渲染为彩色 PNG 图片，保留注释格式供后续修改
+This skill provides two tools:
+1. **Visual Editor** — grid-based editing of ASCII diagrams: box selection, lines, boxes, arrows, coloring, line-tidying, and more
+2. **Batch Renderer** — renders the ASCII diagrams in a Markdown document into colored PNG images while keeping the original comment blocks editable
 
 ---
 
-## 文件清单
+## File Manifest
 
-技能包路径：`~/.claude/skills/md-ascii-diagram/`
+Skill package path: `~/.claude/skills/md-ascii-diagram/`
 
-| 文件 | 说明 |
+| File | Description |
 |------|------|
-| `ascii-editor.html` | 可视化编辑器（单 HTML 文件，浏览器直接打开） |
-| `render_color.js` | 批量渲染脚本（Node.js + Playwright） |
-| `beautify.js` | 图生图美化脚本（Node.js，OpenAI 兼容 /images 接口） |
-| `beautify-cmd.js` | 文档级美化命令（渲染 + 美化 + 更新引用） |
-| `convert.js` | 代码块风格 → 注释块风格转换脚本 |
-| `styles/` | 风格配置目录：每种风格 = 参考图组 + 提示词组 |
-| `server.py` | HTTP 服务器 + `/save` `/generate` `/beautify/start\|status\|insert\|check` API（Python3） |
+| `ascii-editor.html` | Visual editor (single HTML file, opens directly in a browser) |
+| `render_color.js` | Batch renderer (Node.js + Playwright) |
+| `beautify.js` | Image-to-image beautifier (Node.js, OpenAI-compatible `/images` API) |
+| `beautify-cmd.js` | Document-level beautify command (render + beautify + update references) |
+| `convert.js` | Converts code-block style diagrams to comment-block style |
+| `styles/` | Style config directory: each style = a reference image set + a prompt set |
+| `server.py` | HTTP server + `/save` `/generate` `/beautify/start\|status\|insert\|check` APIs (Python 3) |
 
 ---
 
-## 命令一：md-ascii-diagram-edit
+## Command 1: md-ascii-diagram-edit
 
-打开编辑器，加载 Markdown 文档中的 ASCII 图进行编辑，编辑后可直接保存回文档。
+Opens the editor, loads the ASCII diagrams from a Markdown document for editing, and saves them straight back.
 
-### 启动服务器
+### Start the server
 
-编辑器必须通过 HTTP 服务器运行，才能读取和写入 Markdown 文件：
+The editor must run through an HTTP server so it can read and write Markdown files:
 
 ```bash
 # Bash
 cd ~/.claude/skills/md-ascii-diagram/
-python3 server.py [端口]
-# 默认端口 8000
+python3 server.py [port]
+# default port 8000
 ```
 
 ```powershell
 # PowerShell
 cd ~\.claude\skills\md-ascii-diagram\
-python server.py [端口]
+python server.py [port]
 ```
 
-### 连接 Markdown 文档
+### Connect a Markdown document
 
-服务器启动后，在浏览器打开：
+Once the server is running, open in a browser:
 
 ```
 http://localhost:8000/ascii-editor.html?file=C:/path/to/DESIGN.md
 ```
 
-编辑器会自动：
-1. `fetch` Markdown 文件内容（通过 `/?file=` API）
-2. 提取所有 ASCII 图（`<!--diagram NAME-->` 注释块 和 ``` 代码块）
-3. 弹出图列表供选择
-4. 选择后加载到网格编辑
+### Interface language
 
-### 编辑与保存
+The editor supports a **Chinese / English** bilingual UI:
 
-- **编辑完成** → 点击 **💿 保存** → 通过 `POST /save` API 写回原 Markdown 文件
-- 已有名字的图 → 在文档中更新 `<!--diagram NAME-->` 注释块内容
-- 新图 → 追加到文档末尾
-- 保存后 VSCode 自动检测文件变化，无需手动复制粘贴
-- 也支持 **💾 导出** 复制 `<!--diagram NAME-->` 格式到剪贴板（手动粘贴）
+- On first load it auto-detects the browser language (`zh*` → Chinese, otherwise English)
+- The **EN / 中** button on the right of the toolbar switches manually; the choice is remembered (`localStorage`) and kept after refresh
 
-### 支持的图格式
+The editor automatically:
+1. `fetch`es the Markdown content (via the `/?file=` API)
+2. Extracts all ASCII diagrams (`<!--diagram NAME-->` comment blocks and ``` code blocks)
+3. Pops up a diagram list to pick from
+4. Loads the selection into the grid for editing
 
-| 格式 | 示例 | 名称 |
+### Edit & Save
+
+- **Done editing** → click **💿 Save** → writes back to the original Markdown file via the `POST /save` API
+- Diagrams that already have a name → updates the `<!--diagram NAME-->` comment block in the document
+- New diagrams → appended to the end of the document
+- After saving, VSCode detects the file change automatically, no manual copy-paste needed
+- Also supports **💾 Export** to copy the `<!--diagram NAME-->` format to the clipboard (for manual paste)
+
+### Supported diagram formats
+
+| Format | Example | Name |
 |------|------|------|
-| 注释块 | `<!--diagram p1\n...\n-->` | 有名字（如 p1） |
-| 代码块 | ``` ``` ``` | 无名字（需取名后导出） |
+| Comment block | `<!--diagram p1\n...\n-->` | Has a name (e.g. p1) |
+| Code block | ``` ``` ``` | No name (must be named before export) |
 
-### 颜色码
+### Color codes
 
-| 码 | 名称 | 色值 |
+| Code | Name | Hex |
 |----|------|------|
-| `m` | 玫红 | `#CC247C` |
-| `r` | 红 | `#E95351` |
-| `o` | 橙 | `#F7A24F` |
-| `y` | 黄 | `#FAE538` |
-| `g` | 绿 | `#4EA660` |
-| `c` | 淡蓝 | `#79CAFB` |
-| `b` | 蓝 | `#5292F7` |
-| `p` | 紫 | `#AA77E9` |
-| `e` | 灰 | `#D9D1D1` |
+| `m` | Rose | `#CC247C` |
+| `r` | Red | `#E95351` |
+| `o` | Orange | `#F7A24F` |
+| `y` | Yellow | `#FAE538` |
+| `g` | Green | `#4EA660` |
+| `c` | Light Blue | `#79CAFB` |
+| `b` | Blue | `#5292F7` |
+| `p` | Purple | `#AA77E9` |
+| `e` | Gray | `#D9D1D1` |
 
-### 文字颜色标记
+### Text color markers
 
-在文字前后加标记可以给文字上色或加下划线，支持预览和 PNG 渲染：
+Wrap text with markers to color it or add an underline; supported in preview and PNG rendering:
 
-| 语法 | 效果 |
+| Syntax | Effect |
 |------|------|
-| `___文字___` | 红色波浪下划线 |
-| `_g_文字_g_` | 绿色文字（色码 m/r/o/y/g/c/b/p/e） |
-| `_!_文字_!_` | 彩虹色文字（9 色循环） |
+| `___text___` | Red wavy underline |
+| `_g_text_g_` | Green text (color code m/r/o/y/g/c/b/p/e) |
+| `_!_text_!_` | Rainbow text (9-color cycle) |
 
-示例：`___重要___` 下划线，`_r_错误_r_` 红色，`_!_恭喜_!_` 彩虹
+Examples: `___important___` underline, `_r_error_r_` red, `_!_congrats_!_` rainbow
 
-### 自定义形状库
+### Custom shape library
 
-- 工具栏「🧩 形状」管理贴纸：粘贴 SVG + 填**描述**，存到 `shapes.json`
-- 存储格式：`{"编号": {"svg": "<svg>…</svg>", "desc": "语义描述"}}`，兼容旧纯字符串格式
-- **描述字段供大模型阅读**——AI 读到 `desc` 即知该编号形状代表什么（如 `db` = 数据库）
-- 使用：在框**左下角**写 `d:编号`（或 `Ctrl+Shift+B` 弹窗选择），渲染时该框替换成形状 SVG
-- **编号限 1-3 个字符**（字母/数字），如 `d:db`、`d:mp`、`d:act`
-- 渲染时形状 SVG 严格贴合**原框区域**（`overflow:hidden`），任何图形都不会超出原框边界
+- Use the **🧩 Shapes** toolbar button to manage stickers: paste an SVG + fill in a **description**, stored in `shapes.json`
+- Storage format: `{"id": {"svg": "<svg>…</svg>", "desc": "semantic description"}}`, compatible with the old plain-string format
+- The **description is meant for the AI** — when the AI reads `desc` it knows what that shape id represents (e.g. `db` = database)
+- Usage: write `d:id` at the box's **bottom-left corner** (or use `Ctrl+Shift+B` and pick from a dialog); at render time the box is replaced by the shape SVG
+- **IDs are limited to 1-3 characters** (letters/digits), e.g. `d:db`, `d:mp`, `d:act`
+- At render time the shape SVG is strictly clipped to the **original box area** (`overflow:hidden`); no graphic ever exceeds the box boundary
 
-### 快捷键
+### Keyboard shortcuts
 
-#### 工具
+#### Tools
 
-| 快捷键 | 功能 |
+| Shortcut | Function |
 |--------|------|
-| `v` | 选择工具，再次按进入/退出 Visual 模式 |
-| `f` | 自由绘制（横─竖│） |
-| `l` | 直线（支持 L 型拐弯） |
-| `r` | 矩形框 |
-| `a` | 箭头连线（L 型 + 方向箭头） |
-| `i` | 文字输入（Vim 进入插入模式） |
-| `w` | 梳子理线（对齐散落的横线/竖线） |
-| `m` | 移动工具 |
-| `e` | 擦除 |
-| `Esc` | 回到 Normal 模式（取消 Visual，切回选择工具） |
+| `v` | Select tool; press again to enter/exit Visual mode |
+| `f` | Freehand draw (horizontal ─ / vertical │) |
+| `l` | Line (supports L-shaped turns) |
+| `r` | Box |
+| `a` | Arrow connector (L-shaped + directional arrowhead) |
+| `i` | Text input (Vim insert mode) |
+| `w` | Comb / line-tidying (aligns scattered horizontal/vertical lines) |
+| `m` | Move tool |
+| `e` | Erase |
+| `Esc` | Back to Normal mode (cancel Visual, switch back to Select tool) |
 
-> **圆角矩形**：不设快捷键，工具栏选择；画好后可用 `Ctrl+Shift+R` 圆角⇄方角转换。
-> **键盘绘制**：`l` 直线 / `r` 矩形 / `a` 箭头 / `k` 粗箭头 工具下，用**方向键**扩展路径（起点固定），**Enter** 确认绘制，**Esc** 取消重画——与鼠标拖拽一致。
+> **Rounded box**: no shortcut — pick it in the toolbar; once drawn you can toggle round⇄square corners with `Ctrl+Shift+R`.
+> **Keyboard drawing**: under the `l` line / `r` box / `a` arrow / `k` thick-arrow tools, use the **arrow keys** to extend the path (start is fixed), **Enter** to confirm, **Esc** to cancel and redraw — same as mouse dragging.
 
-#### Visual 模式（`v` 激活）
+#### Visual mode (activated with `v`)
 
-| 操作 | 效果 |
+| Action | Effect |
 |------|------|
-| 方向键 / 鼠标拖拽 | 扩展选区 |
-| 拖拽选区内部 | 移动选区内容（自动切移动） |
-| `x` / `X` | 删当前/前一个格子 |
-| `dd` | 删当前行 |
-| `yy` / `p` | 复制行 / 粘贴 |
-| `0` / `$` | 行首 / 行尾 |
+| Arrow keys / mouse drag | Extend the selection |
+| Drag inside the selection | Move the selected content (auto-switches to Move) |
+| `x` / `X` | Delete current / previous cell |
+| `dd` | Delete current row |
+| `yy` / `p` | Copy row / paste |
+| `0` / `$` | Line start / line end |
 
-#### 编辑
+#### Editing
 
-| 快捷键 | 功能 |
+| Shortcut | Function |
 |--------|------|
-| `Space` | 插入空格，右侧右移 |
-| `Backspace` | 删除前一个格子，右侧左移 |
-| `Delete` | 清空当前格子 |
-| `框选 + Delete/Backspace` | 对框选行删 C 列，右侧左移 |
-| `框选 + Space` | 对框选行插 C 列空格，右侧右移 |
-| `Shift+V` | 插入列（V=纵向） |
-| `Shift+H` | 插入行（H=横向） |
-| `Ctrl+Shift+V` | 删除列（全画面） |
-| `Ctrl+Shift+H` | 删除行 |
-| `Insert` | 切换文字插入/覆盖模式 |
+| `Space` | Insert a space, shift content right |
+| `Backspace` | Delete previous cell, shift left |
+| `Delete` | Clear current cell |
+| `Select + Delete/Backspace` | Delete C column across selected rows, shift left |
+| `Select + Space` | Insert a C column of spaces across selected rows, shift right |
+| `Shift+V` | Insert column (V = vertical) |
+| `Shift+H` | Insert row (H = horizontal) |
+| `Ctrl+Shift+V` | Delete column (whole canvas) |
+| `Ctrl+Shift+H` | Delete row |
+| `Insert` | Toggle insert / overwrite text mode |
 
-#### Vim 风格
+#### Vim-style
 
-| 快捷键 | 功能 |
+| Shortcut | Function |
 |--------|------|
-| `u` | 撤销 |
-| `Ctrl+r` | 重做 |
-| `Ctrl+Z` | 撤销（备用） |
-| `Ctrl+C/X/V` | 复制/剪切/粘贴 |
-| `Shift+色码`（如 `Shift+G`） | 着色光标所在框 |
-| `Ctrl+Shift+D` | 光标所在矩形/圆角框 实线⇄虚线转换 |
-| `Ctrl+Shift+R` | 光标所在矩形框 圆角⇄方角转换（循环） |
-| `Ctrl+Shift+B` | 光标所在矩形/圆角框 → 替换成自定义形状（弹窗选择，左下角写 `d:编号`） |
-| `Ctrl+[` / `Ctrl+]` | 上一张图 / 下一张图 |
-| 原色按钮（原） | 还原着色为未着色状态 |
+| `u` | Undo |
+| `Ctrl+r` | Redo |
+| `Ctrl+Z` | Undo (fallback) |
+| `Ctrl+C/X/V` | Copy / cut / paste |
+| `Shift+color-code` (e.g. `Shift+G`) | Colorize the box under the cursor |
+| `Ctrl+Shift+D` | Toggle solid⇄dashed on the box/rounded-box under the cursor |
+| `Ctrl+Shift+R` | Toggle round⇄square corners on the box under the cursor (cycles) |
+| `Ctrl+Shift+B` | Replace the box/rounded-box under the cursor with a custom shape (pick from a dialog; writes `d:id` at the bottom-left corner) |
+| `Ctrl+[` / `Ctrl+]` | Previous diagram / next diagram |
+| Original-color button (None) | Restore a colorized box to its uncolored state |
 
 ---
 
-## 命令二：md-ascii-diagram-gen
+## Command 2: md-ascii-diagram-gen
 
-批量渲染文档中所有 ASCII 图为彩色 PNG 图片。
+Batch-renders all ASCII diagrams in a document into colored PNG images.
 
-### 语法
+### Syntax
 
 ```powershell
 # PowerShell
 cd ~/.claude/skills/md-ascii-diagram/
-node render_color.js <文档路径> <输出目录>
+node render_color.js <doc-path> <output-dir>
 ```
 
 ```bash
 # Bash
 cd ~/.claude/skills/md-ascii-diagram/
-node render_color.js <文档路径> <输出目录>
+node render_color.js <doc-path> <output-dir>
 ```
 
-### 参数
+### Arguments
 
-| 参数 | 说明 |
+| Argument | Description |
 |------|------|
-| `<文档路径>` | Markdown 文档路径（如 `../DESIGN.md`） |
-| `<输出目录>` | PNG 输出目录（默认 `./diagrams_out`） |
-| `--only=名称` | 只处理指定图（逗号分隔） |
+| `<doc-path>` | Markdown document path (e.g. `../DESIGN.md`) |
+| `<output-dir>` | PNG output directory (default `./diagrams_out`) |
+| `--only=name` | Process only the given diagrams (comma-separated) |
 
-### 示例
+### Examples
 
 ```bash
-# 全部生成
+# Generate everything
 node render_color.js DESIGN.md diagrams_out
 
-# 只生成 p1 和 d17
+# Generate only p1 and d17
 node render_color.js DESIGN.md diagrams_out --only=p1,d17
 
-# 预览生成结果
+# Preview the result of one diagram
 node render_color.js DESIGN.md diagrams_out --only=p1
 ```
 
-### 并发生成（>5 张时）
+### Concurrent generation (when >5 diagrams)
 
-图多时用并发加速，每批最多 5 张，最多 4 批同时进行：
+When there are many diagrams, use concurrency to speed things up — at most 5 diagrams per batch, up to 4 batches in parallel:
 
 ```powershell
-# PowerShell 示例：21 张图分 4+4+4+4+5 批并发
+# PowerShell example: 21 diagrams in 4+4+4+4+5 concurrent batches
 $md = "C:\path\to\DESIGN.md"
 $out = "diagrams_out"
 $script = "$env:USERPROFILE\.claude\skills\md-ascii-diagram\render_color.js"
@@ -235,7 +242,7 @@ $batches | ForEach-Object -Parallel {
 ```
 
 ```bash
-# Bash 同样逻辑
+# Same logic in Bash
 md="/path/to/DESIGN.md"
 out="diagrams_out"
 script="$HOME/.claude/skills/md-ascii-diagram/render_color.js"
@@ -245,18 +252,18 @@ done
 wait
 ```
 
-### 工作流程
+### Workflow
 
-1. 脚本扫描文档，提取所有 ASCII 图（注释块和代码块）
-2. 对每张图：
-   - 检测框的颜色标记（对角线颜色码）
-   - 用 Playwright + Edge 截图生成高分辨率 PNG
-3. 在文档中每张图后自动插入 `![名称](diagrams_out/名称.png)` 引用
-4. 原始 ASCII 图的注释格式保留（`<!--diagram NAME-->`），可在编辑器中修改后重新渲染
+1. The script scans the document and extracts all ASCII diagrams (comment blocks and code blocks)
+2. For each diagram:
+   - Detects the box's color markers (corner color codes)
+   - Takes a high-resolution screenshot with Playwright + Edge to generate the PNG
+3. Automatically inserts a `![name](diagrams_out/name.png)` reference after each diagram in the document
+4. The original ASCII diagram stays as a comment block (`<!--diagram NAME-->`), so it can be re-rendered after edits in the editor
 
-### 颜色标记书写
+### Writing color markers
 
-在框的左上角和右下角放颜色码：
+Put color codes in the top-left and bottom-right corners of a box:
 
 ```diff
 -┌──────────────┐
@@ -265,187 +272,187 @@ wait
 └──────────────g
 ```
 
-- 左上角：颜色码替换 `┌`（如 `g`）
-- 右下角：颜色码替换 `┘`（如 `g`）
-- 加明度：`g3──────────┐`（3=明度，1-6，默认3）
+- Top-left corner: the color code replaces `┌` (e.g. `g`)
+- Bottom-right corner: the color code replaces `┘` (e.g. `g`)
+- To add a shade: `g3──────────┐` (3 = shade level, 1-6, default 3)
 
-### 字体说明
+### Fonts
 
-渲染使用 **Sarasa Mono SC Nerd** 字体（等宽中文字体）。
-如未安装，脚本 fallback 到 Consolas / Courier New。
-建议安装 [Sarasa Mono SC Nerd](https://github.com/be5invis/Sarasa-Gothic)，或将 `.ttf` 放入 `fonts/` 目录自动加载。
+Rendering uses the **Sarasa Mono SC Nerd** font (monospace CJK font).
+If it isn't installed, the script falls back to Consolas / Courier New.
+It is recommended to install [Sarasa Mono SC Nerd](https://github.com/be5invis/Sarasa-Gothic), or drop the `.ttf` into the `fonts/` directory for automatic loading.
 
 ---
 
-## 命令三：md-ascii-diagram-beautify
+## Command 3: md-ascii-diagram-beautify
 
-对渲染好的 PNG 做图生图整体美化（流程第 5 步）：把**原图 + 风格参考图 + 既定提示词**投喂给图像生成模型，输出风格化成品。
+Image-to-image overall beautification of a rendered PNG (workflow step 5): feeds the **original image + style reference image(s) + a preset prompt** to an image-generation model and outputs a styled result.
 
-### 语法
+### Syntax
 
 ```bash
 cd ~/.claude/skills/md-ascii-diagram/
-node beautify.js <输入.png> [--style=light|black-metal] [--model=gpt-image-2] [--base-url=https://api.openai.com/v1] [--out=<输出.png>]
+node beautify.js <input.png> [--style=light|black-metal] [--model=gpt-image-2] [--base-url=https://api.openai.com/v1] [--out=<output.png>]
 ```
 
-### 参数
+### Arguments
 
-| 参数 | 说明 |
+| Argument | Description |
 |------|------|
-| `<输入.png>` | 渲染好的 PNG（render_color.js 产物） |
-| `--style=<名>` | 美化风格：`light` / `black-metal`，或 `styles.json` 里自定义 |
-| `--model=<模型>` | 图像生成模型，默认 `gpt-image-2` |
-| `--base-url=<URL>` | OpenAI 兼容服务地址，默认官方；可切国内聚合/中转，实现多模型通用 |
-| `--ref=<参考图>` | 手动追加参考图（在风格自带 refs 之外） |
-| `--quality=<low\|medium\|high>` | 生成质量，默认 `high` |
-| `--out=<输出.png>` | 输出路径，默认 `输入名.beautified-风格.png` |
+| `<input.png>` | The rendered PNG (output of render_color.js) |
+| `--style=<name>` | Beautify style: `light` / `black-metal`, or a custom one defined in `styles.json` |
+| `--model=<model>` | Image-generation model, default `gpt-image-2` |
+| `--base-url=<URL>` | OpenAI-compatible service URL; default official; can point to a domestic aggregator/proxy for multi-model support |
+| `--ref=<ref-image>` | Manually append a reference image (in addition to the style's own refs) |
+| `--quality=<low\|medium\|high>` | Generation quality, default `high` |
+| `--out=<output.png>` | Output path, default `<input-name>.beautified-<style>.png` |
 
 ### API Key
 
-不落盘，按以下优先级读取：
+Never stored on disk; read in this priority order:
 
 1. `--api-key=sk-xxx`
-2. 环境变量 `OPENAI_API_KEY` 或 `BEAUTIFY_API_KEY`
+2. Environment variable `OPENAI_API_KEY` or `BEAUTIFY_API_KEY`
 
-### 支持的服务商（provider）
+### Supported providers
 
-| provider | 说明 | 用法 |
+| provider | Description | Usage |
 |----------|------|------|
-| `openai`（默认） | 任意 OpenAI 兼容图像接口：官方 / 国内聚合 / 中转 | `--provider=openai` + `--base-url` + `--model`（如 gpt-image-2） |
-| `yuntts` | 云音工坊 GPT Image 2，国内直连（已实测跑通） | `--provider=yuntts` |
+| `openai` (default) | Any OpenAI-compatible image API: official / domestic aggregator / proxy | `--provider=openai` + `--base-url` + `--model` (e.g. gpt-image-2) |
+| `yuntts` | Yuntone GPT Image 2, direct domestic access (tested & working) | `--provider=yuntts` |
 
-切换示例：
+Switching example:
 
 ```bash
-# 官方/兼容服务
-node beautify.js 图.png --provider=openai --base-url=https://api.openai.com/v1 --model=gpt-image-2
-# 国内直连（yuntts）
-node beautify.js 图.png --provider=yuntts
+# Official / compatible service
+node beautify.js diagram.png --provider=openai --base-url=https://api.openai.com/v1 --model=gpt-image-2
+# Domestic direct access (yuntts)
+node beautify.js diagram.png --provider=yuntts
 ```
 
-### 风格配置
+### Style configuration
 
-每个风格 = **一组提示词 + 一组参考图**：
+Each style = **a set of prompts + a set of reference images**:
 
-- 内置 `light`（科技小报风）、`black-metal`（金属科技风）
-- 参考图放 `styles/<风格名>/` 目录，在 `beautify.js` 的 `STYLES` 或外部 `styles.json` 里登记 `refs`
-- 无参考图时自动降级为单图模式（`/images/edits`），也能出图
+- Built-in `light` (tech-newspaper style), `black-metal` (metal-tech style)
+- Reference images live in `styles/<style-name>/`; register `refs` in the `STYLES` object inside `beautify.js` or in the external `styles.json`
+- With no reference image it automatically falls back to single-image mode (`/images/edits`) and still produces a result
 
-### 与服务器集成
+### Server integration
 
-`server.py` 提供 `POST /beautify`（异步任务）：保存注释块 → 渲染 PNG → `beautify.js` 美化 → 返回输出路径，编辑器「✨ 美化」按钮调用。
+`server.py` provides `POST /beautify` (async task): save comment block → render PNG → `beautify.js` beautify → return the output path; the editor's **✨ Beautify** button calls it.
 
-### 编辑器「✨ AI 美化」配置（四项）
+### Editor "✨ AI Beautify" configuration (four items)
 
-编辑器点「✨ AI 美化」时，`server.py` 调 `beautify.js` 只传 `--style`，其余四项**全部从环境变量读取**（与 beautify.js 同逻辑）：
+When the editor clicks **✨ AI Beautify**, `server.py` calls `beautify.js` passing only `--style`; the other four items are **all read from environment variables** (same logic as beautify.js):
 
-| 配置 | 环境变量 | 默认值 | 说明 |
+| Config | Environment variable | Default | Description |
 |------|---------|--------|------|
-| Provider | `BEAUTIFY_PROVIDER` | `openai` | `openai`（官方/兼容/中转）或 `yuntts`（国内直连） |
-| Model | `BEAUTIFY_MODEL` | `gpt-image-2` | 图像生成模型名 |
-| Base URL | `BEAUTIFY_BASE_URL` | 按 provider：openai→`https://api.openai.com/v1`，yuntts→`https://www.yuntts.com/api/v1` | 服务地址，改 provider 时通常需同步 |
-| API Key | `BEAUTIFY_API_KEY` 或 `OPENAI_API_KEY` | 无（必配） | 服务商密钥，不落盘 |
+| Provider | `BEAUTIFY_PROVIDER` | `openai` | `openai` (official/compatible/proxy) or `yuntts` (domestic direct) |
+| Model | `BEAUTIFY_MODEL` | `gpt-image-2` | Image-generation model name |
+| Base URL | `BEAUTIFY_BASE_URL` | by provider: openai→`https://api.openai.com/v1`, yuntts→`https://www.yuntts.com/api/v1` | Service URL; usually needs to change together with the provider |
+| API Key | `BEAUTIFY_API_KEY` or `OPENAI_API_KEY` | none (required) | Provider key, never stored on disk |
 
-**设置方法（Windows/PowerShell）：**
+**How to set it (Windows/PowerShell):**
 ```powershell
-# 一次性（当前会话）
+# One-off (current session)
 $env:BEAUTIFY_PROVIDER = "yuntts"
 $env:BEAUTIFY_MODEL = "gpt-image-2"
 $env:BEAUTIFY_API_KEY = "sk-xxx"
-# 持久化（写入用户环境变量，重开终端生效）
+# Persistent (writes to the user environment; takes effect in new terminals)
 [Environment]::SetEnvironmentVariable("BEAUTIFY_PROVIDER", "yuntts", "User")
 [Environment]::SetEnvironmentVariable("BEAUTIFY_API_KEY", "sk-xxx", "User")
 ```
 
-**常见组合示例：**
+**Common combinations:**
 ```powershell
-# 官方 OpenAI
-$env:BEAUTIFY_API_KEY = "sk-xxx"          # 只配 key，其余用默认（provider=openai）
-# 国内直连（yuntts，已实测跑通）
+# Official OpenAI
+$env:BEAUTIFY_API_KEY = "sk-xxx"          # just the key; everything else defaults (provider=openai)
+# Domestic direct access (yuntts, tested & working)
 $env:BEAUTIFY_PROVIDER = "yuntts"
-$env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts 的 key（base-url 自动切到 yuntts）
+$env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts key (base-url switches to yuntts automatically)
 ```
 
-### 配置自检（问题排查）
+### Config self-check (troubleshooting)
 
-编辑器点「✨ AI 美化」时会先请求 `GET /beautify/check` 自动预检，未就绪会弹出具体缺哪项。人工排查：
+When the editor clicks **✨ AI Beautify** it first requests `GET /beautify/check` for an automatic preflight; if not ready it pops up exactly what's missing. Manual check:
 
 ```bash
-curl http://localhost:<端口>/beautify/check
-# 返回示例：
+curl http://localhost:<port>/beautify/check
+# example response:
 # {"ready":false,"has_api_key":true,"provider":"yuntts","model":"gpt-image-2",
-#  "base_url":"https://www.yuntts.com/api/v1","issues":["缺少 API Key（需设置 BEAUTIFY_API_KEY 或 OPENAI_API_KEY）"]}
+#  "base_url":"https://www.yuntts.com/api/v1","issues":["Missing API Key (set BEAUTIFY_API_KEY or OPENAI_API_KEY)"]}
 ```
 
-**判断标准：`ready: true` 才可正常美化。** 若 `false`，看 `issues` 列出的缺项，按上表补对应环境变量后重启 server.py。改环境变量后**必须重启 server** 才生效（进程启动时读取一次）。
+**Criterion: only `ready: true` means beautify will work.** If `false`, look at the items listed in `issues` and set the corresponding environment variables per the table above, then restart server.py. After changing environment variables you **must restart the server** for them to take effect (they are read once at process startup).
 
 ---
 
-## 命令四：md-ascii-diagram-convert
+## Command 4: md-ascii-diagram-convert
 
-把文档中「代码块风格」的 ASCII 图转成「注释块风格」（`<!--diagram NAME-->`），便于后续按名字编辑、渲染、美化。
+Converts "code-block style" ASCII diagrams in a document to "comment-block style" (`<!--diagram NAME-->`), so they can later be edited, rendered, and beautified by name.
 
-### 语法
+### Syntax
 
 ```bash
 cd ~/.claude/skills/md-ascii-diagram/
-node convert.js <文档.md> [--index=N] [--name=NAME] [--dry-run]
+node convert.js <doc.md> [--index=N] [--name=NAME] [--dry-run]
 ```
 
-### 参数
+### Arguments
 
-| 参数 | 说明 |
+| Argument | Description |
 |------|------|
-| `<文档.md>` | Markdown 文档 |
-| `--index=N` | 只转第 N 个代码块图（按文档顺序，1 起） |
-| `--name=NAME` | 指定图名（默认自动命名 p1/p2...，自动避开已存在的名字） |
-| `--dry-run` | 只预览，不写文件 |
+| `<doc.md>` | Markdown document |
+| `--index=N` | Convert only the Nth code-block diagram (in document order, starting at 1) |
+| `--name=NAME` | Assign a name (default auto-names p1/p2...; automatically avoids existing names) |
+| `--dry-run` | Preview only, no file write |
 
-### 示例
+### Examples
 
 ```bash
-# 转换所有代码块图（自动命名）
+# Convert all code-block diagrams (auto-named)
 node convert.js DESIGN.md
 
-# 只转第 2 个并命名为 d17
+# Convert only the 2nd one and name it d17
 node convert.js DESIGN.md --index=2 --name=d17
 ```
 
 ---
 
-## 命令五：md-ascii-diagram-beautify-doc
+## Command 5: md-ascii-diagram-beautify-doc
 
-文档级美化：对文档中指定图形做图生图美化，自动完成「渲染 PNG → beautify.js 美化 → 更新文档图片引用」闭环。
+Document-level beautify: beautifies the specified diagrams in a document, completing the "render PNG → beautify.js → update image reference" loop automatically.
 
-### 语法
+### Syntax
 
 ```bash
 cd ~/.claude/skills/md-ascii-diagram/
-node beautify-cmd.js <文档.md> --list-styles
-node beautify-cmd.js <文档.md> --name=<图名> --style=<风格>
-node beautify-cmd.js <文档.md> --all --style=<风格>
+node beautify-cmd.js <doc.md> --list-styles
+node beautify-cmd.js <doc.md> --name=<diagram-name> --style=<style>
+node beautify-cmd.js <doc.md> --all --style=<style>
 ```
 
-### 参数
+### Arguments
 
-| 参数 | 说明 |
+| Argument | Description |
 |------|------|
-| `--list-styles` | 列出所有可用风格（来自 `styles/*/style.json`） |
-| `--name=<图名>` | 美化指定单图（注释块名字） |
-| `--all` | 美化文档所有图 |
-| `--style=<风格>` | 美化风格，默认 `black-metal` |
-| `--provider=<provider>` | 默认 `yuntts` |
+| `--list-styles` | List all available styles (from `styles/*/style.json`) |
+| `--name=<diagram-name>` | Beautify a single named diagram (comment-block name) |
+| `--all` | Beautify all diagrams in the document |
+| `--style=<style>` | Beautify style, default `black-metal` |
+| `--provider=<provider>` | Default `yuntts` |
 
-### 环境变量
+### Environment variables
 
-需要 `OPENAI_API_KEY` 或 `BEAUTIFY_API_KEY`（beautify.js 自动读取，不落盘）。
+Requires `OPENAI_API_KEY` or `BEAUTIFY_API_KEY` (read automatically by beautify.js, never stored on disk).
 
-### 示例
+### Examples
 
 ```bash
-# 列出可用风格
+# List available styles
 node beautify-cmd.js DESIGN.md --list-styles
 
-# 美化单个图
+# Beautify a single diagram
 node beautify-cmd.js DESIGN.md --name=p1 --style=black-metal
 ```

@@ -326,21 +326,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(resp).encode('utf-8'))
             except Exception as e:
                 self.send_error(500, f'生成失败: {e}')
-        elif self.path == '/beautify/styles':
-            # 列出可用美化风格（styles/ 目录下的子目录）
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            styles_dir = os.path.join(script_dir, 'styles')
-            styles = []
-            if os.path.isdir(styles_dir):
-                for name in sorted(os.listdir(styles_dir)):
-                    d = os.path.join(styles_dir, name)
-                    if os.path.isdir(d) and os.path.exists(os.path.join(d, 'style.json')):
-                        styles.append(name)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({'styles': styles}).encode('utf-8'))
         elif self.path == '/beautify/start':
             # 启动异步美化任务，立即返回 task_id，后台线程执行
             length = int(self.headers.get('Content-Length', 0))

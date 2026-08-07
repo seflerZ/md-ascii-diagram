@@ -21,7 +21,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toolbar button.primary{background:#4a90d9;color:#fff;border-color:#3a7bc8}
 .toolbar button.primary:hover{background:#3a7bc8}
 .toolbar label{font-size:12px;color:#666;display:flex;align-items:center;gap:3px}
-.toolbar input[type=color]{width:22px;height:22px;border:none;padding:0;cursor:pointer;vertical-align:middle}
 .toolbar input[type=number]{width:40px;padding:2px;border:1px solid #ccc;border-radius:3px;font-size:12px;text-align:center}
 .toolbar .name-input{width:100px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px}
 
@@ -76,14 +75,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .canvas-wrap .cell.char{color:#333}
 
 /* ── Selection / highlight ── */
-.canvas-wrap .cell.box-preview{background:#e8f5e9}
-.canvas-wrap .cell.color-preview{opacity:.85}
 
-/* ── Color legend ── */
-.color-legend{display:flex;flex-wrap:wrap;gap:3px;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;flex-shrink:0}
-.color-legend .swatch{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 6px;border-radius:3px;cursor:pointer;border:1px solid transparent}
-.color-legend .swatch:hover{border-color:#aaa}
-.color-legend .swatch .dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
 
 /* ── Preview ── */
 .preview-wrap{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center}
@@ -95,9 +87,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .status{background:#fff;border-top:1px solid #ddd;padding:3px 10px;font-size:12px;color:#888;display:flex;gap:16px;flex-shrink:0}
 .status span{cursor:default}
 
-/* ── Tool panels ── */
-.tool-panel{display:none}
-.tool-panel.active{display:flex;align-items:center;gap:6px}
 .color-picker{display:flex;gap:2px;align-items:center}
 .color-picker .cp-btn{width:22px;height:22px;border:1px solid #ccc;border-radius:3px;cursor:pointer;position:relative}
 .color-picker .cp-btn:hover{border-color:#666}
@@ -138,51 +127,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- Toolbar -->
 <div class="toolbar">
   <div class="group">
-    <button id="tool-select" class="active" title="选择/编辑 (V)">🖱 选择</button>
-    <button id="tool-free" title="自由绘制 (F)">✏️ 自由</button>
+    <button id="tool-select" class="active" data-i18n-title="toolTitle.select" data-i18n="tool.select">🖱 选择</button>
+    <button id="tool-free" data-i18n-title="toolTitle.free" data-i18n="tool.free">✏️ 自由</button>
     <div class="tool-line-wrap">
-      <button id="tool-line" title="直线 (L)，进入后按 1/2 切换实线/虚线">─ 直线</button>
+      <button id="tool-line" data-i18n-title="toolTitle.line" data-i18n="tool.line">─ 直线</button>
       <div class="line-dropdown" id="line-dropdown">
-        <div class="line-opt active" data-type="1">─ │ 实线</div>
-        <div class="line-opt" data-type="2">╌ ╎ 虚线</div>
+        <div class="line-opt active" data-type="1" data-i18n="option.lineSolid">─ │ 实线</div>
+        <div class="line-opt" data-type="2" data-i18n="option.lineDashed">╌ ╎ 虚线</div>
       </div>
     </div>
     <div class="tool-box-wrap">
-      <button id="tool-box" title="矩形框 (R)，进入后按 1/2 切换实线/虚线；Ctrl+Shift+D 转换光标所在框 实线/虚线">▣ 矩形</button>
+      <button id="tool-box" data-i18n-title="toolTitle.box" data-i18n="tool.box">▣ 矩形</button>
       <div class="box-dropdown" id="box-dropdown">
-        <div class="box-opt active" data-type="1">┌┐ 实线</div>
-        <div class="box-opt" data-type="2">╌╎ 虚线</div>
+        <div class="box-opt active" data-type="1" data-i18n="option.boxSolid">┌┐ 实线</div>
+        <div class="box-opt" data-type="2" data-i18n="option.boxDashed">╌╎ 虚线</div>
       </div>
     </div>
     <div class="tool-rounded-wrap">
-      <button id="tool-rounded" title="圆角矩形（工具栏选择），进入后按 1/2 切换实线/虚线；Ctrl+Shift+R 转换光标所在框 圆角/方角">▢ 圆角</button>
+      <button id="tool-rounded" data-i18n-title="toolTitle.rounded" data-i18n="tool.rounded">▢ 圆角</button>
       <div class="rounded-dropdown" id="rounded-dropdown">
-        <div class="rounded-opt active" data-type="1">╭╮ 实线</div>
-        <div class="rounded-opt" data-type="2">╌╎ 虚线</div>
+        <div class="rounded-opt active" data-type="1" data-i18n="option.roundedSolid">╭╮ 实线</div>
+        <div class="rounded-opt" data-type="2" data-i18n="option.roundedDashed">╌╎ 虚线</div>
       </div>
     </div>
     <div class="tool-arrow-wrap">
-      <button id="tool-arrow" title="箭头连线 (A)，进入后按 1/2/3 切换类型">→ 箭头</button>
+      <button id="tool-arrow" data-i18n-title="toolTitle.arrow" data-i18n="tool.arrow">→ 箭头</button>
       <div class="arrow-dropdown" id="arrow-dropdown">
-        <div class="arrow-opt active" data-type="1">→ ← 细箭头</div>
-        <div class="arrow-opt" data-type="2">▶ ◀ 实心</div>
-        <div class="arrow-opt" data-type="3">▷ ◁ 空心</div>
+        <div class="arrow-opt active" data-type="1" data-i18n="option.arrowFine">→ ← 细箭头</div>
+        <div class="arrow-opt" data-type="2" data-i18n="option.arrowSolid">▶ ◀ 实心</div>
+        <div class="arrow-opt" data-type="3" data-i18n="option.arrowHollow">▷ ◁ 空心</div>
       </div>
     </div>
-    <button id="tool-thick" title="粗箭头 (K)，方向键扩展，Enter 确认">⟹ 粗箭头</button>
-    <button id="tool-text" title="文字 (T)">T 文字</button>
-    <button id="tool-magic" title="梳子理线 (W)">🪮 梳子</button>
-    <button id="tool-move" title="移动 (M)">↕ 移动</button>
-    <button id="tool-eraser" title="橡皮擦 (E)">⌫ 擦除</button>
+    <button id="tool-thick" data-i18n-title="toolTitle.thick" data-i18n="tool.thick">⟹ 粗箭头</button>
+    <button id="tool-text" data-i18n-title="toolTitle.text" data-i18n="tool.text">T 文字</button>
+    <button id="tool-magic" data-i18n-title="toolTitle.magic" data-i18n="tool.magic">🪮 梳子</button>
+    <button id="tool-move" data-i18n-title="toolTitle.move" data-i18n="tool.move">↕ 移动</button>
+    <button id="tool-eraser" data-i18n-title="toolTitle.eraser" data-i18n="tool.eraser">⌫ 擦除</button>
   </div>
 
   <div class="sep"></div>
 
   <div class="group" id="panel-color">
-    <span style="font-size:12px;color:#666">点色着色:</span>
+    <span style="font-size:12px;color:#666" data-i18n="toolbar.pointColor">点色着色:</span>
     <div class="color-picker" id="color-picker"></div>
-    <label>明度 <input type="number" id="shade-input" min="1" max="6" value="3" style="width:36px"></label>
-    <label>字体 <select id="font-select" style="font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px">
+    <label><span data-i18n="toolbar.shade">明度</span> <input type="number" id="shade-input" min="1" max="6" value="3" style="width:36px"></label>
+    <label><span data-i18n="toolbar.font">字体</span> <select id="font-select" style="font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px">
       <option value="'更纱终端书呆黑体-简','更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace" selected>更纱终端书呆黑体-简</option>
       <option value="'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Consolas','Courier New',monospace">Sarasa Mono SC Nerd</option>
       <option value="'Cascadia Code','Consolas','Courier New',monospace">Cascadia Code</option>
@@ -194,56 +183,59 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="sep"></div>
 
   <div class="group">
-    <label>图 <select id="diagram-select" style="max-width:150px;font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px"></select></label>
-    <label>名称 <input class="name-input" id="diagram-name" value="" placeholder="图名（导出必填）"></label>
-    <button class="primary" id="btn-export">💾 导出</button>
-    <button class="primary" id="btn-save" style="display:none" title="保存到当前 Markdown 文档">💿 保存</button>
-    <button class="primary" id="btn-refresh" style="display:none" title="从文件重新读取当前图">🔄 刷新</button>
-    <button class="primary" id="btn-generate" title="🖼 生成 PNG 图片（需通过 server.py 访问）">🖼 生成</button>
-    <button class="primary" id="btn-beautify" title="✨ AI 图生图美化（后台异步，进度看工具栏）">✨ AI 美化</button>
-    <button class="primary" id="btn-shapes" title="🧩 自定义形状库（框角 /d:编号 引用）">🧩 形状</button>
-    <button class="primary" id="btn-import">📥 导入</button>
-    <button id="btn-clear">🗑 清空</button>
+    <label><span data-i18n="toolbar.diagram">图</span> <select id="diagram-select" style="max-width:150px;font-size:13px;padding:2px;border:1px solid #ccc;border-radius:4px"></select></label>
+    <label><span data-i18n="toolbar.name">名称</span> <input class="name-input" id="diagram-name" value="" data-i18n-placeholder="placeholder.diagramName" placeholder="图名（导出必填）"></label>
+    <button class="primary" id="btn-export" data-i18n="btn.export">💾 导出</button>
+    <button class="primary" id="btn-save" style="display:none" data-i18n-title="btnTitle.save" data-i18n="btn.save">💿 保存</button>
+    <button class="primary" id="btn-refresh" style="display:none" data-i18n-title="btnTitle.refresh" data-i18n="btn.refresh">🔄 刷新</button>
+    <button class="primary" id="btn-generate" data-i18n-title="btnTitle.generate" data-i18n="btn.generate">🖼 生成</button>
+    <button class="primary" id="btn-beautify" data-i18n-title="btnTitle.beautify" data-i18n="btn.beautify">✨ AI 美化</button>
+    <button class="primary" id="btn-shapes" data-i18n-title="btnTitle.shapes" data-i18n="btn.shapes">🧩 形状</button>
+    <button class="primary" id="btn-import" data-i18n="btn.import">📥 导入</button>
+    <button id="btn-clear" data-i18n="btn.clear">🗑 清空</button>
+  </div>
+  <div class="group">
+    <button id="btn-lang" title="切换语言 / Switch language" style="padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:13px">EN</button>
   </div>
   <div id="beautify-toolbar-progress" style="display:none;margin-left:auto;align-items:center;gap:6px;font-size:12px;color:#4a90d9">
-    <span>✨ AI 美化中</span>
+    <span data-i18n="beautify.toolbarTitle">✨ AI 美化中</span>
     <div style="width:100px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
       <div id="beautify-toolbar-bar" style="height:100%;width:0%;background:#4a90d9;transition:width .3s"></div>
     </div>
     <span id="beautify-toolbar-pct">0%</span>
   </div>
-  <button id="btn-shortcuts" title="快捷键" style="margin-left:auto;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:18px">⌨️</button>
+  <button id="btn-shortcuts" data-i18n-title="btnTitle.shortcuts" style="margin-left:auto;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:18px">⌨️</button>
 </div>
 
 <!-- 快捷键浮层 -->
 <div class="modal-overlay" id="modal-shortcuts">
   <div class="modal-box" style="max-width:600px;font-size:14px">
-    <h3>⌨️ 快捷键一览</h3>
+    <h3 data-i18n="modal.shortcuts">⌨️ 快捷键一览</h3>
     <table style="width:100%;border-collapse:collapse;line-height:2">
-      <tr><td style="padding:2px 8px"><b>v</b></td><td>选择/Visual</td><td style="padding:2px 8px"><b>Ctrl+Z</b></td><td>撤销</td></tr>
-      <tr><td style="padding:2px 8px"><b>F</b></td><td>自由绘制</td><td style="padding:2px 8px"><b>Ctrl+C</b></td><td>复制</td></tr>
-      <tr><td style="padding:2px 8px"><b>L</b></td><td>直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td>剪切</td></tr>
-      <tr><td style="padding:2px 8px"><b>R</b></td><td>矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td>粘贴</td></tr>
-      <tr><td style="padding:2px 8px"><b>—</b></td><td>圆角矩形（工具栏选择）</td><td style="padding:2px 8px"><b>Shift+V</b></td><td>插入列</td></tr>
-      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+D</b></td><td>光标所在框 实线⇄虚线</td><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td>光标所在框 圆角⇄方角</td></tr>
-      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+B</b></td><td>光标所在框→自定义形状</td><td style="padding:2px 8px"><b>方向键+Enter</b></td><td>直线/矩形/圆角等键盘绘制</td></tr>
-      <tr><td style="padding:2px 8px"><b>A</b></td><td>箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td>插入行</td></tr>
-      <tr><td style="padding:2px 8px"><b>T</b></td><td>文字</td><td style="padding:2px 8px"><b>Insert</b></td><td>切换插入/覆盖</td></tr>
-      <tr><td style="padding:2px 8px"><b>W</b></td><td>梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td>删除前一个格子</td></tr>
-      <tr><td style="padding:2px 8px"><b>M</b></td><td>移动</td><td style="padding:2px 8px"><b>Shift+色码</b></td><td>着色</td></tr>
-      <tr><td style="padding:2px 8px"><b>E</b></td><td>擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td>各颜色</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td>清空/框选删C列</td><td style="padding:2px 8px"><b>Ctrl+Shift+V</b></td><td>删除列</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td>删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Shift+H</b></td><td>删除行</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td>保存</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Ctrl+[</b></td><td>上一张图</td><td style="padding:2px 8px"><b>Ctrl+]</b></td><td>下一张图</td></tr>
-	      <tr><td style="padding:2px 8px"><b>Space</b></td><td>插空格右移</td><td style="padding:2px 8px"><b>Esc</b></td><td>退出文字模式</td></tr>
-      <tr><td style="padding:2px 8px"><b>u</b></td><td>撤销(Vim)</td><td style="padding:2px 8px"><b>Ctrl+r</b></td><td>重做(Vim)</td></tr>
-      <tr><td style="padding:2px 8px"><b>x / X</b></td><td>删当前/前格</td><td style="padding:2px 8px"><b>dd</b></td><td>删当前行</td></tr>
-      <tr><td style="padding:2px 8px"><b>p</b></td><td>粘贴(Vim)</td><td style="padding:2px 8px"><b>yy</b></td><td>复制当前行</td></tr>
-      <tr><td style="padding:2px 8px"><b>0 / $</b></td><td>行首/行尾</td><td style="padding:2px 8px"></td><td></td></tr>
+      <tr><td style="padding:2px 8px"><b>v</b></td><td data-i18n="shortcut.select">选择/Visual</td><td style="padding:2px 8px"><b>Ctrl+Z</b></td><td data-i18n="shortcut.undo">撤销</td></tr>
+      <tr><td style="padding:2px 8px"><b>F</b></td><td data-i18n="shortcut.free">自由绘制</td><td style="padding:2px 8px"><b>Ctrl+C</b></td><td data-i18n="shortcut.copy">复制</td></tr>
+      <tr><td style="padding:2px 8px"><b>L</b></td><td data-i18n="shortcut.line">直线</td><td style="padding:2px 8px"><b>Ctrl+X</b></td><td data-i18n="shortcut.cut">剪切</td></tr>
+      <tr><td style="padding:2px 8px"><b>R</b></td><td data-i18n="shortcut.box">矩形框</td><td style="padding:2px 8px"><b>Ctrl+V</b></td><td data-i18n="shortcut.paste">粘贴</td></tr>
+      <tr><td style="padding:2px 8px"><b>—</b></td><td data-i18n="shortcut.rounded">圆角矩形（工具栏选择）</td><td style="padding:2px 8px"><b>Shift+V</b></td><td data-i18n="shortcut.insertColumn">插入列</td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+D</b></td><td data-i18n="shortcut.toggleLineStyle">光标所在框 实线⇄虚线</td><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td data-i18n="shortcut.toggleCornerStyle">光标所在框 圆角⇄方角</td></tr>
+      <tr><td style="padding:2px 8px"><b>Ctrl+Shift+B</b></td><td data-i18n="shortcut.applyShape">光标所在框→自定义形状</td><td style="padding:2px 8px"><b data-i18n-html="shortcut.arrowKeysEnter">方向键+Enter</b></td><td data-i18n="shortcut.keyboardDraw">直线/矩形/圆角等键盘绘制</td></tr>
+      <tr><td style="padding:2px 8px"><b>A</b></td><td data-i18n="shortcut.arrow">箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td data-i18n="shortcut.insertRow">插入行</td></tr>
+      <tr><td style="padding:2px 8px"><b>T</b></td><td data-i18n="shortcut.text">文字</td><td style="padding:2px 8px"><b>Insert</b></td><td data-i18n="shortcut.toggleInsertOverwrite">切换插入/覆盖</td></tr>
+      <tr><td style="padding:2px 8px"><b>W</b></td><td data-i18n="shortcut.magic">梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td data-i18n="shortcut.deletePrevCell">删除前一个格子</td></tr>
+      <tr><td style="padding:2px 8px"><b>M</b></td><td data-i18n="shortcut.move">移动</td><td style="padding:2px 8px"><b data-i18n-html="shortcut.shiftColorKey">Shift+色码</b></td><td data-i18n="shortcut.colorize">着色</td></tr>
+      <tr><td style="padding:2px 8px"><b>E</b></td><td data-i18n="shortcut.eraser">擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td data-i18n="shortcut.eachColor">各颜色</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td data-i18n="shortcut.clear">清空/框选删C列</td><td style="padding:2px 8px"><b>Ctrl+Shift+V</b></td><td data-i18n="shortcut.deleteColumn">删除列</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td data-i18n="shortcut.deletePrevShiftLeft">删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Shift+H</b></td><td data-i18n="shortcut.deleteRow">删除行</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Space</b></td><td data-i18n="shortcut.insertSpace">插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td data-i18n="shortcut.save">保存</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Ctrl+[</b></td><td data-i18n="shortcut.prevDiagram">上一张图</td><td style="padding:2px 8px"><b>Ctrl+]</b></td><td data-i18n="shortcut.nextDiagram">下一张图</td></tr>
+	      <tr><td style="padding:2px 8px"><b>Space</b></td><td data-i18n="shortcut.insertSpace">插空格右移</td><td style="padding:2px 8px"><b>Esc</b></td><td data-i18n="shortcut.exitTextMode">退出文字模式</td></tr>
+      <tr><td style="padding:2px 8px"><b>u</b></td><td data-i18n="shortcut.undoVim">撤销(Vim)</td><td style="padding:2px 8px"><b>Ctrl+r</b></td><td data-i18n="shortcut.redoVim">重做(Vim)</td></tr>
+      <tr><td style="padding:2px 8px"><b>x / X</b></td><td data-i18n="shortcut.deleteCurPrev">删当前/前格</td><td style="padding:2px 8px"><b>dd</b></td><td data-i18n="shortcut.deleteRowVim">删当前行</td></tr>
+      <tr><td style="padding:2px 8px"><b>p</b></td><td data-i18n="shortcut.pasteVim">粘贴(Vim)</td><td style="padding:2px 8px"><b>yy</b></td><td data-i18n="shortcut.copyRowVim">复制当前行</td></tr>
+      <tr><td style="padding:2px 8px"><b>0 / $</b></td><td data-i18n="shortcut.lineStartEnd">行首/行尾</td><td style="padding:2px 8px"></td><td></td></tr>
     </table>
     <div class="modal-buttons">
-      <button class="primary" id="btn-close-shortcuts">关闭</button>
+      <button class="primary" id="btn-close-shortcuts" data-i18n="common.close">关闭</button>
     </div>
   </div>
 </div>
@@ -251,12 +243,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- 美化：样式选择浮层 -->
 <div class="modal-overlay" id="modal-beautify">
   <div class="modal-box" style="max-width:900px;width:94%">
-    <h3>✨ 美化图表</h3>
-    <div class="hint">点击风格卡片查看大图，选定后点「开始美化」（后台运行，期间可继续编辑）</div>
+    <h3 data-i18n="modal.beautify">✨ 美化图表</h3>
+    <div class="hint" data-i18n="hint.beautify">点击风格卡片查看大图，选定后点「开始美化」（后台运行，期间可继续编辑）</div>
     <div id="beautify-style-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"></div>
     <div class="modal-buttons">
-      <button class="primary" id="btn-beautify-start">✨ 开始美化</button>
-      <button class="cancel" id="btn-beautify-cancel">取消</button>
+      <button class="primary" id="btn-beautify-start" data-i18n="beautify.start">✨ 开始美化</button>
+      <button class="cancel" id="btn-beautify-cancel" data-i18n="common.cancel">取消</button>
     </div>
   </div>
 </div>
@@ -266,7 +258,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="modal-box" style="max-width:90%;width:auto;max-height:90vh;align-items:center">
     <img id="beautify-big-full" alt="style big preview" style="max-width:100%;max-height:82vh;object-fit:contain;border-radius:4px" />
     <div class="modal-buttons">
-      <button class="cancel" id="btn-beautify-big-close">关闭</button>
+      <button class="cancel" id="btn-beautify-big-close" data-i18n="common.close">关闭</button>
     </div>
   </div>
 </div>
@@ -274,15 +266,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- 美化：结果浮层 -->
 <div class="modal-overlay" id="modal-beautify-result">
   <div class="modal-box" style="max-width:640px">
-    <h3>✅ 美化完成</h3>
+    <h3 data-i18n="modal.beautifyResult">✅ 美化完成</h3>
     <div style="text-align:center;background:#f8f8f8;border-radius:6px;padding:10px;margin-bottom:10px;flex:none">
-      <img id="beautify-result-img" style="max-width:100%;max-height:55vh;border-radius:4px" alt="美化结果" />
+      <img id="beautify-result-img" style="max-width:100%;max-height:55vh;border-radius:4px" alt="美化结果" data-i18n-alt="alt.beautifyResult" />
     </div>
     <div style="font-size:12px;color:#999;margin-bottom:10px" id="beautify-result-path"></div>
     <div class="modal-buttons">
-      <button class="cancel" id="btn-beautify-redo">🔁 再生成</button>
-      <button class="primary" id="btn-beautify-insert">💾 插入文档</button>
-      <button class="cancel" id="btn-beautify-done">关闭</button>
+      <button class="cancel" id="btn-beautify-redo" data-i18n="beautify.redo">🔁 再生成</button>
+      <button class="primary" id="btn-beautify-insert" data-i18n="beautify.insert">💾 插入文档</button>
+      <button class="cancel" id="btn-beautify-done" data-i18n="common.close">关闭</button>
     </div>
   </div>
 </div>
@@ -291,17 +283,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- 形状库浮层 -->
 <div class="modal-overlay" id="modal-shapes">
   <div class="modal-box" style="max-width:720px">
-    <h3>🧩 自定义形状库</h3>
-    <div class="hint">粘贴 SVG 代码添加贴纸；渲染时在框<b>左下角</b>写 <b>d:编号/名字</b>，即可把整个框替换成该形状（大小自适应框）。</div>
+    <h3 data-i18n="modal.shapes">🧩 自定义形状库</h3>
+    <div class="hint" data-i18n-html="hint.shapes">粘贴 SVG 代码添加贴纸；渲染时在框<b>左下角</b>写 <b>d:编号/名字</b>，即可把整个框替换成该形状（大小自适应框）。</div>
     <div id="shapes-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:260px;overflow:auto;align-items:flex-start"></div>
     <div style="margin-bottom:8px;display:flex;gap:6px;align-items:center">
-      <label style="font-size:13px;color:#666">名字 <input id="shapes-name" maxlength="3" placeholder="留空自动编号" style="width:90px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
-      <label style="font-size:13px;color:#666">描述 <input id="shapes-desc" placeholder="给大模型看的语义说明，如：数据库实例" style="width:280px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
+      <label style="font-size:13px;color:#666"><span data-i18n="shapes.nameLabel">名字</span> <input id="shapes-name" maxlength="3" data-i18n-placeholder="shapes.namePlaceholder" placeholder="留空自动编号" style="width:90px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
+      <label style="font-size:13px;color:#666"><span data-i18n="shapes.descLabel">描述</span> <input id="shapes-desc" data-i18n-placeholder="shapes.descPlaceholder" placeholder="给大模型看的语义说明，如：数据库实例" style="width:280px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px"></label>
     </div>
-    <textarea id="shapes-input" placeholder="粘贴 SVG 代码，如 &lt;svg viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='40' fill='#4EA660'/&gt;&lt;/svg&gt;" style="width:100%;height:120px;font-family:monospace;font-size:12px;box-sizing:border-box"></textarea>
+    <textarea id="shapes-input" data-i18n-placeholder="shapes.inputPlaceholder" placeholder="粘贴 SVG 代码，如 &lt;svg viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='40' fill='#4EA660'/&gt;&lt;/svg&gt;" style="width:100%;height:120px;font-family:monospace;font-size:12px;box-sizing:border-box"></textarea>
     <div class="modal-buttons">
-      <button class="primary" id="btn-add-shape">➕ 添加形状</button>
-      <button class="cancel" id="btn-close-shapes">关闭</button>
+      <button class="primary" id="btn-add-shape" data-i18n="shapes.add">➕ 添加形状</button>
+      <button class="cancel" id="btn-close-shapes" data-i18n="common.close">关闭</button>
     </div>
   </div>
 </div>
@@ -309,11 +301,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- 形状替换选择弹窗（Ctrl+Shift+B） -->
 <div class="modal-overlay" id="modal-shape-pick">
   <div class="modal-box" style="max-width:560px">
-    <h3>🧩 替换为自定义形状</h3>
-    <div class="hint">选择形状替换光标所在矩形：将在框<b>左下角</b>写入 <b>d:编号</b> 标记，渲染时该框替换成所选形状（大小自适应框）。</div>
+    <h3 data-i18n="modal.shapePick">🧩 替换为自定义形状</h3>
+    <div class="hint" data-i18n-html="hint.shapePick">选择形状替换光标所在矩形：将在框<b>左下角</b>写入 <b>d:编号</b> 标记，渲染时该框替换成所选形状（大小自适应框）。</div>
     <div id="shape-pick-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:300px;overflow:auto;align-items:flex-start"></div>
     <div class="modal-buttons">
-      <button class="cancel" id="btn-close-shape-pick">取消</button>
+      <button class="cancel" id="btn-close-shape-pick" data-i18n="common.cancel">取消</button>
     </div>
   </div>
 </div>
@@ -321,7 +313,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="editor-panel">
     <div class="canvas-wrap" id="canvas-wrap">
       <div class="grid-root" id="canvas"></div>
-      <input id="ime-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-label="文字输入">
+      <input id="ime-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" data-i18n-aria-label="aria.imeInput" aria-label="文字输入">
     </div>
     <div class="status">
       <span id="status-pos">行: 1 列: 1</span>
@@ -333,45 +325,394 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   <div class="preview-panel" id="preview-panel">
     <div style="padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;font-size:13px;color:#666;display:flex;justify-content:space-between;align-items:center">
-      <span>🎨 预览</span>
-      <button id="btn-close-preview" style="background:none;border:none;cursor:pointer;font-size:16px;color:#999">✕</button>
+      <span data-i18n="preview.title">🎨 预览</span>
     </div>
     <div class="preview-wrap" id="preview-wrap">
-      <div class="preview-empty">实时预览 🎨 开始绘制吧 ✏️</div>
+      <div class="preview-empty" data-i18n="preview.empty">实时预览 🎨 开始绘制吧 ✏️</div>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-import">
   <div class="modal-box">
-    <h3>📥 导入 ASCII 图</h3>
-    <div class="hint">粘贴 ASCII 图文本（支持 `<!--diagram NAME ... -->` 注释格式或纯文本）</div>
+    <h3 data-i18n="modal.import">📥 导入 ASCII 图</h3>
+    <div class="hint" data-i18n="hint.import">粘贴 ASCII 图文本（支持 `<!--diagram NAME ... -->` 注释格式或纯文本）</div>
     <textarea id="import-textarea" spellcheck="false"></textarea>
     <div class="modal-buttons">
-      <button class="cancel" id="btn-import-cancel">取消</button>
-      <button class="primary" id="btn-import-confirm">导入</button>
+      <button class="cancel" id="btn-import-cancel" data-i18n="common.cancel">取消</button>
+      <button class="primary" id="btn-import-confirm" data-i18n="common.import">导入</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-list">
   <div class="modal-box" style="width:95%;max-width:1200px">
-    <h3>📂 选择要编辑的图</h3>
-    <div class="hint" id="list-hint">单击预览，确认后点「导入」：</div>
+    <h3 data-i18n="modal.list">📂 选择要编辑的图</h3>
+    <div class="hint" id="list-hint" data-i18n="hint.list">单击预览，确认后点「导入」：</div>
     <div style="display:flex;flex:1;gap:12px;min-height:0">
       <div id="diagram-list" style="flex:0 0 280px;overflow:auto;border:1px solid #ccc;border-radius:4px;padding:4px"></div>
       <div id="diagram-preview" style="flex:1;overflow:auto;border:1px solid #eee;border-radius:4px;padding:12px;background:#fafafa;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd','Consolas',monospace;font-size:13px;line-height:1.4;white-space:pre;color:#999">
-        单击左侧图名预览完整内容
+        <div data-i18n="hint.listPreview">单击左侧图名预览完整内容</div>
       </div>
     </div>
     <div class="modal-buttons">
-      <button class="primary" id="btn-list-import">导入</button>
-      <button class="cancel" id="btn-list-cancel">取消</button>
+      <button class="primary" id="btn-list-import" data-i18n="common.import">导入</button>
+      <button class="cancel" id="btn-list-cancel" data-i18n="common.cancel">取消</button>
     </div>
   </div>
 </div>
 
 <script>
+// ═══════════════════════════════════════
+// i18n — 中 / EN
+// ═══════════════════════════════════════
+const LANG_KEY = 'ascii-editor-lang';
+const I18N = {
+  zh: {
+    'app.title': 'ASCII 图编辑器',
+    // 工具名（按钮 / 状态栏 / 快捷键表复用）
+    'tool.select': '选择', 'tool.free': '自由绘制', 'tool.line': '直线', 'tool.box': '矩形',
+    'tool.rounded': '圆角', 'tool.roundedRect': '圆角矩形', 'tool.arrow': '箭头', 'tool.thick': '粗箭头',
+    'tool.text': '文字', 'tool.magic': '梳子', 'tool.move': '移动', 'tool.eraser': '擦除',
+    // 工具按钮 title
+    'toolTitle.select': '选择/编辑 (V)',
+    'toolTitle.free': '自由绘制 (F)',
+    'toolTitle.line': '直线 (L)，进入后按 1/2 切换实线/虚线',
+    'toolTitle.box': '矩形框 (R)，进入后按 1/2 切换实线/虚线；Ctrl+Shift+D 转换光标所在框 实线/虚线',
+    'toolTitle.rounded': '圆角矩形（工具栏选择），进入后按 1/2 切换实线/虚线；Ctrl+Shift+R 转换光标所在框 圆角/方角',
+    'toolTitle.arrow': '箭头连线 (A)，进入后按 1/2/3 切换类型',
+    'toolTitle.thick': '粗箭头 (K)，方向键扩展，Enter 确认',
+    'toolTitle.text': '文字 (T)', 'toolTitle.magic': '梳子理线 (W)',
+    'toolTitle.move': '移动 (M)', 'toolTitle.eraser': '橡皮擦 (E)',
+    // 下拉选项（完整串，避免拼接）
+    'option.lineSolid': '─ │ 实线', 'option.lineDashed': '╌ ╎ 虚线',
+    'option.boxSolid': '┌┐ 实线', 'option.boxDashed': '╌╎ 虚线',
+    'option.roundedSolid': '╭╮ 实线', 'option.roundedDashed': '╌╎ 虚线',
+    'option.arrowFine': '→ ← 细箭头', 'option.arrowSolid': '▶ ◀ 实心', 'option.arrowHollow': '▷ ◁ 空心',
+    // 工具栏标签
+    'toolbar.pointColor': '点色着色:', 'toolbar.shade': '明度', 'toolbar.font': '字体',
+    'toolbar.diagram': '图', 'toolbar.name': '名称',
+    'placeholder.diagramName': '图名（导出必填）',
+    // 按钮
+    'btn.export': '💾 导出', 'btn.exportCopied': '✅ 已复制',
+    'btn.save': '💿 保存', 'btn.saved': '✅ 已保存',
+    'btn.refresh': '🔄 刷新',
+    'btn.generate': '🖼 生成', 'btn.generating': '⏳ 生成中…', 'btn.generated': '✅ 已生成', 'btn.failed': '❌ 失败',
+    'btn.beautify': '✨ AI 美化', 'btn.shapes': '🧩 形状', 'btn.import': '📥 导入', 'btn.clear': '🗑 清空',
+    'btnTitle.save': '保存到当前 Markdown 文档',
+    'btnTitle.refresh': '从文件重新读取当前图',
+    'btnTitle.generate': '🖼 生成 PNG 图片（需通过 server.py 访问）',
+    'btnTitle.beautify': '✨ AI 图生图美化（后台异步，进度看工具栏）',
+    'btnTitle.shapes': '🧩 自定义形状库（框角 /d:编号 引用）',
+    'btnTitle.shortcuts': '快捷键',
+    'btnTitle.langSwitch': '切换语言 / Switch language',
+    // 弹窗标题
+    'modal.shortcuts': '⌨️ 快捷键一览', 'modal.beautify': '✨ 美化图表', 'modal.beautifyResult': '✅ 美化完成',
+    'modal.shapes': '🧩 自定义形状库', 'modal.shapePick': '🧩 替换为自定义形状',
+    'modal.import': '📥 导入 ASCII 图', 'modal.list': '📂 选择要编辑的图',
+    // 提示
+    'hint.beautify': '点击风格卡片查看大图，选定后点「开始美化」（后台运行，期间可继续编辑）',
+    'hint.shapes': '粘贴 SVG 代码添加贴纸；渲染时在框<b>左下角</b>写 <b>d:编号/名字</b>，即可把整个框替换成该形状（大小自适应框）。',
+    'hint.shapePick': '选择形状替换光标所在矩形：将在框<b>左下角</b>写入 <b>d:编号</b> 标记，渲染时该框替换成所选形状（大小自适应框）。',
+    'hint.import': '粘贴 ASCII 图文本（支持 `<!--diagram NAME ... -->` 注释格式或纯文本）',
+    'hint.list': '单击预览，确认后点「导入」：',
+    'hint.listPreview': '单击左侧图名预览完整内容',
+    'preview.title': '🎨 预览',
+    'preview.empty': '实时预览 🎨 开始绘制吧 ✏️',
+    'preview.emptyCanvas': '图表为空，开始绘制吧 ✏️',
+    // 状态栏
+    'status.pos': '行: {row} 列: {col}', 'status.grid': '网格: {cols} × {rows}',
+    'status.mode': '模式: {mode}', 'status.tool': '工具: {tool}',
+    'status.modeInsert': '插入', 'status.modeOverwrite': '覆盖', 'status.modeNormal': '普通',
+    'status.modeVisual': '可视', 'status.modeVisualText': 'VISUAL {mode}可视',
+    // 颜色
+    'color.m': '玫红', 'color.r': '红', 'color.o': '橙', 'color.y': '黄', 'color.g': '绿',
+    'color.c': '淡蓝', 'color.b': '蓝', 'color.p': '紫', 'color.e': '灰',
+    'color.noneTitle': '原色（清除着色）', 'color.noneShort': '原',
+    // 快捷键表
+    'shortcut.select': '选择/Visual', 'shortcut.free': '自由绘制', 'shortcut.line': '直线', 'shortcut.box': '矩形框',
+    'shortcut.rounded': '圆角矩形（工具栏选择）', 'shortcut.toggleLineStyle': '光标所在框 实线⇄虚线',
+    'shortcut.toggleCornerStyle': '光标所在框 圆角⇄方角', 'shortcut.applyShape': '光标所在框→自定义形状',
+    'shortcut.keyboardDraw': '直线/矩形/圆角等键盘绘制', 'shortcut.arrow': '箭头', 'shortcut.text': '文字',
+    'shortcut.magic': '梳子理线', 'shortcut.move': '移动', 'shortcut.eraser': '擦除',
+    'shortcut.undo': '撤销', 'shortcut.copy': '复制', 'shortcut.cut': '剪切', 'shortcut.paste': '粘贴',
+    'shortcut.insertColumn': '插入列', 'shortcut.insertRow': '插入行',
+    'shortcut.toggleInsertOverwrite': '切换插入/覆盖', 'shortcut.deletePrevCell': '删除前一个格子',
+    'shortcut.colorize': '着色', 'shortcut.eachColor': '各颜色', 'shortcut.clear': '清空/框选删C列',
+    'shortcut.deleteColumn': '删除列', 'shortcut.deletePrevShiftLeft': '删前一格左移', 'shortcut.deleteRow': '删除行',
+    'shortcut.insertSpace': '插空格右移', 'shortcut.save': '保存',
+    'shortcut.prevDiagram': '上一张图', 'shortcut.nextDiagram': '下一张图',
+    'shortcut.exitTextMode': '退出文字模式', 'shortcut.undoVim': '撤销(Vim)', 'shortcut.redoVim': '重做(Vim)',
+    'shortcut.deleteCurPrev': '删当前/前格', 'shortcut.deleteRowVim': '删当前行',
+    'shortcut.pasteVim': '粘贴(Vim)', 'shortcut.copyRowVim': '复制当前行',
+    'shortcut.lineStartEnd': '行首/行尾', 'shortcut.arrowKeysEnter': '方向键+Enter', 'shortcut.shiftColorKey': 'Shift+色码',
+    // 图列表 / 图下拉
+    'list.selectPlaceholder': '— 选择图 —', 'list.figureN': '图 {n}', 'list.codeBlock': '代码块 {n}',
+    'list.needName': '(需取名)',
+    // 形状库
+    'shapes.nameLabel': '名字', 'shapes.descLabel': '描述',
+    'shapes.namePlaceholder': '留空自动编号', 'shapes.descPlaceholder': '给大模型看的语义说明，如：数据库实例',
+    'shapes.inputPlaceholder': '粘贴 SVG 代码，如 &lt;svg viewBox=\'0 0 100 100\'&gt;&lt;circle cx=\'50\' cy=\'50\' r=\'40\' fill=\'#4EA660\'/&gt;&lt;/svg&gt;',
+    'shapes.add': '➕ 添加形状', 'shapes.delete': '🗑 删除', 'shapes.editTooltip': '点击编辑该形状',
+    'shapes.empty': '暂无形状，粘贴 SVG 添加第一个吧',
+    'shapes.pickEmpty': '形状库为空，请先点击「🧩 形状」按钮添加 SVG 形状',
+    'shapes.replaceTooltip': '替换为 #{id}：{desc}', 'shapes.replaceTooltipNoDesc': '替换为 #{id}',
+    // 美化
+    'beautify.progress': '✨ AI 美化中 ({label})',
+    'beautify.toolbarTitle': '✨ AI 美化中',
+    'beautify.stage.starting': '启动中…', 'beautify.stage.save': '保存内容', 'beautify.stage.render': '渲染 PNG',
+    'beautify.stage.beautify': 'AI 生成', 'beautify.stage.done': '完成', 'beautify.stage.failed': '失败', 'beautify.stage.queued': '排队中',
+    'beautify.styles.loading': '加载风格中…', 'beautify.styles.notFound': '未找到可用风格（styles/ 目录下需有 style.json）',
+    'beautify.result.output': '输出: {path}',
+    'beautify.start': '✨ 开始美化', 'beautify.redo': '🔁 再生成', 'beautify.insert': '💾 插入文档',
+    'alt.beautifyResult': '美化结果', 'aria.imeInput': '文字输入',
+    // 通用
+    'common.close': '关闭', 'common.cancel': '取消', 'common.import': '导入',
+    // alert
+    'alert.nameRequiredExport': '请先填写图名（代码块图需取名后才能导出）',
+    'alert.nameRequired': '请先填写图名',
+    'alert.requireSelection': '请先在左侧选择一张图',
+    'alert.noDiagramFound': '未在文件中找到 ASCII 图',
+    'alert.loadFailed': '加载文件失败：{err}\n（可能是跨域限制，需同源或 CORS，或用导入按钮手动粘贴）',
+    'alert.saveFailed': '保存失败：{err}\n请确认启动的是 server.py（python server.py），而非直接打开 HTML',
+    'alert.refreshFailed': '刷新失败：{err}',
+    'alert.requireSvg': '请粘贴 SVG 代码',
+    'alert.invalidSvg': '看起来不是 SVG 代码（应以 <svg 开头）',
+    'alert.invalidShapeName': '名字需为 1-3 个字母或数字',
+    'alert.shapeSaveFailed': '保存失败（请确认通过 server.py 访问）',
+    'alert.shapeRemoveFailed': '保存失败',
+    'alert.requireCursorInBox': '请先把光标移到矩形/圆角框内',
+    'alert.noReplaceableBox': '光标处没有可替换的矩形/圆角框',
+    'alert.boxTooNarrow': '当前矩形宽度 {width} 格，容纳不下标记「{marker}」+ 右下角，请换更宽的框或更短的形状名',
+    'alert.generateRequireFile': '请通过 ?file= 参数打开文档才能生成 PNG。直接用浏览器打开 HTML 不支持生成。',
+    'alert.generateEmpty': '图表为空，没什么好生成的',
+    'alert.generateFailed': '生成失败：{error}',
+    'alert.generateFailedHint': '生成失败：{err}\n请确认已启动 server.py（python server.py）',
+    'alert.unknownError': '未知错误',
+    'alert.beautifyRequireFile': '请通过 ?file= 参数打开文档才能美化。直接打开 HTML 不支持。',
+    'alert.beautifyEmpty': '图表为空，没什么好美化的',
+    'alert.backendConfigIncomplete': '配置不完整',
+    'alert.backendNotReady': '⚠️ AI 美化后端未就绪，请先在 server.py 所在环境配置：\n\n{issues}\n\n当前 provider={provider}，model={model}，base-url={baseUrl}',
+    'alert.backendUnreachable': '⚠️ 无法连接后端，请确认 server.py 已启动',
+    'alert.requireStyle': '请先选择风格',
+    'alert.startTaskFailed': '启动任务失败 {status}',
+    'alert.startBeautifyFailed': '启动美化失败：{err}',
+    'alert.taskLost': '任务丢失（服务器可能已重启）',
+    'alert.pollFailed': '轮询失败：{err}',
+    'alert.noOutput': '未生成结果文件',
+    'alert.beautifyFailed': '美化失败：{msg}',
+    'alert.beautifyInserted': '已插入美化图到文档',
+    'alert.beautifyInsertFailed': '插入失败',
+    'alert.beautifyInsertFailedErr': '插入失败：{err}',
+    // confirm
+    'confirm.clear': '确定清空所有内容？',
+  },
+  en: {
+    'app.title': 'ASCII Diagram Editor',
+    // Tool names (shared by buttons / status / shortcuts)
+    'tool.select': 'Select', 'tool.free': 'Freehand', 'tool.line': 'Line', 'tool.box': 'Box',
+    'tool.rounded': 'Rounded', 'tool.roundedRect': 'Rounded Box', 'tool.arrow': 'Arrow', 'tool.thick': 'Thick Arrow',
+    'tool.text': 'Text', 'tool.magic': 'Comb', 'tool.move': 'Move', 'tool.eraser': 'Eraser',
+    // Tool button titles
+    'toolTitle.select': 'Select/Edit (V)',
+    'toolTitle.free': 'Freehand draw (F)',
+    'toolTitle.line': 'Line (L); press 1/2 to switch solid/dashed',
+    'toolTitle.box': 'Box (R); press 1/2 to switch solid/dashed; Ctrl+Shift+D toggles box under cursor',
+    'toolTitle.rounded': 'Rounded box (toolbar only); press 1/2 to switch solid/dashed; Ctrl+Shift+R toggles round/square corners',
+    'toolTitle.arrow': 'Arrow connector (A); press 1/2/3 to switch type',
+    'toolTitle.thick': 'Thick arrow (K); extend with arrow keys, Enter to confirm',
+    'toolTitle.text': 'Text (T)', 'toolTitle.magic': 'Comb lines (W)',
+    'toolTitle.move': 'Move (M)', 'toolTitle.eraser': 'Eraser (E)',
+    // Dropdown options (full strings, no concatenation)
+    'option.lineSolid': '─ │ Solid', 'option.lineDashed': '╌ ╎ Dashed',
+    'option.boxSolid': '┌┐ Solid', 'option.boxDashed': '╌╎ Dashed',
+    'option.roundedSolid': '╭╮ Solid', 'option.roundedDashed': '╌╎ Dashed',
+    'option.arrowFine': '→ ← Thin', 'option.arrowSolid': '▶ ◀ Solid', 'option.arrowHollow': '▷ ◁ Hollow',
+    // Toolbar labels
+    'toolbar.pointColor': 'Dot Color:', 'toolbar.shade': 'Shade', 'toolbar.font': 'Font',
+    'toolbar.diagram': 'Diagram', 'toolbar.name': 'Name',
+    'placeholder.diagramName': 'Diagram name (required for export)',
+    // Buttons
+    'btn.export': '💾 Export', 'btn.exportCopied': '✅ Copied',
+    'btn.save': '💿 Save', 'btn.saved': '✅ Saved',
+    'btn.refresh': '🔄 Refresh',
+    'btn.generate': '🖼 Generate', 'btn.generating': '⏳ Generating…', 'btn.generated': '✅ Generated', 'btn.failed': '❌ Failed',
+    'btn.beautify': '✨ AI Beautify', 'btn.shapes': '🧩 Shapes', 'btn.import': '📥 Import', 'btn.clear': '🗑 Clear',
+    'btnTitle.save': 'Save to current Markdown document',
+    'btnTitle.refresh': 'Re-read current diagram from file',
+    'btnTitle.generate': '🖼 Generate PNG image (requires server.py)',
+    'btnTitle.beautify': '✨ AI image beautification (async; progress in toolbar)',
+    'btnTitle.shapes': '🧩 Custom shape library (write /d:id at a box corner to use)',
+    'btnTitle.shortcuts': 'Shortcuts',
+    'btnTitle.langSwitch': 'Switch language / 切换语言',
+    // Modal titles
+    'modal.shortcuts': '⌨️ Shortcuts', 'modal.beautify': '✨ Beautify Diagram', 'modal.beautifyResult': '✅ Beautified',
+    'modal.shapes': '🧩 Custom Shapes', 'modal.shapePick': '🧩 Replace with Custom Shape',
+    'modal.import': '📥 Import ASCII Diagram', 'modal.list': '📂 Select Diagram to Edit',
+    // Hints
+    'hint.beautify': 'Click a style card to view the large preview, then click "Start Beautify" (runs in the background; keep editing)',
+    'hint.shapes': 'Paste SVG code to add a sticker; write <b>d:id/name</b> at the box\'s <b>bottom-left corner</b> to replace the whole box with that shape (auto-sized).',
+    'hint.shapePick': 'Pick a shape to replace the box under the cursor: a <b>d:id</b> marker is written at its <b>bottom-left corner</b>, and the box is replaced when rendered (auto-sized).',
+    'hint.import': 'Paste ASCII diagram text (supports `<!--diagram NAME ... -->` comment format or plain text)',
+    'hint.list': 'Click to preview, then click "Import":',
+    'hint.listPreview': 'Click a name on the left to preview full content',
+    'preview.title': '🎨 Preview',
+    'preview.empty': 'Live preview 🎨 start drawing ✏️',
+    'preview.emptyCanvas': 'The diagram is empty — start drawing ✏️',
+    // Status bar
+    'status.pos': 'Row: {row} Col: {col}', 'status.grid': 'Grid: {cols} × {rows}',
+    'status.mode': 'Mode: {mode}', 'status.tool': 'Tool: {tool}',
+    'status.modeInsert': 'Insert', 'status.modeOverwrite': 'Overwrite', 'status.modeNormal': 'Normal',
+    'status.modeVisual': 'Visual', 'status.modeVisualText': 'VISUAL {mode}',
+    // Colors
+    'color.m': 'Rose', 'color.r': 'Red', 'color.o': 'Orange', 'color.y': 'Yellow', 'color.g': 'Green',
+    'color.c': 'Light Blue', 'color.b': 'Blue', 'color.p': 'Purple', 'color.e': 'Gray',
+    'color.noneTitle': 'Original (clear color)', 'color.noneShort': 'None',
+    // Shortcut table
+    'shortcut.select': 'Select/Visual', 'shortcut.free': 'Freehand', 'shortcut.line': 'Line', 'shortcut.box': 'Box',
+    'shortcut.rounded': 'Rounded box (toolbar)', 'shortcut.toggleLineStyle': 'Box under cursor: solid⇄dashed',
+    'shortcut.toggleCornerStyle': 'Box under cursor: round⇄square', 'shortcut.applyShape': 'Box under cursor → custom shape',
+    'shortcut.keyboardDraw': 'Keyboard draw: line/box/rounded…', 'shortcut.arrow': 'Arrow', 'shortcut.text': 'Text',
+    'shortcut.magic': 'Comb lines', 'shortcut.move': 'Move', 'shortcut.eraser': 'Eraser',
+    'shortcut.undo': 'Undo', 'shortcut.copy': 'Copy', 'shortcut.cut': 'Cut', 'shortcut.paste': 'Paste',
+    'shortcut.insertColumn': 'Insert column', 'shortcut.insertRow': 'Insert row',
+    'shortcut.toggleInsertOverwrite': 'Toggle insert/overwrite', 'shortcut.deletePrevCell': 'Delete previous cell',
+    'shortcut.colorize': 'Colorize', 'shortcut.eachColor': 'Each color', 'shortcut.clear': 'Clear / delete C column in selection',
+    'shortcut.deleteColumn': 'Delete column', 'shortcut.deletePrevShiftLeft': 'Delete previous cell, shift left', 'shortcut.deleteRow': 'Delete row',
+    'shortcut.insertSpace': 'Insert space, shift right', 'shortcut.save': 'Save',
+    'shortcut.prevDiagram': 'Previous diagram', 'shortcut.nextDiagram': 'Next diagram',
+    'shortcut.exitTextMode': 'Exit text mode', 'shortcut.undoVim': 'Undo (Vim)', 'shortcut.redoVim': 'Redo (Vim)',
+    'shortcut.deleteCurPrev': 'Delete current/previous cell', 'shortcut.deleteRowVim': 'Delete current row',
+    'shortcut.pasteVim': 'Paste (Vim)', 'shortcut.copyRowVim': 'Copy current row',
+    'shortcut.lineStartEnd': 'Line start/end', 'shortcut.arrowKeysEnter': 'Arrow keys+Enter', 'shortcut.shiftColorKey': 'Shift+color-code',
+    // Diagram list / select
+    'list.selectPlaceholder': '— Select diagram —', 'list.figureN': 'Diagram {n}', 'list.codeBlock': 'Code block {n}',
+    'list.needName': '(needs name)',
+    // Shapes library
+    'shapes.nameLabel': 'Name', 'shapes.descLabel': 'Description',
+    'shapes.namePlaceholder': 'blank = auto number', 'shapes.descPlaceholder': 'Semantic note for the AI, e.g. database instance',
+    'shapes.inputPlaceholder': 'Paste SVG code, e.g. &lt;svg viewBox=\'0 0 100 100\'&gt;&lt;circle cx=\'50\' cy=\'50\' r=\'40\' fill=\'#4EA660\'/&gt;&lt;/svg&gt;',
+    'shapes.add': '➕ Add Shape', 'shapes.delete': '🗑 Delete', 'shapes.editTooltip': 'Click to edit this shape',
+    'shapes.empty': 'No shapes yet — paste an SVG to add the first one',
+    'shapes.pickEmpty': 'Shape library is empty — click "🧩 Shapes" to add SVG shapes first',
+    'shapes.replaceTooltip': 'Replace with #{id}: {desc}', 'shapes.replaceTooltipNoDesc': 'Replace with #{id}',
+    // Beautify
+    'beautify.progress': '✨ AI Beautifying ({label})',
+    'beautify.toolbarTitle': '✨ AI Beautifying',
+    'beautify.stage.starting': 'Starting…', 'beautify.stage.save': 'Saving', 'beautify.stage.render': 'Rendering PNG',
+    'beautify.stage.beautify': 'AI Generating', 'beautify.stage.done': 'Done', 'beautify.stage.failed': 'Failed', 'beautify.stage.queued': 'Queued',
+    'beautify.styles.loading': 'Loading styles…', 'beautify.styles.notFound': 'No styles found (styles/ dir needs style.json)',
+    'beautify.result.output': 'Output: {path}',
+    'beautify.start': '✨ Start Beautify', 'beautify.redo': '🔁 Regenerate', 'beautify.insert': '💾 Insert',
+    'alt.beautifyResult': 'Beautified result', 'aria.imeInput': 'Text input',
+    // Common
+    'common.close': 'Close', 'common.cancel': 'Cancel', 'common.import': 'Import',
+    // Alerts
+    'alert.nameRequiredExport': 'Please set a diagram name (code-block diagrams need a name to export)',
+    'alert.nameRequired': 'Please set a diagram name',
+    'alert.requireSelection': 'Select a diagram on the left first',
+    'alert.noDiagramFound': 'No ASCII diagram found in the file',
+    'alert.loadFailed': 'Failed to load file: {err}\n(possibly CORS; use same-origin or the Import button to paste manually)',
+    'alert.saveFailed': 'Save failed: {err}\nMake sure you are running server.py (python server.py), not opening the HTML directly',
+    'alert.refreshFailed': 'Refresh failed: {err}',
+    'alert.requireSvg': 'Please paste SVG code',
+    'alert.invalidSvg': 'This does not look like SVG code (should start with <svg)',
+    'alert.invalidShapeName': 'Name must be 1-3 letters or digits',
+    'alert.shapeSaveFailed': 'Save failed (make sure you are accessing via server.py)',
+    'alert.shapeRemoveFailed': 'Save failed',
+    'alert.requireCursorInBox': 'Move the cursor inside a box/rounded box first',
+    'alert.noReplaceableBox': 'No replaceable box/rounded box at the cursor',
+    'alert.boxTooNarrow': 'Box width {width} cells cannot fit "{marker}" + bottom-right corner; use a wider box or a shorter shape name',
+    'alert.generateRequireFile': 'Open the document with a ?file= parameter to generate PNG. Directly opening the HTML is not supported.',
+    'alert.generateEmpty': 'The diagram is empty — nothing to generate',
+    'alert.generateFailed': 'Generate failed: {error}',
+    'alert.generateFailedHint': 'Generate failed: {err}\nMake sure server.py is running (python server.py)',
+    'alert.unknownError': 'Unknown error',
+    'alert.beautifyRequireFile': 'Open the document with a ?file= parameter to beautify. Directly opening the HTML is not supported.',
+    'alert.beautifyEmpty': 'The diagram is empty — nothing to beautify',
+    'alert.backendConfigIncomplete': 'Configuration incomplete',
+    'alert.backendNotReady': '⚠️ AI beautify backend not ready. Configure it in the server.py environment:\n\n{issues}\n\ncurrent provider={provider}, model={model}, base-url={baseUrl}',
+    'alert.backendUnreachable': '⚠️ Cannot reach the backend — make sure server.py is running',
+    'alert.requireStyle': 'Please select a style first',
+    'alert.startTaskFailed': 'Failed to start task {status}',
+    'alert.startBeautifyFailed': 'Failed to start beautify: {err}',
+    'alert.taskLost': 'Task lost (the server may have restarted)',
+    'alert.pollFailed': 'Poll failed: {err}',
+    'alert.noOutput': 'No result file generated',
+    'alert.beautifyFailed': 'Beautify failed: {msg}',
+    'alert.beautifyInserted': 'Beautified image inserted into the document',
+    'alert.beautifyInsertFailed': 'Insert failed',
+    'alert.beautifyInsertFailedErr': 'Insert failed: {err}',
+    // Confirm
+    'confirm.clear': 'Clear all content?',
+  },
+};
+
+function detectLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'zh' || saved === 'en') return saved;
+  } catch (e) {}
+  const nl = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  return nl.startsWith('zh') ? 'zh' : 'en';
+}
+
+let lang = detectLang();
+
+function t(key, params) {
+  let s = (I18N[lang] && I18N[lang][key]) || I18N.zh[key] || key;
+  if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
+  return s;
+}
+
+function applyStaticText() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
+  document.querySelectorAll('[data-i18n-alt]').forEach(el => { el.setAttribute('alt', t(el.dataset.i18nAlt)); });
+}
+
+function updateLangButton() {
+  const btn = document.getElementById('btn-lang');
+  if (!btn) return;
+  btn.textContent = lang === 'zh' ? 'EN' : '中';
+  btn.title = t('btnTitle.langSwitch');
+}
+
+function applyI18n(nextLang) {
+  lang = nextLang;
+  try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('app.title');
+  applyStaticText();
+  updateLangButton();
+  if (typeof updateStatusTool === 'function') updateStatusTool();
+  if (typeof updateStatus === 'function') updateStatus();
+  if (typeof setArrowType === 'function') setArrowType(arrowType);
+  if (typeof setLineType === 'function') setLineType(lineType);
+  if (typeof setBoxType === 'function') setBoxType(boxType);
+  if (typeof setRoundedType === 'function') setRoundedType(roundedType);
+  if (typeof initColorPicker === 'function') initColorPicker();
+  if (typeof populateDiagramSelect === 'function' && typeof diagrams !== 'undefined' && diagrams.length) populateDiagramSelect(diagrams);
+  if (typeof renderShapesList === 'function') renderShapesList();
+  if (typeof renderShapePickList === 'function') renderShapePickList();
+  if (typeof refreshPreview === 'function') refreshPreview();
+  const bar = document.getElementById('beautify-toolbar-progress');
+  if (bar && bar.style.display !== 'none' && typeof beautifyProgressPct === 'number' && beautifyProgressPct >= 0 && typeof beautifyUpdateProgress === 'function') {
+    beautifyUpdateProgress(beautifyProgressPct, beautifyProgressLabel);
+  }
+  const rp = document.getElementById('beautify-result-path');
+  if (rp && rp.textContent && typeof beautifyResultPath === 'string' && beautifyResultPath) {
+    rp.textContent = t('beautify.result.output', { path: beautifyResultPath });
+  }
+  const mb = document.getElementById('modal-beautify');
+  if (mb && mb.classList.contains('active') && typeof beautifyOpen === 'function') beautifyOpen();
+  const ml = document.getElementById('modal-list');
+  if (ml && ml.classList.contains('active') && typeof showDiagramList === 'function') showDiagramList();
+}
+
 // ═══ ASCII Diagram Editor — Grid-Based Visual Editor ═══
 // ═══════════════════════════════════════
 // Colors
@@ -388,8 +729,6 @@ const COLORS = {
   e: { name: '灰',   hex: '#D9D1D1' },
 };
 const COLOR_CODES = Object.keys(COLORS);
-const BORDER_TOPS = '┌┐└┘├┤┬┴┼─│▲▼═║╔╗╚╝╠╣╦╩╬┏┓┗┛┣┫┳┻╋┃━┍┑┕┙┝┥┰┸╂';
-const BOX_CHARS = '┌┐└┘├┤┬┴┼─│';
 
 // ═══════════════════════════════════════
 // Grid State
@@ -830,17 +1169,6 @@ function findCellByDispCol(r, dispCol) {
   return -1;
 }
 
-function findCellsInDispRange(r, minD, maxD) {
-  const result = [];
-  const cells = document.querySelectorAll('.cell[data-r="' + r + '"]');
-  for (const cell of cells) {
-    if (cell.classList.contains('w2')) continue;
-    const d = parseInt(cell.dataset.dispCol);
-    if (d >= minD && d <= maxD) result.push({ c: parseInt(cell.dataset.c), dispCol: d });
-  }
-  return result;
-}
-
 function setCellByDisp(r, d, ch) {
   const cc = findCellByDispCol(r, d);
   if (cc >= 0) setCell(r, cc, ch);
@@ -884,27 +1212,6 @@ const ARROW_DIRS = {
 };
 function isLineChar(ch) { return !!LINE_DIRS[ch] || !!ARROW_DIRS[ch]; }
 function charDirs(ch) { return LINE_DIRS[ch] ? LINE_DIRS[ch].slice() : (ARROW_DIRS[ch] ? ARROW_DIRS[ch].slice() : []); }
-function mergeChar(a, b) {
-  const dirs = {};
-  (LINE_DIRS[a] || []).forEach(d => dirs[d] = 1);
-  (LINE_DIRS[b] || []).forEach(d => dirs[d] = 1);
-  const sorted = Object.keys(dirs).sort();
-  const key = sorted.join('');
-  return DIRS_TO_CHAR[key] || b;
-}
-// Place a char, merging with existing line chars at intersections
-function placeChar(r, c, ch) {
-  const cur = getCellText(r, c);
-  if (cur === '' || cur === ' ') {
-    setCell(r, c, ch);
-  } else if (isLineChar(cur) && isLineChar(ch)) {
-    setCell(r, c, mergeChar(cur, ch));
-  } else if (ARROW_HEAD_CHARS.includes(ch)) {
-    setCell(r, c, ch); // arrow head overwrites
-  }
-  // else: don't overwrite text / other chars
-}
-
 // 色码字符（着色框的角）是否确实构成框角：左侧/右侧有框线（框角色码总是横向连框边）
 function isColorBoxCorner(r, d) {
   // 右侧：色码 + 可选明度数字(1-6) + 框线
@@ -1316,11 +1623,11 @@ const ARROW_HEADS = {
 const ARROW_HEAD_CHARS = '→←↑↓▶◀▲▼▷◁△▽';
 
 // 切换箭头类型并更新按钮/下拉高亮
-function setArrowType(t) {
-  arrowType = t;
-  document.querySelectorAll('.arrow-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+function setArrowType(type) {
+  arrowType = type;
+  document.querySelectorAll('.arrow-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-arrow');
-  if (btn && ARROW_HEADS[t]) btn.textContent = ARROW_HEADS[t].r + ' 箭头';
+  if (btn && ARROW_HEADS[type]) btn.textContent = ARROW_HEADS[type].r + ' ' + t('tool.arrow');
 }
 
 // Compute the thick arrow path (4 directions, auto-scaled head + variable shaft)
@@ -1475,30 +1782,30 @@ function computeArrowPath() {
 
 // 直线类型：1=实线(─│) 2=虚线(╌╎)
 let lineType = 1;
-function setLineType(t) {
-  lineType = t;
-  document.querySelectorAll('.line-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+function setLineType(type) {
+  lineType = type;
+  document.querySelectorAll('.line-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-line');
-  if (btn) btn.textContent = (t === 2 ? '╌' : '─') + ' 直线';
+  if (btn) btn.textContent = (type === 2 ? '╌' : '─') + ' ' + t('tool.line');
 }
 
 
 // 矩形框类型：1=实线(┌┐) 2=虚线(╌╎)
 let boxType = 1;
-function setBoxType(t) {
-  boxType = t;
-  document.querySelectorAll('.box-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+function setBoxType(type) {
+  boxType = type;
+  document.querySelectorAll('.box-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-box');
-  if (btn) btn.textContent = (t === 2 ? '╌' : '▣') + ' 矩形';
+  if (btn) btn.textContent = (type === 2 ? '╌' : '▣') + ' ' + t('tool.box');
 }
 
 // 圆角矩形类型：1=实线(╭╮) 2=虚线(╌╎)
 let roundedType = 1;
-function setRoundedType(t) {
-  roundedType = t;
-  document.querySelectorAll('.rounded-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === t));
+function setRoundedType(type) {
+  roundedType = type;
+  document.querySelectorAll('.rounded-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-rounded');
-  if (btn) btn.textContent = (t === 2 ? '╌' : '▢') + ' 圆角';
+  if (btn) btn.textContent = (type === 2 ? '╌' : '▢') + ' ' + t('tool.rounded');
 }
 
 // 返回虚线/实线的边字符，角保持实心
@@ -1681,25 +1988,6 @@ function findBoxAt(r, d) {
   }
   return best;
 }
-function applyColor() {
-  // Click mode: detect the box under the click point and color its TL/BR corners
-  const box = findBoxAt(selStart.r, selStart.dispCol);
-  if (!box) { clearSelection(); return; }
-  const code = activeColor;
-  const shade = activeShade === 3 ? '' : String(activeShade);
-  const tlC = findCellByDispCol(box.topR, box.leftD);
-  const brC = findCellByDispCol(box.botR, box.rightD);
-  setCell(box.topR, tlC, code);
-  if (brC >= 0) setCell(box.botR, brC, code);
-  // 明度数字只看左上角（色码后一格）；右下角只色码、不写数字
-  if (shade) {
-    const nextC = findCellByDispCol(box.topR, box.leftD + 1);
-    if (nextC >= 0) setCell(box.topR, nextC, shade);
-  }
-  saveHistory();
-  clearSelection();
-}
-
 // Color the box under the current cursor position (triggered by clicking a color swatch)
 // ═══ Coloring ═══
 function colorAtCursor() {
@@ -2468,11 +2756,8 @@ function setTool(tool) {
   const btn = document.getElementById(btnMap[tool]);
   if (btn) btn.classList.add('active');
 
-  // Show/hide color panel
-  document.getElementById('panel-color').classList.toggle('active', tool === 'color');
 
-  document.getElementById('status-tool').textContent = '工具: ' +
-    ({ select: '选择', free: '自由绘制', line: '直线', box: '矩形', rounded: '圆角矩形', arrow: '箭头', thick: '粗箭头', text: '文字', magic: '梳子', move: '移动', eraser: '擦除' }[tool] || tool);
+  updateStatusTool();
   // Set cursor for move tool
   document.getElementById('canvas-wrap').style.cursor = tool === 'move' ? 'move' : 'default';
   // 文字工具下聚焦隐藏 IME 输入框，让中文输入法有合成目标；其他工具失焦
@@ -2538,7 +2823,7 @@ function initColorPicker() {
     letter.textContent = code;
     btn.appendChild(letter);
     btn.dataset.code = code;
-    btn.title = `${COLORS[code].name} (${COLORS[code].hex})`;
+    btn.title = t('color.' + code) + ' (' + COLORS[code].hex + ')';
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -2553,10 +2838,10 @@ function initColorPicker() {
   noneBtn.style.background = '#fff';
   noneBtn.style.border = '2px dashed #999';
   noneBtn.dataset.code = 'none';
-  noneBtn.title = '原色（清除着色）';
+  noneBtn.title = t('color.noneTitle');
   const noneLabel = document.createElement('span');
   noneLabel.className = 'letter';
-  noneLabel.textContent = '原';
+  noneLabel.textContent = t('color.noneShort');
   noneLabel.style.fontSize = '9px';
   noneLabel.style.color = '#666';
   noneBtn.appendChild(noneLabel);
@@ -2584,38 +2869,22 @@ document.getElementById('font-select').addEventListener('change', () => {
 });
 
 // ═══════════════════════════════════════
-// Color legend
-// ═══════════════════════════════════════
-function initColorLegend() {
-  const container = document.getElementById('color-legend');
-  container.innerHTML = '<span style="font-size:11px;color:#999;margin-right:4px">颜色码:</span>';
-  for (const code of COLOR_CODES) {
-    const swatch = document.createElement('span');
-    swatch.className = 'swatch';
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.style.background = COLORS[code].hex;
-    swatch.appendChild(dot);
-    swatch.appendChild(document.createTextNode(`${code}=${COLORS[code].name}`));
-    swatch.addEventListener('click', () => {
-      activeColor = code;
-      document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.cp-btn[data-code="${code}"]`)?.classList.add('active');
-    });
-    container.appendChild(swatch);
-  }
-}
-
-// ═══════════════════════════════════════
 // Status
 // ═══════════════════════════════════════
+function updateStatusTool() {
+  const map = { select: 'tool.select', free: 'tool.free', line: 'tool.line', box: 'tool.box', rounded: 'tool.roundedRect', arrow: 'tool.arrow', thick: 'tool.thick', text: 'tool.text', magic: 'tool.magic', move: 'tool.move', eraser: 'tool.eraser' };
+  const key = map[activeTool];
+  const toolName = key ? t(key) : activeTool;
+  document.getElementById('status-tool').textContent = t('status.tool', { tool: toolName });
+}
+
 function updateStatus() {
-  document.getElementById('status-pos').textContent = `行: ${cursorR + 1} 列: ${cursorC + 1}`;
-  document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
-  let mode = activeTool === 'text' ? (textMode === 'insert' ? '插入' : '覆盖') : '';
-  if (isVisual) mode = (mode ? 'VISUAL ' : '') + mode + '可视';
-  else if (!mode) mode = '普通';
-  document.getElementById('status-mode').textContent = `模式: ${mode}`;
+  document.getElementById('status-pos').textContent = t('status.pos', { row: cursorR + 1, col: cursorC + 1 });
+  document.getElementById('status-size').textContent = t('status.grid', { cols: COLS, rows: ROWS });
+  let mode = activeTool === 'text' ? (textMode === 'insert' ? t('status.modeInsert') : t('status.modeOverwrite')) : '';
+  if (isVisual) mode = mode ? t('status.modeVisualText', { mode }) : t('status.modeVisual');
+  else if (!mode) mode = t('status.modeNormal');
+  document.getElementById('status-mode').textContent = t('status.mode', { mode });
 }
 
 // ═══════════════════════════════════════
@@ -2639,7 +2908,7 @@ function getGridText() {
 document.getElementById('btn-export').addEventListener('click', () => {
   const name = document.getElementById('diagram-name').value.trim();
   if (!name) {
-    alert('请先填写图名（代码块图需取名后才能导出）');
+    alert(t('alert.nameRequiredExport'));
     document.getElementById('diagram-name').focus();
     return;
   }
@@ -2647,8 +2916,8 @@ document.getElementById('btn-export').addEventListener('click', () => {
   const comment = `<!--diagram ${name}\n${text}\n-->`;
   navigator.clipboard.writeText(comment).then(() => {
     const btn = document.getElementById('btn-export');
-    btn.textContent = '✅ 已复制';
-    setTimeout(() => { btn.textContent = '💾 导出'; }, 1500);
+    btn.textContent = t('btn.exportCopied');
+    setTimeout(() => { btn.textContent = t('btn.export'); }, 1500);
   }).catch(() => {
     // Fallback
     const ta = document.createElement('textarea');
@@ -2702,7 +2971,7 @@ function extractDiagrams(md) {
     const content = m[1];
     if (/[┌┐└┘├┤┬┴┼─│]/.test(content) && content.split('\n').length > 3) {
       codeIdx++;
-      list.push({ name: '', content, type: 'code', label: '代码块 ' + codeIdx });
+      list.push({ name: '', content, type: 'code', label: t('list.codeBlock', { n: codeIdx }) });
     }
   }
   return list;
@@ -2710,11 +2979,11 @@ function extractDiagrams(md) {
 
 function populateDiagramSelect(list) {
   const sel = document.getElementById('diagram-select');
-  sel.innerHTML = '<option value="">— 选择图 —</option>';
+  sel.innerHTML = '<option value="">' + t('list.selectPlaceholder') + '</option>';
   list.forEach((d, i) => {
     const opt = document.createElement('option');
     opt.value = i;
-    opt.textContent = d.name || d.label || ('图 ' + (i + 1));
+    opt.textContent = d.name || d.label || t('list.figureN', { n: i + 1 });
     sel.appendChild(opt);
   });
 }
@@ -2744,7 +3013,7 @@ function showDiagramList() {
     item.className = "diag-item";
     const nameSpan = document.createElement("span");
     nameSpan.className = "name";
-    nameSpan.textContent = (d.name || d.label || "图 " + (i + 1)) + (d.type === "code" ? "  (需取名)" : "");
+    nameSpan.textContent = (d.name || d.label || t('list.figureN', { n: i + 1 })) + (d.type === "code" ? "  " + t('list.needName') : "");
     item.appendChild(nameSpan);
     item.addEventListener("click", () => {
       previewIdx = i;
@@ -2769,7 +3038,7 @@ document.getElementById('btn-list-import').addEventListener('click', () => {
     document.getElementById('diagram-select').value = previewIdx;
     document.getElementById('modal-list').classList.remove('active');
   } else {
-    alert('请先在左侧选择一张图');
+    alert(t('alert.requireSelection'));
   }
 });
 
@@ -2791,14 +3060,14 @@ function loadFromUrl(url) {
     .then(md => {
       diagrams = extractDiagrams(md);
       if (!diagrams.length) {
-        alert('未在文件中找到 ASCII 图');
+        alert(t('alert.noDiagramFound'));
         return;
       }
       populateDiagramSelect(diagrams);
       showDiagramList();
     })
     .catch(err => {
-      alert('加载文件失败：' + err + '\n（可能是跨域限制，需同源或 CORS，或用导入按钮手动粘贴）');
+      alert(t('alert.loadFailed', { err }));
     });
   saveHistory();
 }
@@ -2816,7 +3085,7 @@ if (_fileParam) {
 // Save button: POST edited diagram back to the Markdown file
 function saveDiagram() {
   const name = document.getElementById('diagram-name').value.trim();
-  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return; }
+  if (!name) { alert(t('alert.nameRequired')); document.getElementById('diagram-name').focus(); return; }
   const content = getGridText();
   const body = { file: currentFilePath, name, content };
   if (selectedIndex >= 0) {
@@ -2839,11 +3108,11 @@ function saveDiagram() {
         diagrams[selectedIndex].name = name;
       }
       const btn = document.getElementById('btn-save');
-      btn.textContent = '✅ 已保存';
-      setTimeout(() => { btn.textContent = '💿 保存'; }, 1500);
+      btn.textContent = t('btn.saved');
+      setTimeout(() => { btn.textContent = t('btn.save'); }, 1500);
     }
   }).catch(err => {
-    alert('保存失败：' + err + '\n请确认启动的是 server.py（python server.py），而非直接打开 HTML');
+    alert(t('alert.saveFailed', { err }));
   });
 }
 
@@ -2863,7 +3132,7 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
         importText(d.content);
       }
     })
-    .catch(err => { alert('刷新失败：' + err); });
+    .catch(err => { alert(t('alert.refreshFailed', { err })); });
 });
 
 // ═══ 形状库（自定义贴纸）═══
@@ -2893,7 +3162,7 @@ function renderShapesList() {
   const list = document.getElementById('shapes-list');
   if (!list) return;
   const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
-  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">暂无形状，粘贴 SVG 添加第一个吧</div>'; return; }
+  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">' + t('shapes.empty') + '</div>'; return; }
   list.innerHTML = ids.map(id => {
     // 与画布渲染一致的变换：线宽不缩放 + 填满容器
     let svg = shapeSvg(id);
@@ -2901,22 +3170,22 @@ function renderShapesList() {
     svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
     svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
     return `
-    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="editShape('${id}')" title="点击编辑该形状">
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="editShape('${id}')" title="${t('shapes.editTooltip')}">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
       <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
       <div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3;word-break:break-all;min-height:13px">${escapeHtml(desc)}</div>
-      <div style="font-size:11px;color:#999;margin-top:4px" onclick="event.stopPropagation();removeShape('${id}')">🗑 删除</div>
+      <div style="font-size:11px;color:#999;margin-top:4px" onclick="event.stopPropagation();removeShape('${id}')">${t('shapes.delete')}</div>
     </div>`}).join('');
 }
 
 function addShape() {
   const svg = document.getElementById('shapes-input').value.trim();
-  if (!svg) { alert('请粘贴 SVG 代码'); return; }
-  if (!/^<svg[\s>]/i.test(svg)) { alert('看起来不是 SVG 代码（应以 <svg 开头）'); return; }
+  if (!svg) { alert(t('alert.requireSvg')); return; }
+  if (!/^<svg[\s>]/i.test(svg)) { alert(t('alert.invalidSvg')); return; }
   const nameInput = document.getElementById('shapes-name').value.trim();
   let id;
   if (nameInput) {
-    if (!/^[a-zA-Z0-9]{1,3}$/.test(nameInput)) { alert('名字需为 1-3 个字母或数字'); return; }
+    if (!/^[a-zA-Z0-9]{1,3}$/.test(nameInput)) { alert(t('alert.invalidShapeName')); return; }
     id = nameInput;  // 同名直接覆盖（更新形状）
   } else {
     // 数字递增：找最大数字 ID +1
@@ -2930,22 +3199,22 @@ function addShape() {
     document.getElementById('shapes-name').value = '';
     document.getElementById('shapes-desc').value = '';
     renderShapesList();
-  }).catch(() => alert('保存失败（请确认通过 server.py 访问）'));
+  }).catch(() => alert(t('alert.shapeSaveFailed')));
 }
 
 function removeShape(id) {
   delete shapes[id];
-  saveShapes().then(renderShapesList).catch(() => alert('保存失败'));
+  saveShapes().then(renderShapesList).catch(() => alert(t('alert.shapeRemoveFailed')));
 }
 
 // ═══ Ctrl+Shift+B：矩形替换成自定义形状 ═══
 // 复用上色逻辑：上色是把框角替换成色码，这里把框「左下角」替换成 d:编号 标记
 function openShapePicker() {
   const cell = getCell(cursorR, cursorC);
-  if (!cell) { alert('请先把光标移到矩形/圆角框内'); return; }
+  if (!cell) { alert(t('alert.requireCursorInBox')); return; }
   const d = parseInt(cell.dataset.dispCol);
   const box = findBoxAt(cursorR, d);
-  if (!box) { alert('光标处没有可替换的矩形/圆角框'); return; }
+  if (!box) { alert(t('alert.noReplaceableBox')); return; }
   pendingShapeBox = box;
   renderShapePickList();
   document.getElementById('modal-shape-pick').classList.add('active');
@@ -2956,7 +3225,7 @@ function renderShapePickList() {
   const list = document.getElementById('shape-pick-list');
   if (!list) return;
   const ids = Object.keys(shapes).sort((a, b) => parseInt(a) - parseInt(b));
-  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">形状库为空，请先点击「🧩 形状」按钮添加 SVG 形状</div>'; return; }
+  if (!ids.length) { list.innerHTML = '<div style="color:#999;font-size:13px">' + t('shapes.pickEmpty') + '</div>'; return; }
   list.innerHTML = ids.map(id => {
     // 与画布渲染一致的变换：线宽不缩放 + 填满容器
     let svg = shapeSvg(id);
@@ -2964,7 +3233,7 @@ function renderShapePickList() {
     svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
     svg = svg.replace(/<svg/i, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"');
     return `
-    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="applyShapePick('${id}')" title="替换为 #${id}${desc ? '：' + desc : ''}">
+    <div style="border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;width:96px;cursor:pointer" onclick="applyShapePick('${id}')" title="${desc ? t('shapes.replaceTooltip', { id, desc }) : t('shapes.replaceTooltipNoDesc', { id })}">
       <div style="font-size:11px;color:#666;margin-bottom:4px">#${id}</div>
       <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">${svg}</div>
       <div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3;word-break:break-all;min-height:13px">${escapeHtml(desc)}</div>
@@ -2980,7 +3249,7 @@ function applyShapePick(id) {
   const marker = 'd:' + id;
   // 宽度校验：标记 + 底边右角 ┘ 需能容纳，否则渲染器识别不到右边界
   if (box.rightD - box.leftD + 1 < marker.length + 1) {
-    alert(`当前矩形宽度 ${box.rightD - box.leftD + 1} 格，容纳不下标记「${marker}」+ 右下角，请换更宽的框或更短的形状名`);
+    alert(t('alert.boxTooNarrow', { width: box.rightD - box.leftD + 1, marker }));
     return;
   }
   const c = findCellByDispColAny(box.botR, box.leftD);
@@ -3022,13 +3291,13 @@ loadShapes();
 
 document.getElementById('btn-generate').addEventListener('click', () => {
   const name = document.getElementById('diagram-name').value.trim();
-  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return; }
-  if (!currentFilePath) { alert('请通过 ?file= 参数打开文档才能生成 PNG。直接用浏览器打开 HTML 不支持生成。'); return; }
+  if (!name) { alert(t('alert.nameRequired')); document.getElementById('diagram-name').focus(); return; }
+  if (!currentFilePath) { alert(t('alert.generateRequireFile')); return; }
   const content = getGridText();
-  if (!content.trim()) { alert('图表为空，没什么好生成的'); return; }
+  if (!content.trim()) { alert(t('alert.generateEmpty')); return; }
   const btn = document.getElementById('btn-generate');
   btn.disabled = true;
-  btn.textContent = '⏳ 生成中…';
+  btn.textContent = t('btn.generating');
   fetch('/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -3038,20 +3307,20 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     return r.json();
   }).then(data => {
     if (data.ok) {
-      btn.textContent = '✅ 已生成';
+      btn.textContent = t('btn.generated');
       // 刷新预览以显示最新的 PNG 引用
       if (document.getElementById('btn-refresh').style.display !== 'none') {
         document.getElementById('btn-refresh').click();
       }
     } else {
-      btn.textContent = '❌ 失败';
-      alert('生成失败：' + (data.error || data.output || '未知错误'));
+      btn.textContent = t('btn.failed');
+      alert(t('alert.generateFailed', { error: data.error || data.output || t('alert.unknownError') }));
     }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '🖼 生成'; }, 2000);
+    setTimeout(() => { btn.disabled = false; btn.textContent = t('btn.generate'); }, 2000);
   }).catch(err => {
     btn.disabled = false;
-    btn.textContent = '🖼 生成';
-    alert('生成失败：' + err + '\n请确认已启动 server.py（python server.py）');
+    btn.textContent = t('btn.generate');
+    alert(t('alert.generateFailedHint', { err }));
   });
 });
 
@@ -3111,7 +3380,7 @@ function resizeGrid(newRows, newCols) {
     }
   }
   grid = newGrid;
-  document.getElementById('status-size').textContent = `网格: ${COLS} × ${ROWS}`;
+  updateStatus();
 }
 
 // Auto-expand the canvas when the cursor approaches the right/bottom edge
@@ -3587,7 +3856,7 @@ function refreshPreview() {
     const text = getGridText();
     const wrap = document.getElementById('preview-wrap');
     if (!text.trim()) {
-      wrap.innerHTML = '<div class="preview-empty">图表为空，开始绘制吧 ✏️</div>';
+      wrap.innerHTML = '<div class="preview-empty">' + t('preview.emptyCanvas') + '</div>';
       return;
     }
     wrap.innerHTML = renderPreview(text);
@@ -3595,7 +3864,7 @@ function refreshPreview() {
 }
 
 document.getElementById('btn-clear').addEventListener('click', () => {
-  if (!confirm('确定清空所有内容？')) return;
+  if (!confirm(t('confirm.clear'))) return;
   saveHistory();
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) grid[r][c] = '';
@@ -3621,6 +3890,12 @@ initColorPicker();
 renderGrid();
 refreshPreview();
 setTool('select');
+
+// 应用已检测语言（自动检测 / localStorage 记忆），并绑定语言切换按钮
+applyI18n(lang);
+document.getElementById('btn-lang').addEventListener('click', () => {
+  applyI18n(lang === 'zh' ? 'en' : 'zh');
+});
 
 // 恢复上次保存的字体并测量
 ;(() => {
@@ -3649,14 +3924,16 @@ let beautifyCurrentTask = null;
 let beautifyPollTimer = null;
 let beautifySelectedStyle = null;
 let beautifyResultData = null;
+let beautifyProgressPct = -1, beautifyProgressLabel = '';
+let beautifyResultPath = null;
 
 // 从当前图/文件收集美化参数
 function beautifyCollectParams() {
   const name = document.getElementById('diagram-name').value.trim();
-  if (!name) { alert('请先填写图名'); document.getElementById('diagram-name').focus(); return null; }
-  if (!currentFilePath) { alert('请通过 ?file= 参数打开文档才能美化。直接打开 HTML 不支持。'); return null; }
+  if (!name) { alert(t('alert.nameRequired')); document.getElementById('diagram-name').focus(); return null; }
+  if (!currentFilePath) { alert(t('alert.beautifyRequireFile')); return null; }
   const content = getGridText();
-  if (!content.trim()) { alert('图表为空，没什么好美化的'); return null; }
+  if (!content.trim()) { alert(t('alert.beautifyEmpty')); return null; }
   return { file: currentFilePath, name, content };
 }
 
@@ -3678,12 +3955,12 @@ function beautifyOpenWithCheck() {
       if (d.ready) {
         beautifyOpen();
       } else {
-        const issues = (d.issues && d.issues.length) ? d.issues.join('\n') : '配置不完整';
-        alert('⚠️ AI 美化后端未就绪，请先在 server.py 所在环境配置：\n\n' + issues + '\n\n当前 provider=' + d.provider + '，model=' + d.model + '，base-url=' + d.base_url);
+        const issues = (d.issues && d.issues.length) ? d.issues.join('\n') : t('alert.backendConfigIncomplete');
+        alert(t('alert.backendNotReady', { issues, provider: d.provider, model: d.model, baseUrl: d.base_url }));
       }
     })
     .catch(() => {
-      alert('⚠️ 无法连接后端，请确认 server.py 已启动');
+      alert(t('alert.backendUnreachable'));
     });
 }
 
@@ -3692,10 +3969,10 @@ function beautifyOpen() {
   const params = beautifyCollectParams();
   if (!params) return;
   const listEl = document.getElementById('beautify-style-list');
-  listEl.innerHTML = '<div style="color:#999;font-size:13px">加载风格中…</div>';
+  listEl.innerHTML = '<div style="color:#999;font-size:13px">' + t('beautify.styles.loading') + '</div>';
   beautifyLoadStyles().then(styles => {
     if (!styles.length) {
-      listEl.innerHTML = '<div style="color:#c00;font-size:13px">未找到可用风格（styles/ 目录下需有 style.json）</div>';
+      listEl.innerHTML = '<div style="color:#c00;font-size:13px">' + t('beautify.styles.notFound') + '</div>';
       return;
     }
     listEl.innerHTML = '';
@@ -3725,34 +4002,36 @@ function beautifyOpen() {
 function beautifyStart() {
   const params = beautifyCollectParams();
   if (!params) return;
-  if (!beautifySelectedStyle) { alert('请先选择风格'); return; }
+  if (!beautifySelectedStyle) { alert(t('alert.requireStyle')); return; }
   document.getElementById('modal-beautify').classList.remove('active');
   // 立即显示进度条（启动中），不等后端返回，避免用户干等
-  beautifyShowProgress(0, '启动中…');
+  beautifyUpdateProgress(0, 'beautify.stage.starting');
   fetch('/beautify/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign(params, { style: beautifySelectedStyle }))
   }).then(r => {
-    if (!r.ok) throw new Error('启动任务失败 ' + r.status);
+    if (!r.ok) throw new Error(t('alert.startTaskFailed', { status: r.status }));
     return r.json();
   }).then(d => {
     beautifyCurrentTask = d.task_id;
     beautifyPoll();
-  }).catch(err => beautifyFail('启动美化失败：' + err));
+  }).catch(err => beautifyFail(t('alert.startBeautifyFailed', { err })));
 }
 
-// 显示进度到工具栏（pct/阶段可选，默认只显示）
-function beautifyShowProgress(pct, label) {
+// 更新工具栏进度条（统一入口；记录进度供切语言恢复）
+function beautifyUpdateProgress(pct, label) {
   const bar = document.getElementById('beautify-toolbar-progress');
   bar.style.display = 'flex';
   if (typeof pct === 'number') {
     document.getElementById('beautify-toolbar-bar').style.width = pct + '%';
     document.getElementById('beautify-toolbar-pct').textContent = pct + '%';
+    beautifyProgressPct = pct;
   }
   if (label) {
     const span = bar.querySelector('span');
-    if (span) span.textContent = '✨ AI 美化中 (' + label + ')';
+    if (span) span.textContent = t('beautify.progress', { label: t(label) });
+    beautifyProgressLabel = label;
   }
 }
 
@@ -3762,31 +4041,19 @@ function beautifyPoll() {
   fetch('/beautify/status?id=' + encodeURIComponent(beautifyCurrentTask))
     .then(r => r.json())
     .then(task => {
-      if (!task || task.status === 'notfound') { beautifyFail('任务丢失（服务器可能已重启）'); return; }
-      beautifyUpdateProgress(task);
+      if (!task || task.status === 'notfound') { beautifyFail(t('alert.taskLost')); return; }
+      beautifyUpdateProgress(task.pct || 0, 'beautify.stage.' + task.stage);
       if (task.status === 'running' || task.status === 'queued') {
         beautifyPollTimer = setTimeout(beautifyPoll, 1500);
       } else if (task.status === 'done') {
         beautifyResultData = task;
         beautifyFinish();
       } else if (task.status === 'error') {
-        beautifyFail(task.error || task.stderr || '未知错误');
+        beautifyFail(task.error || task.stderr || t('alert.unknownError'));
       }
     }).catch(err => {
-      beautifyFail('轮询失败：' + err);
+      beautifyFail(t('alert.pollFailed', { err }));
     });
-}
-
-// 更新工具栏进度条
-function beautifyUpdateProgress(task) {
-  const pct = task.pct || 0;
-  document.getElementById('beautify-toolbar-bar').style.width = pct + '%';
-  document.getElementById('beautify-toolbar-pct').textContent = pct + '%';
-  // 更新阶段标签
-  const stageMap = { save: '保存内容', render: '渲染 PNG', beautify: 'AI 生成', done: '完成', failed: '失败', queued: '排队中' };
-  const label = stageMap[task.stage] || '';
-  const span = document.querySelector('#beautify-toolbar-progress span');
-  if (span && label) span.textContent = '✨ AI 美化中 (' + label + ')';
 }
 
 // 任务完成
@@ -3796,11 +4063,12 @@ function beautifyFinish() {
   beautifyCurrentTask = null;
   document.getElementById('beautify-toolbar-progress').style.display = 'none';
   const out = beautifyResultData.output;
-  if (!out) { beautifyFail('未生成结果文件'); return; }
+  if (!out) { beautifyFail(t('alert.noOutput')); return; }
   // 显示结果预览
   const img = document.getElementById('beautify-result-img');
   img.src = '/' + out.replace(/\\/g, '/');
-  document.getElementById('beautify-result-path').textContent = '输出: ' + out;
+  document.getElementById('beautify-result-path').textContent = t('beautify.result.output', { path: out });
+  beautifyResultPath = out;
   document.getElementById('modal-beautify-result').classList.add('active');
 }
 
@@ -3809,8 +4077,9 @@ function beautifyFail(msg) {
   clearTimeout(beautifyPollTimer);
   beautifyPollTimer = null;
   beautifyCurrentTask = null;
+  beautifyProgressPct = -1;
   document.getElementById('beautify-toolbar-progress').style.display = 'none';
-  alert('美化失败：' + msg);
+  alert(t('alert.beautifyFailed', { msg }));
 }
 
 // 插入文档（用户确认后）
@@ -3824,15 +4093,15 @@ function beautifyInsert() {
     body: JSON.stringify({ file: params.file, name: params.name, output: beautifyResultData.output })
   }).then(r => r.json()).then(d => {
     if (d.ok) {
-      alert('已插入美化图到文档');
+      alert(t('alert.beautifyInserted'));
       document.getElementById('modal-beautify-result').classList.remove('active');
       if (document.getElementById('btn-refresh').style.display !== 'none') {
         document.getElementById('btn-refresh').click();
       }
     } else {
-      alert('插入失败');
+      alert(t('alert.beautifyInsertFailed'))
     }
-  }).catch(err => alert('插入失败：' + err));
+  }).catch(err => alert(t('alert.beautifyInsertFailedErr', { err })));
 }
 
 // 绑定事件
