@@ -327,7 +327,15 @@ async function main() {
   }
 
   const inputImage = readImage(inputPath);
-  const prompt = buildPrompt(style);
+  const inputImage = readImage(inputPath);
+  // 提示词：默认由 buildPrompt(style) 拼接（结构规则 + 风格规则）；外部可通过 --prompt-stdin 从 stdin 传入完整覆盖
+  let prompt;
+  if (kv['prompt-stdin']) {
+    prompt = fs.readFileSync(0, 'utf-8').trim();
+  } else {
+    prompt = buildPrompt(style);
+  }
+  const outPath = kv.out || defaultOut(inputPath, style);
   const outPath = kv.out || defaultOut(inputPath, style);
 
   console.log(`🎨 美化中: ${inputPath} -> ${outPath}`);

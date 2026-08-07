@@ -4121,9 +4121,13 @@ function beautifyFinish() {
   if (!out) { beautifyFail(t('alert.noOutput')); return; }
   // 显示结果预览
   const img = document.getElementById('beautify-result-img');
-  img.src = '/' + out.replace(/\\/g, '/');
-  document.getElementById('beautify-result-path').textContent = t('beautify.result.output', { path: out });
-  beautifyResultPath = out;
+  img.src = '/beautify/file?path=' + encodeURIComponent(out);
+  // 显示相对文档目录的路径（不暴露完整绝对路径）
+  const _outPosix = out.replace(/\\/g, '/');
+  const _fileDir = (currentFilePath || '').replace(/\\/g, '/').replace(/\/[^/]*$/, '');
+  const _relPath = _fileDir && _outPosix.indexOf(_fileDir + '/') === 0 ? _outPosix.slice(_fileDir.length + 1) : _outPosix.split('/').pop();
+  document.getElementById('beautify-result-path').textContent = t('beautify.result.output', { path: _relPath });
+  beautifyResultPath = _relPath;
   document.getElementById('modal-beautify-result').classList.add('active');
 }
 

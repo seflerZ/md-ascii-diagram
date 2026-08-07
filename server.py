@@ -73,7 +73,7 @@ def _beautify_worker(task_id, filepath, name, content, style):
         out_dir = os.path.join(file_dir, 'diagrams_out')
         render = subprocess.run(
             ['node', render_js, filepath, out_dir, '--only=' + name],
-            capture_output=True, text=True, timeout=60, cwd=script_dir
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, cwd=script_dir
         )
         if render.returncode != 0:
             raise RuntimeError('渲染失败: ' + (render.stderr or render.stdout))
@@ -91,7 +91,7 @@ def _beautify_worker(task_id, filepath, name, content, style):
         beautify_js = os.path.join(script_dir, 'beautify.js')
         beautify = subprocess.run(
             ['node', beautify_js, png, '--style=' + style],
-            capture_output=True, text=True, timeout=300, cwd=script_dir
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300, cwd=script_dir
         )
         out_png = None
         if beautify.returncode == 0:
@@ -239,8 +239,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps(task).encode('utf-8'))
+        elif parsed.path == '/beautify/file':
+            # 按绝对路径返回图片/文件（美化结果预览，路径在文档目录下，不在 server 根目录内）
+            fp = (params.get('path') or [''])[0]
+            if not fp:
+                self.send_error(400, '缺少 path 参数')
+                return
+            try:
+                with open(fp, 'rb') as f:
+                    data = f.read()
+                ext = os.path.splitext(fp)[1].lower()
+                ctype = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif', 'webp': 'image/webp'}.get(ext.lstrip('.'), 'application/octet-stream')
+                self.send_response(200)
+                self.send_header('Content-Type', ctype)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self.send_error(404, '文件不存在: %s' % e)
         else:
             super().do_GET()
+
+
 
     def do_POST(self):
         if self.path == '/shapes':
@@ -339,7 +360,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 out_dir = os.path.join(file_dir, 'diagrams_out')
                 result = subprocess.run(
                     ['node', render_js, filepath, out_dir, '--only=' + name],
-                    capture_output=True, text=True, timeout=60,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
                     cwd=script_dir
                 )
                 ok = result.returncode == 0
