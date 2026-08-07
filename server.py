@@ -15,7 +15,6 @@ import json
 import re
 import sys, os, subprocess, shutil, threading, time, uuid
 
-
 def find_all_diagrams(md):
     """返回 Markdown 中所有 ASCII 图的位置列表（按出现顺序）。
     每项: {type, name, start, end}
@@ -33,7 +32,6 @@ def find_all_diagrams(md):
     diagrams.sort(key=lambda d: d['start'])
     return diagrams
 
-
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
 # 自定义形状库（贴纸），与 server.py 同目录
@@ -45,7 +43,7 @@ SHAPES_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shape
 BEAUTIFY_TASKS = {}
 BEAUTIFY_LOCK = threading.Lock()
 
-def _beautify_worker(task_id, filepath, name, content, style):
+def _beautify_worker(task_id, filepath, name, content, style, prompt=None):
     """后台线程：保存注释块 -> 渲染 PNG -> beautify.js 美化 -> 更新任务状态。"""
     def upd(**kw):
         with BEAUTIFY_LOCK:
@@ -90,9 +88,11 @@ def _beautify_worker(task_id, filepath, name, content, style):
         # 3. 图生图美化（beautify.js，自动序号去重，从 OUTPUT: 行取实际路径）
         beautify_js = os.path.join(script_dir, 'beautify.js')
         beautify = subprocess.run(
-            ['node', beautify_js, png, '--style=' + style],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300, cwd=script_dir
+            ['node', beautify_js, png, '--style=' + style] + (['--prompt-stdin'] if (prompt and prompt.strip()) else []),
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300, cwd=script_dir,
+            input=prompt if (prompt and prompt.strip()) else None
         )
+
         out_png = None
         if beautify.returncode == 0:
             for line in beautify.stdout.splitlines():
@@ -106,8 +106,6 @@ def _beautify_worker(task_id, filepath, name, content, style):
 
     except Exception as e:
         upd(status='error', stage='failed', error=str(e))
-
-
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
@@ -261,8 +259,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_GET()
 
-
-
     def do_POST(self):
         if self.path == '/shapes':
             # 保存自定义形状库（shapes.json）
@@ -381,13 +377,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             name = data.get('name')
             content = data.get('content')
             style = data.get('style', 'black-metal')
+            prompt = data.get('prompt')  # 可选：用户编辑后的风格提示词（每行一条），为空则 beautify.js 用默认
             if not filepath or not name:
                 self.send_error(400, '缺少 file 或 name 参数')
                 return
             task_id = uuid.uuid4().hex[:12]
             with BEAUTIFY_LOCK:
                 BEAUTIFY_TASKS[task_id] = {'id': task_id, 'status': 'queued', 'stage': 'queued', 'pct': 0}
-            t = threading.Thread(target=_beautify_worker, args=(task_id, filepath, name, content, style), daemon=True)
+            t = threading.Thread(target=_beautify_worker, args=(task_id, filepath, name, content, style, prompt), daemon=True)
             t.start()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -434,7 +431,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
-
 
 if __name__ == '__main__':
     server = http.server.ThreadingHTTPServer(('0.0.0.0', PORT), Handler)

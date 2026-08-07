@@ -241,6 +241,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <h3 data-i18n="modal.beautify">✨ 美化图表</h3>
     <div class="hint" data-i18n="hint.beautify">点击风格卡片查看大图，选定后点「开始美化」（后台运行，期间可继续编辑）</div>
     <div id="beautify-style-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"></div>
+    <div id="beautify-prompt-wrap" style="display:none;margin-bottom:12px">
+      <label data-i18n="beautify.promptLabel">风格提示词（可编辑，将发给 AI）</label>
+      <textarea id="beautify-prompt" rows="7" style="width:100%;font-family:monospace;font-size:13px;box-sizing:border-box;margin-top:4px" placeholder="输入该风格的提示词，每行一条"></textarea>
+    </div>
     <div class="modal-buttons">
       <button class="primary" id="btn-beautify-start" data-i18n="beautify.start">✨ 开始美化</button>
       <button class="cancel" id="btn-beautify-cancel" data-i18n="common.cancel">取消</button>
@@ -458,6 +462,7 @@ const I18N = {
     'beautify.stage.starting': '启动中…', 'beautify.stage.save': '保存内容', 'beautify.stage.render': '渲染 PNG',
     'beautify.stage.beautify': 'AI 生成', 'beautify.stage.done': '完成', 'beautify.stage.failed': '失败', 'beautify.stage.queued': '排队中',
     'beautify.styles.loading': '加载风格中…', 'beautify.styles.notFound': '未找到可用风格（styles/ 目录下需有 style.json）',
+    'beautify.promptLabel': '风格提示词（可编辑，将发给 AI）',
     'beautify.result.output': '输出: {path}',
     'beautify.start': '✨ 开始美化', 'beautify.redo': '🔁 再生成', 'beautify.insert': '💾 插入文档',
     'alt.beautifyResult': '美化结果', 'aria.imeInput': '文字输入',
@@ -597,6 +602,7 @@ const I18N = {
     'beautify.stage.starting': 'Starting…', 'beautify.stage.save': 'Saving', 'beautify.stage.render': 'Rendering PNG',
     'beautify.stage.beautify': 'AI Generating', 'beautify.stage.done': 'Done', 'beautify.stage.failed': 'Failed', 'beautify.stage.queued': 'Queued',
     'beautify.styles.loading': 'Loading styles…', 'beautify.styles.notFound': 'No styles found (styles/ dir needs style.json)',
+    'beautify.promptLabel': 'Style prompt (editable, sent to AI)',
     'beautify.result.output': 'Output: {path}',
     'beautify.start': '✨ Start Beautify', 'beautify.redo': '🔁 Regenerate', 'beautify.insert': '💾 Insert',
     'alt.beautifyResult': 'Beautified result', 'aria.imeInput': 'Text input',
@@ -3874,10 +3880,6 @@ document.getElementById('btn-shortcuts').addEventListener('click', () => {
 document.getElementById('btn-close-shortcuts').addEventListener('click', () => {
   document.getElementById('modal-shortcuts').classList.remove('active');
 });
-document.getElementById('modal-shortcuts').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.target.classList.remove('active');
-});
-
 // ═══════════════════════════════════════
 // Init
 // ═══════════════════════════════════════
@@ -4019,6 +4021,21 @@ function beautifyOpenWithCheck() {
     });
 }
 
+// 加载某风格的默认提示词（仅该风格自己的 rules，公共结构规则 structure 不展示）填入编辑框
+function loadStylePrompt(style) {
+  fetch('/styles/' + style + '/style.json')
+    .then(r => r.json())
+    .then(cfg => {
+      const rules = (cfg && cfg.rules) || [];
+      document.getElementById('beautify-prompt').value = rules.join('\n');
+      document.getElementById('beautify-prompt-wrap').style.display = 'block';
+    })
+    .catch(() => {
+      document.getElementById('beautify-prompt').value = '';
+      document.getElementById('beautify-prompt-wrap').style.display = 'block';
+    });
+}
+
 // 打开风格选择浮层
 function beautifyOpen() {
   const params = beautifyCollectParams();
@@ -4041,6 +4058,8 @@ function beautifyOpen() {
         listEl.querySelectorAll('.beautify-style-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         beautifySelectedStyle = s;
+        // 加载该风格默认提示词到编辑框并显示（仅风格自己的 rules，公共结构规则不展示）
+        loadStylePrompt(s);
         // 点击卡片 → 弹出独立大图浮层
         const bigImg = document.getElementById('beautify-big-full');
         bigImg.src = '/styles/' + s + '/ref-1.png';
@@ -4064,7 +4083,10 @@ function beautifyStart() {
   fetch('/beautify/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign(params, { style: beautifySelectedStyle }))
+    body: JSON.stringify(Object.assign(params, {
+      style: beautifySelectedStyle,
+      prompt: document.getElementById('beautify-prompt').value.trim() || undefined
+    }))
   }).then(r => {
     if (!r.ok) throw new Error(t('alert.startTaskFailed', { status: r.status }));
     return r.json();
@@ -4167,7 +4189,6 @@ function beautifyInsert() {
 document.getElementById('btn-beautify').addEventListener('click', beautifyOpenWithCheck);
 document.getElementById('btn-beautify-start').addEventListener('click', beautifyStart);
 document.getElementById('btn-beautify-big-close').addEventListener('click', () => document.getElementById('modal-beautify-big').classList.remove('active'));
-document.getElementById('modal-beautify-big').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
 document.getElementById('btn-beautify-cancel').addEventListener('click', () => document.getElementById('modal-beautify').classList.remove('active'));
 document.getElementById('btn-beautify-insert').addEventListener('click', beautifyInsert);
 document.getElementById('btn-beautify-redo').addEventListener('click', () => {
@@ -4176,8 +4197,6 @@ document.getElementById('btn-beautify-redo').addEventListener('click', () => {
 });
 document.getElementById('btn-beautify-done').addEventListener('click', () => document.getElementById('modal-beautify-result').classList.remove('active'));
 // 背景点击关闭（样式/结果浮层）
-document.getElementById('modal-beautify').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
-document.getElementById('modal-beautify-result').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.target.classList.remove('active'); });
 
 console.log('ASCII 图编辑器已加载');
 console.log('快捷键: V=选择, F=自由, L=直线, B=矩形, A=箭头, T=文字, W=梳子, E=擦除, Ctrl+Z=撤销, Ctrl+C/X/V=复制剪切粘贴');
