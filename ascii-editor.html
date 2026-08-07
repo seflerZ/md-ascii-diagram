@@ -4053,18 +4053,27 @@ function beautifyOpen() {
       const card = document.createElement('div');
       card.className = 'beautify-style-card' + (i === 0 ? ' active' : '');
       card.dataset.style = s;
-      card.innerHTML = '<img src="/styles/' + s + '/ref-1.png" onerror="this.style.visibility=\'hidden\'"><div class="name">' + s + '</div>';
+      card.innerHTML = '<div class="name">' + s + '</div>';
+      const cardImg = document.createElement('img');
+      cardImg.src = '/styles/' + s + '/ref-1.png';
+      cardImg.onerror = function() { this.style.visibility = 'hidden'; };
+      cardImg.style.cursor = 'pointer';
+      cardImg.title = s;
+      // 点图片 → 弹出大图浮层（阻止冒泡，避免触发卡片切换）
+      cardImg.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const bigImg = document.getElementById('beautify-big-full');
+        bigImg.src = '/styles/' + s + '/ref-1.png';
+        bigImg.onerror = function() { this.style.visibility = 'hidden'; };
+        document.getElementById('modal-beautify-big').classList.add('active');
+      });
+      card.insertBefore(cardImg, card.firstChild);
       card.addEventListener('click', () => {
         listEl.querySelectorAll('.beautify-style-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         beautifySelectedStyle = s;
         // 加载该风格默认提示词到编辑框并显示（仅风格自己的 rules，公共结构规则不展示）
         loadStylePrompt(s);
-        // 点击卡片 → 弹出独立大图浮层
-        const bigImg = document.getElementById('beautify-big-full');
-        bigImg.src = '/styles/' + s + '/ref-1.png';
-        bigImg.onerror = function() { this.style.visibility = 'hidden'; };
-        document.getElementById('modal-beautify-big').classList.add('active');
       });
       listEl.appendChild(card);
     });
