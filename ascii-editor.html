@@ -39,6 +39,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .line-dropdown .line-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
 .line-dropdown .line-opt:hover{background:#e8f0ff}
 .line-dropdown .line-opt.active{background:#d0e4ff;font-weight:bold}
+.tool-corner-wrap{position:relative;display:inline-flex}
+.tool-corner-wrap .corner-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;min-width:110px;padding:2px}
+.tool-corner-wrap:hover .corner-dropdown{display:block}
+.corner-dropdown .corner-opt{padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:3px;font-family:'更纱终端书呆黑体-简','Sarasa Mono SC Nerd',monospace}
+.corner-dropdown .corner-opt:hover{background:#e8f0ff}
+.corner-dropdown .corner-opt.active{background:#d0e4ff;font-weight:bold}
 
 /* ── Box tool dropdown (实线/虚线) ── */
 .tool-box-wrap{position:relative;display:inline-flex}
@@ -156,6 +162,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="arrow-opt active" data-type="1" data-i18n="option.arrowFine">→ ← 细箭头</div>
         <div class="arrow-opt" data-type="2" data-i18n="option.arrowSolid">▶ ◀ 实心</div>
         <div class="arrow-opt" data-type="3" data-i18n="option.arrowHollow">▷ ◁ 空心</div>
+      </div>
+    </div>
+    <div class="tool-corner-wrap">
+      <button id="tool-corner" data-i18n-title="toolTitle.corner" data-i18n="tool.corner">└┘ 转弯</button>
+      <div class="corner-dropdown" id="corner-dropdown">
+        <div class="corner-opt active" data-corner="1" data-i18n="option.cornerSquare">└┘ 直角</div>
+        <div class="corner-opt" data-corner="2" data-i18n="option.cornerRound">╰╯ 圆角</div>
       </div>
     </div>
     <button id="tool-thick" data-i18n-title="toolTitle.thick" data-i18n="tool.thick">⟹ 粗箭头</button>
@@ -373,6 +386,7 @@ const I18N = {
     'tool.select': '选择', 'tool.free': '自由绘制', 'tool.line': '直线', 'tool.box': '矩形',
     'tool.rounded': '圆角', 'tool.roundedRect': '圆角矩形', 'tool.arrow': '箭头', 'tool.thick': '粗箭头',
     'tool.text': '文字', 'tool.magic': '梳子', 'tool.move': '移动', 'tool.eraser': '擦除',
+    'tool.corner': '转弯',
     // 工具按钮 title
     'toolTitle.select': '选择/编辑 (V)',
     'toolTitle.free': '自由绘制 (F)',
@@ -383,11 +397,13 @@ const I18N = {
     'toolTitle.thick': '粗箭头 (K)，方向键扩展，Enter 确认',
     'toolTitle.text': '文字 (T)', 'toolTitle.magic': '梳子理线 (W)',
     'toolTitle.move': '移动 (M)', 'toolTitle.eraser': '橡皮擦 (E)',
+    'toolTitle.corner': '转弯样式：直线/箭头拐角 直角⇄圆角',
     // 下拉选项（完整串，避免拼接）
     'option.lineSolid': '─ │ 实线', 'option.lineDashed': '╌ ╎ 虚线',
     'option.boxSolid': '┌┐ 实线', 'option.boxDashed': '╌╎ 虚线',
     'option.roundedSolid': '╭╮ 实线', 'option.roundedDashed': '╌╎ 虚线',
     'option.arrowFine': '→ ← 细箭头', 'option.arrowSolid': '▶ ◀ 实心', 'option.arrowHollow': '▷ ◁ 空心',
+    'option.cornerSquare': '└┘ 直角', 'option.cornerRound': '╰╯ 圆角',
     // 工具栏标签
     'toolbar.pointColor': '点色着色:', 'toolbar.shade': '明度', 'toolbar.font': '字体',
     'toolbar.diagram': '图', 'toolbar.name': '名称',
@@ -512,6 +528,7 @@ const I18N = {
     // Tool names (shared by buttons / status / shortcuts)
     'tool.select': 'Select', 'tool.free': 'Freehand', 'tool.line': 'Line', 'tool.box': 'Box',
     'tool.rounded': 'Rounded', 'tool.roundedRect': 'Rounded Box', 'tool.arrow': 'Arrow', 'tool.thick': 'Thick Arrow',
+    'tool.corner': 'Corner',
     'tool.text': 'Text', 'tool.magic': 'Comb', 'tool.move': 'Move', 'tool.eraser': 'Eraser',
     // Tool button titles
     'toolTitle.select': 'Select/Edit (V)',
@@ -523,11 +540,13 @@ const I18N = {
     'toolTitle.thick': 'Thick arrow (K); extend with arrow keys, Enter to confirm',
     'toolTitle.text': 'Text (T)', 'toolTitle.magic': 'Comb lines (W)',
     'toolTitle.move': 'Move (M)', 'toolTitle.eraser': 'Eraser (E)',
+    'toolTitle.corner': 'Turn style: square⇄rounded corner for line/arrow',
     // Dropdown options (full strings, no concatenation)
     'option.lineSolid': '─ │ Solid', 'option.lineDashed': '╌ ╎ Dashed',
     'option.boxSolid': '┌┐ Solid', 'option.boxDashed': '╌╎ Dashed',
     'option.roundedSolid': '╭╮ Solid', 'option.roundedDashed': '╌╎ Dashed',
     'option.arrowFine': '→ ← Thin', 'option.arrowSolid': '▶ ◀ Solid', 'option.arrowHollow': '▷ ◁ Hollow',
+    'option.cornerSquare': '└┘ Square', 'option.cornerRound': '╰╯ Rounded',
     // Toolbar labels
     'toolbar.pointColor': 'Dot Color:', 'toolbar.shade': 'Shade', 'toolbar.font': 'Font',
     'toolbar.diagram': 'Diagram', 'toolbar.name': 'Name',
@@ -693,6 +712,7 @@ function applyI18n(nextLang) {
   if (typeof updateStatus === 'function') updateStatus();
   if (typeof setArrowType === 'function') setArrowType(arrowType);
   if (typeof setLineType === 'function') setLineType(lineType);
+  if (typeof setCornerStyle === 'function') setCornerStyle(cornerStyle);
   if (typeof setBoxType === 'function') setBoxType(boxType);
   if (typeof setRoundedType === 'function') setRoundedType(roundedType);
   if (typeof initColorPicker === 'function') initColorPicker();
@@ -1766,6 +1786,7 @@ function computeArrowPath() {
     else if (hDir === 'left' && vDir === 'up') corner = '┘';
     else if (hDir === 'right' && vDir === 'down') corner = '┌';
     else if (hDir === 'right' && vDir === 'up') corner = '└';
+    if (cornerStyle === 2) corner = { '┐': '╮', '┘': '╯', '┌': '╭', '└': '╰' }[corner];
     const loD = Math.min(d1, d2), hiD = Math.max(d1, d2);
     for (let d = loD; d <= hiD; d++) {
       if (d === d2) continue; // corner handled separately
@@ -1788,6 +1809,14 @@ function setLineType(type) {
   document.querySelectorAll('.line-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-line');
   if (btn) btn.textContent = (type === 2 ? '╌' : '─') + ' ' + t('tool.line');
+}
+// 转弯样式：1=直角(└┘) 2=圆角(╰╯)，作用于直线/箭头拐角
+let cornerStyle = 1;
+function setCornerStyle(type) {
+  cornerStyle = type;
+  document.querySelectorAll('.corner-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.corner) === type));
+  const btn = document.getElementById('tool-corner');
+  if (btn) btn.textContent = (type === 2 ? '╰╯' : '└┘') + ' ' + t('tool.corner');
 }
 
 
@@ -2788,6 +2817,13 @@ document.querySelectorAll('.line-opt').forEach(o => {
   });
 });
 setLineType(1); // 初始化直线按钮文字
+document.querySelectorAll('.corner-opt').forEach(o => {
+  o.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setCornerStyle(parseInt(o.dataset.corner));
+  });
+});
+setCornerStyle(1); // 初始化转弯样式按钮文字
 document.querySelectorAll('.box-opt').forEach(o => {
   o.addEventListener('click', (e) => {
     e.stopPropagation();
