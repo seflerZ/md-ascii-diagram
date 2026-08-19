@@ -117,6 +117,13 @@ git clone git@github.com:seflerZ/md-ascii-diagram.git ~/.claude/skills/md-ascii-
 
 - `/md-ascii-diagram edit <文件.md>` — 打开可视化编辑器
 - `/md-ascii-diagram gen <文件.md>` — 将所有图表渲染为 PNG
+- `/md-ascii-diagram beautify <文件.md>` — 图生图 AI 美化
+
+**更新 skill**：上游仓库有更新后，在 skill 目录拉取最新即可：
+
+```bash
+cd ~/.claude/skills/md-ascii-diagram && git pull
+```
 
 ### 2. 安装依赖
 

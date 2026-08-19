@@ -81,6 +81,7 @@ The editor automatically:
 - New diagrams → appended to the end of the document
 - After saving, VSCode detects the file change automatically, no manual copy-paste needed
 - Also supports **💾 Export** to copy the `<!--diagram NAME-->` format to the clipboard (for manual paste)
+- **🖼 Generate** auto-saves the current diagram to the document first, then renders the PNG — so the output always reflects the latest edits.
 
 ### Supported diagram formats
 
@@ -409,6 +410,7 @@ $env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts key (base-url switches to yun
 
 Clicking a style card shows an **editable prompt box** below the style list, pre-filled with that style's own rules only (the shared `structure` rules are NOT shown). The user can tweak the rules; on "Start Beautify" the edited text is sent as `prompt`, and `beautify.js` merges it after `structure`. Leave it empty to use the style's preset rules.
 If the result is unsatisfying, click **🔁 Regenerate** on the result modal — it returns you to the style/prompt modal with the **selected style and your edited prompt preserved**, so you can tweak the prompt and hit "Start Beautify" again.
+The style/prompt modal also shows a **reference fine-image** picker listing the document's historically generated beautified images (`diagrams_out/*.beautified-*.png`). Pick one (single-select, click again to clear); it is passed to `beautify.js` as `--ref`, so the AI refines toward that chosen image on top of the style's own refs.
 
 ### Config self-check (troubleshooting)
 

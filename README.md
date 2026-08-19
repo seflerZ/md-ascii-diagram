@@ -116,6 +116,13 @@ Then in a Claude Code session, use:
 
 - `/md-ascii-diagram edit <file.md>` — open the visual editor
 - `/md-ascii-diagram gen <file.md>` — render all diagrams to PNG
+- `/md-ascii-diagram beautify <file.md>` — image-to-image AI beautify
+
+**Updating the skill**: after upstream changes, pull the latest inside the skill directory:
+
+```bash
+cd ~/.claude/skills/md-ascii-diagram && git pull
+```
 
 ### 2. Install dependencies
 
