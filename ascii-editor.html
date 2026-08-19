@@ -2651,6 +2651,19 @@ document.addEventListener('keydown', (e) => {
   if (e.key.length >= 1 && activeTool === 'text' && !e.ctrlKey && !e.metaKey && !e.altKey
       && e.key !== 'Process' && e.key !== 'Unidentified'
       && !['Backspace','Delete','Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) {
+    // 数字键 1/2 快速切换 insert/replace 模式（i 进插入模式，按 2 进替换模式）
+    if (e.key === '1') {
+      textMode = 'insert';
+      updateStatus();
+      e.preventDefault();
+      return;
+    }
+    if (e.key === '2') {
+      textMode = 'replace';
+      updateStatus();
+      e.preventDefault();
+      return;
+    }
     // Insert 键切换 insert/replace 模式
     if (e.key === 'Insert') {
       textMode = (textMode === 'insert') ? 'replace' : 'insert';
