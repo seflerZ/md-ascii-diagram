@@ -1010,7 +1010,6 @@ function onCellMouseDown(e) {
   drawStart = p;
 
   if (activeTool === 'free') {
-    saveHistory();
     freePlaced = [];
     setCell(p.r, p.c, '─');
     freePlaced.push({ r: p.r, c: p.c });
@@ -1116,6 +1115,7 @@ function onCellMouseUp(e) {
         if (el) setCell(cell.r, cell.c, autoConnect(cell.r, cell.c, parseInt(el.dataset.dispCol)));
       }
       freePlaced = [];
+      saveHistory();
     }
   } else if (activeTool === 'line') {
     clearPreview();
@@ -1497,7 +1497,6 @@ function insertColumn() {
   const b = getSelectionBounds();
   const minC = b ? b.minC : cursorC;
   const n = b ? (b.maxC - b.minC + 1) : 1; // 选区列宽（无选区时插入 1 列于光标处）
-  saveHistory();
   for (let r = 0; r < ROWS; r++) {
     for (let i = 0; i < n; i++) grid[r].push('');
   }
@@ -1505,6 +1504,7 @@ function insertColumn() {
   for (let r = 0; r < ROWS; r++) {
     for (let i = 0; i < n; i++) { grid[r].splice(minC, 0, ''); grid[r].pop(); }
   }
+  saveHistory();
   renderGrid();
   refreshPreview();
 }
@@ -1512,9 +1512,9 @@ function insertColumn() {
 function insertRow() {
   const b = getSelectionBounds();
   const insertR = b ? b.minR : cursorR; // 无选区时在光标行插入
-  saveHistory();
   grid.splice(insertR, 0, new Array(COLS).fill(''));
   ROWS++;
+  saveHistory();
   renderGrid();
   refreshPreview();
 }
@@ -1523,7 +1523,6 @@ function deleteColumn() {
   const b = getSelectionBounds();
   if (!b) return;
   const n = b.maxC - b.minC + 1;
-  saveHistory();
   for (let r = 0; r < ROWS; r++) {
     for (let i = 0; i < n; i++) { grid[r].splice(b.minC, 1); grid[r].push(''); }
   }
@@ -1532,6 +1531,7 @@ function deleteColumn() {
     while (grid[r].length > COLS - n) grid[r].pop();
   }
   COLS -= n;
+  saveHistory();
   renderGrid();
   refreshPreview();
 }
@@ -1539,7 +1539,6 @@ function deleteColumn() {
 function deleteRow() {
   const b = getSelectionBounds();
   if (!b) return;
-  saveHistory();
   // 选区列范围内容上移：删除 minR 行，新行末尾补
   grid.splice(b.minR, 1);
   const newRow = new Array(COLS).fill('');
@@ -1547,6 +1546,7 @@ function deleteRow() {
     if (d < b.minC || d > b.maxC) newRow[d] = grid[b.minR][d] || '';
   }
   grid.push(newRow);
+  saveHistory();
   renderGrid();
   refreshPreview();
 }
@@ -1902,9 +1902,9 @@ function shiftSelectionLeft(b) {
 function deleteCellShiftLeft() {
   const ch = getCellText(cursorR, cursorC);
   clipboard = [[{ char: ch, width: charWidth(ch) }]];  // 删除字符写入剪贴板（Vim：d → 寄存器）
-  saveHistory();
   for (let c = cursorC; c < COLS - 1; c++) grid[cursorR][c] = grid[cursorR][c + 1];
   grid[cursorR][COLS - 1] = '';
+  saveHistory();
   renderGrid(); refreshPreview();
 }
 
@@ -1912,9 +1912,9 @@ function deleteCellShiftLeft() {
 // prevRow：首次按 d 记录的原始行快照（可选），用于剪贴板保真
 function deleteCurrentRow(prevRow) {
   clipboard = [prevRow || rowToClip(cursorR)];  // 整行写入剪贴板（Vim：dd 删除行 → 寄存器）
-  saveHistory();
   grid.splice(cursorR, 1);
   grid.push(new Array(COLS).fill(''));
+  saveHistory();
   renderGrid(); refreshPreview();
 }
 
@@ -1932,8 +1932,8 @@ function eraseCell(r, c) {
 function deleteSelectionShiftLeft() {
   const b = getSelectionBounds();
   if (!b) return;
-  saveHistory();
   shiftSelectionLeft(b);
+  saveHistory();
   renderGrid(); refreshPreview();
 }
 
@@ -2508,8 +2508,8 @@ document.addEventListener('keydown', (e) => {
     if (hasSel) {
       // 框选：对框选每一行，删除框选列范围，右侧左移补位（框选外行不动）
       const b = getSelectionBounds();
-      saveHistory();
       shiftSelectionLeft(b);
+      saveHistory();
       renderGrid();
       refreshPreview();
       // 保留框选，刷新 dispCol 以持续操作
