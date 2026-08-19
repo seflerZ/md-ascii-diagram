@@ -33,6 +33,7 @@ let STRUCTURE_RULES = [
   'Add icons to each rectangle based on its content to aid comprehension (icons must be relevant to the content - they can be product-describing icons or illustrative diagrams), highlighting its role/function.',
   'Do not remove or cut any of the original text.',
   'Preserve the existing color scheme.',
+  'If any reference images are provided, use them ONLY for style, color, and mood — do not carry their content, objects, text, characters, or layout into the new image.',
 ];
 
 // 风格注册表：运行时从 styles/<名>/style.json + 外部 styles.json 加载
@@ -330,7 +331,14 @@ async function main() {
   // 提示词 = 公共结构锁定规则(structure) + 风格规则(rules)。
   // 默认由 buildPrompt(style) 拼接；外部可通过 --prompt-stdin 从 stdin 传入用户编辑后的风格规则（每行一条），与公共规则合并
   let prompt;
-  if (kv['prompt-stdin']) {
+  if (kv.ref) {
+    // 传了参考精图：提示词完全由前端对话框传入（前端已把防复制约束显示在窗口），这里不再追加隐藏提示词
+    if (kv['prompt-stdin']) {
+      prompt = fs.readFileSync(0, 'utf-8').trim().split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+    } else {
+      prompt = '';
+    }
+  } else if (kv['prompt-stdin']) {
     const customRules = fs.readFileSync(0, 'utf-8').trim().split('\n').map(l => l.trim()).filter(Boolean);
     prompt = [...STRUCTURE_RULES, ...customRules].map((r, i) => `${i + 1}. ${r}`).join('\n');
   } else {
@@ -341,9 +349,9 @@ async function main() {
   console.log(`🎨 美化中: ${inputPath} -> ${outPath}`);
   console.log(`   model=${model}  style=${style}  base-url=${baseUrl}`);
 
-  // 参考图：风格自带 refs + 命令行 --ref 追加；有参考图走多模态，否则单图 edits
+  // 参考图：一次只传一张——用户指定了 --ref（如精修图）则只用它；否则用风格自带的参考图
   const styleCfg = STYLES[style] || STYLES['light'];
-  const refPaths = [...(styleCfg.refs || []), ...(kv.ref ? [kv.ref] : [])];
+  const refPaths = kv.ref ? [kv.ref] : [...(styleCfg.refs || [])];
   const refImages = [];
   for (const rp of refPaths) {
     const p = path.isAbsolute(rp) ? rp : path.join(__dirname, rp);
@@ -357,7 +365,7 @@ async function main() {
     const refs = [];
     if (kv['input-url']) refs.push({ url: kv['input-url'] });
     else refs.push(inputImage);
-    for (const u of ((STYLES[style] || {}).refsUrl || [])) refs.push({ url: u });
+    if (!kv.ref) for (const u of ((STYLES[style] || {}).refsUrl || [])) refs.push({ url: u });
     for (const rp of refPaths) {
       if (/^https?:\/\//.test(rp)) refs.push({ url: rp });
       else { const p = path.isAbsolute(rp) ? rp : path.join(__dirname, rp); if (fs.existsSync(p)) refs.push(readImage(p)); }

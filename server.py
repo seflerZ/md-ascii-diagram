@@ -43,7 +43,7 @@ SHAPES_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shape
 BEAUTIFY_TASKS = {}
 BEAUTIFY_LOCK = threading.Lock()
 
-def _beautify_worker(task_id, filepath, name, content, style, prompt=None):
+def _beautify_worker(task_id, filepath, name, content, style, prompt=None, ref=None):
     """后台线程：保存注释块 -> 渲染 PNG -> beautify.js 美化 -> 更新任务状态。"""
     def upd(**kw):
         with BEAUTIFY_LOCK:
@@ -64,31 +64,41 @@ def _beautify_worker(task_id, filepath, name, content, style, prompt=None):
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(new_md)
 
-        # 2. 渲染彩色 PNG（复用 render_color.js）
+        # 2. 渲染彩色 PNG（复用 render_color.js，要求本轮新生成，避免静默复用旧缓存导致"旧内容"）
         upd(stage='render', pct=35)
         render_js = os.path.join(script_dir, 'render_color.js')
         file_dir = os.path.dirname(os.path.abspath(filepath))
         out_dir = os.path.join(file_dir, 'diagrams_out')
+        render_start = time.time()
         render = subprocess.run(
             ['node', render_js, filepath, out_dir, '--only=' + name],
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, cwd=script_dir
         )
         if render.returncode != 0:
-            raise RuntimeError('渲染失败: ' + (render.stderr or render.stdout))
+            raise RuntimeError('Render failed: ' + (render.stderr or render.stdout))
 
-        # 定位渲染出的 PNG
-        png = os.path.join(out_dir, name + '.png')
-        if not os.path.exists(png):
-            cands = [f for f in os.listdir(out_dir) if f.startswith(name) and f.endswith('.png')] if os.path.isdir(out_dir) else []
-            if not cands:
-                raise RuntimeError('渲染后未找到 PNG: ' + png)
-            png = os.path.join(out_dir, sorted(cands)[0])
+        # 定位本轮新渲染出的 PNG（mtime 须晚于渲染开始；渲染未产出时不复用旧图）
+        fresh = []
+        if os.path.isdir(out_dir):
+            for f in os.listdir(out_dir):
+                if f.startswith(name) and f.endswith('.png'):
+                    p = os.path.join(out_dir, f)
+                    if os.path.getmtime(p) >= render_start:
+                        fresh.append(p)
+        if not fresh:
+            raise RuntimeError('Render produced no new PNG for ' + name)
+        png = sorted(fresh)[0]
         upd(png=png, stage='beautify', pct=65)
 
         # 3. 图生图美化（beautify.js，自动序号去重，从 OUTPUT: 行取实际路径）
         beautify_js = os.path.join(script_dir, 'beautify.js')
+        beautify_cmd = ['node', beautify_js, png, '--style=' + style]
+        if prompt and prompt.strip():
+            beautify_cmd.append('--prompt-stdin')
+        if ref:
+            beautify_cmd.append('--ref=' + ref)
         beautify = subprocess.run(
-            ['node', beautify_js, png, '--style=' + style] + (['--prompt-stdin'] if (prompt and prompt.strip()) else []),
+            beautify_cmd,
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300, cwd=script_dir,
             input=prompt if (prompt and prompt.strip()) else None
         )
@@ -102,7 +112,7 @@ def _beautify_worker(task_id, filepath, name, content, style, prompt=None):
                 out_png = os.path.join(out_dir, name + '.beautified-' + style + '.png')
         upd(stage='done', pct=100, output=out_png, stdout=beautify.stdout, stderr=beautify.stderr,
             status='done' if out_png else 'error',
-            error=None if out_png else ((beautify.stderr or '').strip() or 'beautify.js 未生成输出（请检查 API Key 与风格配置）'))
+            error=None if out_png else ((beautify.stderr or '').strip() or 'beautify.js produced no output (check API Key and style config)'))
 
     except Exception as e:
         upd(status='error', stage='failed', error=str(e))
@@ -129,7 +139,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(content.encode('utf-8'))
             except Exception as e:
-                self.send_error(500, f'读取文件失败: {e}')
+                self.send_error(500, f'Failed to read file: {e}')
         elif parsed.path == '/shapes':
             # 读取自定义形状库（shapes.json）
             # 首次访问时，若 shapes.json 不存在，从 shapes.default.json 复制一份作为种子
@@ -188,6 +198,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({'styles': styles}).encode('utf-8'))
+        elif parsed.path == '/beautify/history':
+            # List this doc's historically generated "fine images" (diagrams_out/*.beautified-*.png), newest first
+            filepath = params.get('file', [''])[0]
+            refs = []
+            if filepath:
+                file_dir = os.path.dirname(os.path.abspath(filepath))
+                out_dir = os.path.join(file_dir, 'diagrams_out')
+                if os.path.isdir(out_dir):
+                    pat = re.compile(r'.*\.beautified-.*\.png$')
+                    cands = [f for f in os.listdir(out_dir) if pat.match(f)]
+                    cands.sort(key=lambda f: os.path.getmtime(os.path.join(out_dir, f)), reverse=True)
+                    for f in cands:
+                        abs_p = os.path.join(out_dir, f)
+                        rel = os.path.relpath(abs_p, file_dir).replace('\\', '/')
+                        refs.append({'path': abs_p, 'rel': rel})
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({'refs': refs}).encode('utf-8'))
         elif parsed.path == '/beautify/check':
             # 预检：检查 AI 美化后端配置是否就绪（provider/model/base-url/api-key）
             # 与 beautify.js 的环境变量读取逻辑保持一致
@@ -204,13 +234,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             issues = []
             if not has_key:
-                issues.append('缺少 API Key（需设置 BEAUTIFY_API_KEY 或 OPENAI_API_KEY）')
+                issues.append('Missing API Key (set BEAUTIFY_API_KEY or OPENAI_API_KEY)')
             if not has_base:
-                issues.append('缺少 Base URL（需设置 BEAUTIFY_BASE_URL）')
+                issues.append('Missing Base URL (set BEAUTIFY_BASE_URL)')
             if not has_model:
-                issues.append('缺少 Model（需设置 BEAUTIFY_MODEL）')
+                issues.append('Missing Model (set BEAUTIFY_MODEL)')
             if provider not in ('openai', 'yuntts'):
-                issues.append('未知 Provider：%s（应为 openai 或 yuntts）' % provider)
+                issues.append('Unknown Provider: %s (expected openai or yuntts)' % provider)
 
             ready = has_key and has_base and has_model and provider in ('openai', 'yuntts')
             self.send_response(200)
@@ -241,7 +271,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # 按绝对路径返回图片/文件（美化结果预览，路径在文档目录下，不在 server 根目录内）
             fp = (params.get('path') or [''])[0]
             if not fp:
-                self.send_error(400, '缺少 path 参数')
+                self.send_error(400, 'Missing path parameter')
                 return
             try:
                 with open(fp, 'rb') as f:
@@ -255,7 +285,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             except Exception as e:
-                self.send_error(404, '文件不存在: %s' % e)
+                self.send_error(404, 'File not found: %s' % e)
         else:
             super().do_GET()
 
@@ -274,7 +304,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({'ok': True}).encode('utf-8'))
             except Exception as e:
-                self.send_error(500, f'shapes 保存失败: {e}')
+                self.send_error(500, f'Failed to save shapes: {e}')
         elif self.path == '/save':
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length).decode('utf-8')
@@ -284,7 +314,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             content = data.get('content')
             index = data.get('index')
             if not filepath or not name:
-                self.send_error(400, '缺少 file 或 name 参数')
+                self.send_error(400, 'Missing file or name parameter')
                 return
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -325,7 +355,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({'ok': True}).encode('utf-8'))
             except Exception as e:
-                self.send_error(500, f'保存失败: {e}')
+                self.send_error(500, f'Save failed: {e}')
         elif self.path == '/generate':
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length).decode('utf-8')
@@ -334,7 +364,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             name = data.get('name')
             content = data.get('content')
             if not filepath or not name:
-                self.send_error(400, '缺少 file 或 name 参数')
+                self.send_error(400, 'Missing file or name parameter')
                 return
             try:
                 # 1. 先把当前内容保存到文件
@@ -367,7 +397,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 resp = {'ok': ok, 'output': result.stdout, 'error': result.stderr if result.stderr else None}
                 self.wfile.write(json.dumps(resp).encode('utf-8'))
             except Exception as e:
-                self.send_error(500, f'生成失败: {e}')
+                self.send_error(500, f'Generate failed: {e}')
         elif self.path == '/beautify/start':
             # 启动异步美化任务，立即返回 task_id，后台线程执行
             length = int(self.headers.get('Content-Length', 0))
@@ -376,15 +406,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             filepath = data.get('file')
             name = data.get('name')
             content = data.get('content')
-            style = data.get('style', 'black-metal')
+            style = data.get('style') or 'black-metal'
             prompt = data.get('prompt')  # 可选：用户编辑后的风格提示词（每行一条），为空则 beautify.js 用默认
+            ref = data.get('ref')  # optional: reference fine-image path, passed to beautify.js as --ref
             if not filepath or not name:
-                self.send_error(400, '缺少 file 或 name 参数')
+                self.send_error(400, 'Missing file or name parameter')
                 return
             task_id = uuid.uuid4().hex[:12]
             with BEAUTIFY_LOCK:
                 BEAUTIFY_TASKS[task_id] = {'id': task_id, 'status': 'queued', 'stage': 'queued', 'pct': 0}
-            t = threading.Thread(target=_beautify_worker, args=(task_id, filepath, name, content, style, prompt), daemon=True)
+            t = threading.Thread(target=_beautify_worker, args=(task_id, filepath, name, content, style, prompt, ref), daemon=True)
             t.start()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -401,7 +432,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             name = data.get('name')
             output = data.get('output')
             if not filepath or not name or not output:
-                self.send_error(400, '缺少 file/name/output 参数')
+                self.send_error(400, 'Missing file/name/output parameter')
                 return
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -421,7 +452,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({'ok': True}).encode('utf-8'))
             except Exception as e:
-                self.send_error(500, f'插入失败: {e}')
+                self.send_error(500, f'Insert failed: {e}')
         else:
             self.send_error(404)
 
