@@ -2260,6 +2260,14 @@ document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && e.target.id !== 'ime-input')) return;
   // 跳过 IME 组合态（拼音/选词中间键，含 Enter/Space）——中文由 compositionend 提交
   if (e.isComposing) return;
+  // 对话框打开时：焦点若不在对话框的输入框（仍停留在 ime-input/画布），普通字符键不落入画布，并把焦点交给对话框输入框（如有）
+  const _anyModal = document.querySelector('.modal-overlay.active');
+  if (_anyModal && e.target.tagName !== 'TEXTAREA' && !(e.target.tagName === 'INPUT' && e.target.id !== 'ime-input')
+      && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const _mi = _anyModal.querySelector('textarea, input:not([type=hidden]):not(#ime-input)');
+    if (_mi) _mi.focus();
+    return;
+  }
 
   // Shift + 颜色码 (mroygcbpe)：着色光标所在框，不冲突快捷键
   if (!e.ctrlKey && !e.metaKey && e.shiftKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') {
@@ -2743,6 +2751,7 @@ function blurImeInput() {
 // 中文输入法（IME）：compositionend 提交最终文字，text 工具下写入光标（支持多字符）
 document.addEventListener('compositionend', (e) => {
   if (activeTool !== 'text' || !e.data) return;
+  if (document.querySelector('.modal-overlay.active')) return; // 对话框打开时，中文不落入画布
   for (const ch of Array.from(e.data)) {
     if (!ch || ch === '\n') continue;
     const nxc = cursorC + 1;
@@ -3120,36 +3129,51 @@ if (_fileParam) {
 }
 
 // Save button: POST edited diagram back to the Markdown file
-function saveDiagram() {
-  const name = document.getElementById('diagram-name').value.trim();
-  if (!name) { alert(t('alert.nameRequired')); document.getElementById('diagram-name').focus(); return; }
-  const content = getGridText();
-  const body = { file: currentFilePath, name, content };
-  if (selectedIndex >= 0) {
-    body.index = selectedIndex;
-    // 传原图类型（comment/code），服务器按原格式保存
-    if (diagrams[selectedIndex]) body.type = diagrams[selectedIndex].type;
-  }
-  fetch('/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  }).then(r => {
-    if (!r.ok) throw new Error(r.statusText);
-    return r.json();
-  }).then(data => {
-    if (data.ok) {
-      // 同步本地缓存，避免切图再切回时读到旧内容
-      if (selectedIndex >= 0 && diagrams[selectedIndex]) {
-        diagrams[selectedIndex].content = content;
-        diagrams[selectedIndex].name = name;
+// 保存当前图到 Markdown 文档（返回 Promise，供按钮与“生成前自动保存”共用）
+function saveDiagramAsync() {
+  return new Promise((resolve) => {
+    const name = document.getElementById('diagram-name').value.trim();
+    if (!name) { resolve({ ok: false, reason: 'name' }); return; }
+    const content = getGridText();
+    const body = { file: currentFilePath, name, content };
+    if (selectedIndex >= 0) {
+      body.index = selectedIndex;
+      if (diagrams[selectedIndex]) body.type = diagrams[selectedIndex].type;
+    }
+    fetch('/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(r => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json();
+    }).then(data => {
+      if (data.ok) {
+        if (selectedIndex >= 0 && diagrams[selectedIndex]) {
+          diagrams[selectedIndex].content = content;
+          diagrams[selectedIndex].name = name;
+        }
+        resolve({ ok: true });
+      } else {
+        resolve({ ok: false, reason: 'server', err: data });
       }
+    }).catch(err => resolve({ ok: false, reason: 'error', err }));
+  });
+}
+
+// Save button
+function saveDiagram() {
+  saveDiagramAsync().then(res => {
+    if (res.ok) {
       const btn = document.getElementById('btn-save');
       btn.textContent = t('btn.saved');
       setTimeout(() => { btn.textContent = t('btn.save'); }, 1500);
+    } else if (res.reason === 'name') {
+      alert(t('alert.nameRequired'));
+      document.getElementById('diagram-name').focus();
+    } else {
+      alert(t('alert.saveFailed', { err: res.err }));
     }
-  }).catch(err => {
-    alert(t('alert.saveFailed', { err }));
   });
 }
 
@@ -3332,32 +3356,39 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   if (!currentFilePath) { alert(t('alert.generateRequireFile')); return; }
   const content = getGridText();
   if (!content.trim()) { alert(t('alert.generateEmpty')); return; }
-  const btn = document.getElementById('btn-generate');
-  btn.disabled = true;
-  btn.textContent = t('btn.generating');
-  fetch('/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file: currentFilePath, name, content })
-  }).then(r => {
-    if (!r.ok) throw new Error(r.statusText);
-    return r.json();
-  }).then(data => {
-    if (data.ok) {
-      btn.textContent = t('btn.generated');
-      // 刷新预览以显示最新的 PNG 引用
-      if (document.getElementById('btn-refresh').style.display !== 'none') {
-        document.getElementById('btn-refresh').click();
-      }
-    } else {
-      btn.textContent = t('btn.failed');
-      alert(t('alert.generateFailed', { error: data.error || data.output || t('alert.unknownError') }));
+  // 生成前先自动保存一次，确保后端读到的是最新内容
+  saveDiagramAsync().then(res => {
+    if (!res.ok) {
+      if (res.reason === 'name') { alert(t('alert.nameRequired')); return; }
+      alert(t('alert.saveFailed', { err: res.err }));
+      return;
     }
-    setTimeout(() => { btn.disabled = false; btn.textContent = t('btn.generate'); }, 2000);
-  }).catch(err => {
-    btn.disabled = false;
-    btn.textContent = t('btn.generate');
-    alert(t('alert.generateFailedHint', { err }));
+    const btn = document.getElementById('btn-generate');
+    btn.disabled = true;
+    btn.textContent = t('btn.generating');
+    fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: currentFilePath, name, content })
+    }).then(r => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json();
+    }).then(data => {
+      if (data.ok) {
+        btn.textContent = t('btn.generated');
+        if (document.getElementById('btn-refresh').style.display !== 'none') {
+          document.getElementById('btn-refresh').click();
+        }
+      } else {
+        btn.textContent = t('btn.failed');
+        alert(t('alert.generateFailed', { error: data.error || data.output || t('alert.unknownError') }));
+      }
+      setTimeout(() => { btn.disabled = false; btn.textContent = t('btn.generate'); }, 2000);
+    }).catch(err => {
+      btn.disabled = false;
+      btn.textContent = t('btn.generate');
+      alert(t('alert.generateFailedHint', { err }));
+    });
   });
 });
 
@@ -4229,6 +4260,18 @@ function beautifyInsert() {
     }
   }).catch(err => alert(t('alert.beautifyInsertFailedErr', { err })));
 }
+// 再生成：返回风格/提示词编辑浮层，保留已选风格与已编辑提示词，可修改后重新生成
+function beautifyRetry() {
+  document.getElementById('modal-beautify-result').classList.remove('active');
+  document.getElementById('beautify-prompt-wrap').style.display = 'block';
+  if (beautifySelectedStyle) {
+    const listEl = document.getElementById('beautify-style-list');
+    listEl.querySelectorAll('.beautify-style-card').forEach(c => {
+      c.classList.toggle('active', c.dataset.style === beautifySelectedStyle);
+    });
+  }
+  document.getElementById('modal-beautify').classList.add('active');
+}
 
 // 绑定事件
 document.getElementById('btn-beautify').addEventListener('click', beautifyOpenWithCheck);
@@ -4236,10 +4279,7 @@ document.getElementById('btn-beautify-start').addEventListener('click', beautify
 document.getElementById('btn-beautify-big-close').addEventListener('click', () => document.getElementById('modal-beautify-big').classList.remove('active'));
 document.getElementById('btn-beautify-cancel').addEventListener('click', () => document.getElementById('modal-beautify').classList.remove('active'));
 document.getElementById('btn-beautify-insert').addEventListener('click', beautifyInsert);
-document.getElementById('btn-beautify-redo').addEventListener('click', () => {
-  document.getElementById('modal-beautify-result').classList.remove('active');
-  beautifyStart();
-});
+document.getElementById('btn-beautify-redo').addEventListener('click', beautifyRetry);
 document.getElementById('btn-beautify-done').addEventListener('click', () => document.getElementById('modal-beautify-result').classList.remove('active'));
 // 背景点击关闭（样式/结果浮层）
 

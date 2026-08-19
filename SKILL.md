@@ -143,6 +143,7 @@ Examples: `___important___` underline, `_r_error_r_` red, `_!_congrats_!_` rainb
 
 > **Rounded box**: no shortcut — pick it in the toolbar; once drawn you can toggle round⇄square corners with `Ctrl+Shift+R`.
 > **Keyboard drawing**: under the `l` line / `r` box / `a` arrow / `k` thick-arrow tools, use the **arrow keys** to extend the path (start is fixed), **Enter** to confirm, **Esc** to cancel and redraw — same as mouse dragging.
+> **Rounded corners**: the toolbar `└┘` turn toggle makes the turn corner of **line (`l`) and arrow (`a`)** connectors rounded (`╮╯╭╰`) instead of square (`┐┘┌└`) — independent of solid/dashed style and arrow type.
 
 #### Visual mode (activated with `v`)
 
@@ -407,6 +408,7 @@ $env:BEAUTIFY_API_KEY = "sk-yuntts-key"   # yuntts key (base-url switches to yun
 ### Editor "✨ AI Beautify" — editable prompt box
 
 Clicking a style card shows an **editable prompt box** below the style list, pre-filled with that style's own rules only (the shared `structure` rules are NOT shown). The user can tweak the rules; on "Start Beautify" the edited text is sent as `prompt`, and `beautify.js` merges it after `structure`. Leave it empty to use the style's preset rules.
+If the result is unsatisfying, click **🔁 Regenerate** on the result modal — it returns you to the style/prompt modal with the **selected style and your edited prompt preserved**, so you can tweak the prompt and hit "Start Beautify" again.
 
 ### Config self-check (troubleshooting)
 
