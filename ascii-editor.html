@@ -154,13 +154,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="box-dropdown" id="box-dropdown">
         <div class="box-opt active" data-type="1" data-i18n="option.boxSolid">┌┐ 实线</div>
         <div class="box-opt" data-type="2" data-i18n="option.boxDashed">╌╎ 虚线</div>
-      </div>
-    </div>
-    <div class="tool-rounded-wrap">
-      <button id="tool-rounded" data-i18n-title="toolTitle.rounded" data-i18n="tool.rounded">▢ 圆角</button>
-      <div class="rounded-dropdown" id="rounded-dropdown">
-        <div class="rounded-opt active" data-type="1" data-i18n="option.roundedSolid">╭╮ 实线</div>
-        <div class="rounded-opt" data-type="2" data-i18n="option.roundedDashed">╌╎ 虚线</div>
+        <div class="box-opt" data-type="3" data-i18n="option.boxRoundSolid">╭╮ 圆角实线</div>
+        <div class="box-opt" data-type="4" data-i18n="option.boxRoundDashed">╌╎ 圆角虚线</div>
       </div>
     </div>
     <div class="tool-arrow-wrap">
@@ -402,7 +397,7 @@ const I18N = {
     'toolTitle.select': '选择/编辑 (V)',
     'toolTitle.free': '自由绘制 (F)',
     'toolTitle.line': '直线 (L)，进入后按 1/2 切换实线/虚线',
-    'toolTitle.box': '矩形框 (R)，进入后按 1/2 切换实线/虚线；Ctrl+Shift+D 转换光标所在框 实线/虚线',
+    'toolTitle.box': '矩形框 (R)，进入后按 1/2/3/4 切换（1直角实线 2直角虚线 3圆角实线 4圆角虚线）；Ctrl+Shift+D 转换光标所在框 实线/虚线',
     'toolTitle.rounded': '圆角矩形（工具栏选择），进入后按 1/2 切换实线/虚线；Ctrl+Shift+R 转换光标所在框 圆角/方角',
     'toolTitle.arrow': '箭头连线 (A)，进入后按 1/2/3 切换类型',
     'toolTitle.thick': '粗箭头 (K)，方向键扩展，Enter 确认',
@@ -412,6 +407,7 @@ const I18N = {
     // 下拉选项（完整串，避免拼接）
     'option.lineSolid': '─ │ 实线', 'option.lineDashed': '╌ ╎ 虚线',
     'option.boxSolid': '┌┐ 实线', 'option.boxDashed': '╌╎ 虚线',
+    'option.boxRoundSolid': '╭╮ 圆角实线', 'option.boxRoundDashed': '╌╎ 圆角虚线',
     'option.roundedSolid': '╭╮ 实线', 'option.roundedDashed': '╌╎ 虚线',
     'option.arrowFine': '→ ← 细箭头', 'option.arrowSolid': '▶ ◀ 实心', 'option.arrowHollow': '▷ ◁ 空心',
     'option.cornerSquare': '└┘ 直角', 'option.cornerRound': '╰╯ 圆角',
@@ -546,7 +542,7 @@ const I18N = {
     'toolTitle.select': 'Select/Edit (V)',
     'toolTitle.free': 'Freehand draw (F)',
     'toolTitle.line': 'Line (L); press 1/2 to switch solid/dashed',
-    'toolTitle.box': 'Box (R); press 1/2 to switch solid/dashed; Ctrl+Shift+D toggles box under cursor',
+    'toolTitle.box': 'Box (R); press 1/2/3/4 to switch (1 square-solid 2 square-dashed 3 rounded-solid 4 rounded-dashed); Ctrl+Shift+D toggles box under cursor',
     'toolTitle.rounded': 'Rounded box (toolbar only); press 1/2 to switch solid/dashed; Ctrl+Shift+R toggles round/square corners',
     'toolTitle.arrow': 'Arrow connector (A); press 1/2/3 to switch type',
     'toolTitle.thick': 'Thick arrow (K); extend with arrow keys, Enter to confirm',
@@ -556,6 +552,7 @@ const I18N = {
     // Dropdown options (full strings, no concatenation)
     'option.lineSolid': '─ │ Solid', 'option.lineDashed': '╌ ╎ Dashed',
     'option.boxSolid': '┌┐ Solid', 'option.boxDashed': '╌╎ Dashed',
+    'option.boxRoundSolid': '╭╮ Rounded Solid', 'option.boxRoundDashed': '╌╎ Rounded Dashed',
     'option.roundedSolid': '╭╮ Solid', 'option.roundedDashed': '╌╎ Dashed',
     'option.arrowFine': '→ ← Thin', 'option.arrowSolid': '▶ ◀ Solid', 'option.arrowHollow': '▷ ◁ Hollow',
     'option.cornerSquare': '└┘ Square', 'option.cornerRound': '╰╯ Rounded',
@@ -727,7 +724,6 @@ function applyI18n(nextLang) {
   if (typeof setLineType === 'function') setLineType(lineType);
   if (typeof setCornerStyle === 'function') setCornerStyle(cornerStyle);
   if (typeof setBoxType === 'function') setBoxType(boxType);
-  if (typeof setRoundedType === 'function') setRoundedType(roundedType);
   if (typeof initColorPicker === 'function') initColorPicker();
   if (typeof populateDiagramSelect === 'function' && typeof diagrams !== 'undefined' && diagrams.length) populateDiagramSelect(diagrams);
   if (typeof renderShapesList === 'function') renderShapesList();
@@ -1053,7 +1049,7 @@ function onCellMouseDown(e) {
     selStart = p; selEnd = p;
     updateSelection();
     if (activeTool === 'text') focusImeInput();  // 点格子时聚焦隐藏 IME 输入框
-  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
+  } else if (activeTool === 'box' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
     // box / rounded / line / arrow / thick: prepare drag, no selection highlight
     if (activeTool === 'thick') thickAxis = null;   // new drag, unlock axis
     clearSelection();
@@ -1097,7 +1093,7 @@ function onCellMouseMove(e) {
       selEnd = p;
       updateSelection();
     }
-  } else if (activeTool === 'box' || activeTool === 'rounded' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
+  } else if (activeTool === 'box' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'thick') {
     // box / rounded / line / arrow: live preview
     selEnd = p;
     setPreview(previewPositions());
@@ -1127,9 +1123,6 @@ function onCellMouseUp(e) {
   } else if (activeTool === 'box') {
     clearPreview();
     drawBox();
-  } else if (activeTool === 'rounded') {
-    clearPreview();
-    drawRoundedBox();
   } else if (activeTool === 'arrow') {
     clearPreview();
     drawArrow();
@@ -1357,7 +1350,6 @@ function previewPositions() {
   if (!b) return [];
   if (activeTool === 'line') return previewLine();
   if (activeTool === 'box') return previewBox(b);
-  if (activeTool === 'rounded') return previewRoundedBox(b);
   if (activeTool === 'arrow') return previewArrow();
   if (activeTool === 'thick') return previewThick();
   return [];
@@ -1382,7 +1374,9 @@ function buildBoxPath(b, c) {
 }
 
 function previewBox(b) {
-  return buildBoxPath(b, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
+  const rounded = boxType >= 3;
+  const corners = rounded ? { tl: '╭', tr: '╮', bl: '╰', br: '╯' } : { tl: '┌', tr: '┐', bl: '└', br: '┘' };
+  return buildBoxPath(b, boxStyle(boxType === 2 || boxType === 4 ? 2 : 1, corners));
 }
 
 function previewMoveTarget(p) {
@@ -1498,18 +1492,6 @@ function moveContentByGrid(b, dr, dc) {
   saveHistory();
 }
 
-function previewRoundedBox(b) {
-  return buildBoxPath(b, boxStyle(roundedType, { tl: '╭', tr: '╮', bl: '╰', br: '╯' }));
-}
-
-function drawRoundedBox() {
-  const b = getSelectionBounds();
-  if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
-  const path = buildBoxPath(b, boxStyle(roundedType, { tl: '╭', tr: '╮', bl: '╰', br: '╯' }));
-  placePath(path);
-  saveHistory();
-  clearSelection();
-}
 
 function insertColumn() {
   const b = getSelectionBounds();
@@ -1834,21 +1816,13 @@ function setCornerStyle(type) {
 
 
 // 矩形框类型：1=实线(┌┐) 2=虚线(╌╎)
+// 矩形类型：1=直角实线(┌┐) 2=直角虚线(╌╎) 3=圆角实线(╭╮) 4=圆角虚线(╌╎)
 let boxType = 1;
 function setBoxType(type) {
   boxType = type;
   document.querySelectorAll('.box-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
   const btn = document.getElementById('tool-box');
-  if (btn) btn.textContent = (type === 2 ? '╌' : '▣') + ' ' + t('tool.box');
-}
-
-// 圆角矩形类型：1=实线(╭╮) 2=虚线(╌╎)
-let roundedType = 1;
-function setRoundedType(type) {
-  roundedType = type;
-  document.querySelectorAll('.rounded-opt').forEach(o => o.classList.toggle('active', parseInt(o.dataset.type) === type));
-  const btn = document.getElementById('tool-rounded');
-  if (btn) btn.textContent = (type === 2 ? '╌' : '▢') + ' ' + t('tool.rounded');
+  if (btn) btn.textContent = (type >= 3 ? '▢' : '▣') + ' ' + (type >= 3 ? t('tool.roundedRect') : t('tool.box'));
 }
 
 // 返回虚线/实线的边字符，角保持实心
@@ -1882,7 +1856,9 @@ function drawLine() {
 function drawBox() {
   const b = getSelectionBounds();
   if (!b || b.maxR - b.minR < 2 || b.maxD - b.minD < 2) { clearSelection(); return; }
-  const path = buildBoxPath(b, boxStyle(boxType, { tl: '┌', tr: '┐', bl: '└', br: '┘' }));
+  const rounded = boxType >= 3;
+  const corners = rounded ? { tl: '╭', tr: '╮', bl: '╰', br: '╯' } : { tl: '┌', tr: '┐', bl: '└', br: '┘' };
+  const path = buildBoxPath(b, boxStyle(boxType === 2 || boxType === 4 ? 2 : 1, corners));
   placePath(path);
   saveHistory();
   clearSelection();
@@ -2335,16 +2311,11 @@ document.addEventListener('keydown', (e) => {
   }
 
   // 矩形工具下：1/2 切换实线/虚线
-  if (activeTool === 'box' && !e.ctrlKey && !e.metaKey && !e.altKey && '12'.includes(e.key)) {
+  if (activeTool === 'box' && !e.ctrlKey && !e.metaKey && !e.altKey && '1234'.includes(e.key)) {
     setBoxType(parseInt(e.key));
     e.preventDefault(); return;
   }
 
-  // 圆角矩形工具下：1/2 切换实线/虚线
-  if (activeTool === 'rounded' && !e.ctrlKey && !e.metaKey && !e.altKey && '12'.includes(e.key)) {
-    setRoundedType(parseInt(e.key));
-    e.preventDefault(); return;
-  }
 
   // Visual 模式：y/d/x 作用于选区、p 粘贴（Vim yank/delete/paste）
   if (isVisual && !e.ctrlKey && !e.metaKey && !e.altKey && activeTool !== 'text') {
@@ -2591,7 +2562,7 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault(); return;
     }
     if (isVisual) { isVisual = false; clearSelection(); }
-    else if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') && selStart) {
+    else if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box') && selStart) {
       // 箭头/直线/粗箭头/矩形/圆角键盘绘制中：取消当前路径，光标回到起点，留在工具里重画
       cursorR = selStart.r; cursorC = selStart.c;
       clearPreview();
@@ -2628,7 +2599,7 @@ document.addEventListener('keydown', (e) => {
       return;
     }
     // 箭头/直线/粗箭头/矩形/圆角工具 + 键盘绘制：方向键扩展路径终点（起点固定，Enter 确认）
-    if (activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') {
+    if (activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box') {
       e.preventDefault();
       const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
@@ -2712,13 +2683,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     // 箭头/直线/粗箭头/矩形/圆角工具 + 有进行中的键盘绘制路径 → 确认绘制（对应鼠标松开）
-    if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box' || activeTool === 'rounded') && selStart && selEnd) {
+    if ((activeTool === 'arrow' || activeTool === 'line' || activeTool === 'thick' || activeTool === 'box') && selStart && selEnd) {
       clearPreview();
       if (activeTool === 'arrow') drawArrow();
       else if (activeTool === 'line') drawLine();
       else if (activeTool === 'thick') drawThick();
       else if (activeTool === 'box') drawBox();
-      else if (activeTool === 'rounded') drawRoundedBox();
       updateStatus();
       return;
     }
@@ -2795,14 +2765,14 @@ function setTool(tool) {
   activeTool = tool;
   isVisual = false;
   // 切到绘制类工具：清掉残留的框选/路径选区，键盘绘制从当前光标起算
-  if (tool === 'arrow' || tool === 'line' || tool === 'box' || tool === 'rounded' || tool === 'free' || tool === 'thick') {
+  if (tool === 'arrow' || tool === 'line' || tool === 'box' || tool === 'free' || tool === 'thick') {
     clearSelection();
     clearPreview();
     if (tool === 'thick') thickAxis = null;   // reset axis lock on tool activation
   }
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
   const btnMap = {
-    select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box', rounded: 'tool-rounded',
+    select: 'tool-select', free: 'tool-free', line: 'tool-line', box: 'tool-box',
     arrow: 'tool-arrow', thick: 'tool-thick', text: 'tool-text', magic: 'tool-magic', move: 'tool-move', eraser: 'tool-eraser',
   };
   const btn = document.getElementById(btnMap[tool]);
@@ -2820,7 +2790,6 @@ document.getElementById('tool-select').addEventListener('click', () => setTool('
 document.getElementById('tool-free').addEventListener('click', () => setTool('free'));
 document.getElementById('tool-line').addEventListener('click', () => setTool('line'));
 document.getElementById('tool-box').addEventListener('click', () => setTool('box'));
-document.getElementById('tool-rounded').addEventListener('click', () => setTool('rounded'));
 document.getElementById('tool-arrow').addEventListener('click', () => setTool('arrow'));
 document.getElementById('tool-thick').addEventListener('click', () => setTool('thick'));
 document.querySelectorAll('.arrow-opt').forEach(o => {
@@ -2854,14 +2823,6 @@ document.querySelectorAll('.box-opt').forEach(o => {
   });
 });
 setBoxType(1); // 初始化矩形按钮文字
-document.querySelectorAll('.rounded-opt').forEach(o => {
-  o.addEventListener('click', (e) => {
-    e.stopPropagation();
-    setRoundedType(parseInt(o.dataset.type));
-    setTool('rounded');
-  });
-});
-setRoundedType(1); // 初始化圆角按钮文字
 document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
 document.getElementById('tool-magic').addEventListener('click', () => setTool('magic'));
 document.getElementById('tool-move').addEventListener('click', () => setTool('move'));
@@ -3473,7 +3434,7 @@ function ensureCapacity(r, c) {
     resizeGrid(newRows, newCols);
     renderGrid();
     // Re-apply live preview after re-render
-    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'rounded' || activeTool === 'arrow' || activeTool === 'thick') {
+    if (activeTool === 'line' || activeTool === 'box' || activeTool === 'arrow' || activeTool === 'thick') {
       setPreview(previewPositions());
     }
   }
