@@ -230,17 +230,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <tr><td style="padding:2px 8px"><b>Ctrl+Shift+D</b></td><td data-i18n="shortcut.toggleLineStyle">光标所在框 实线⇄虚线</td><td style="padding:2px 8px"><b>Ctrl+Shift+R</b></td><td data-i18n="shortcut.toggleCornerStyle">光标所在框 圆角⇄方角</td></tr>
       <tr><td style="padding:2px 8px"><b>Ctrl+Shift+B</b></td><td data-i18n="shortcut.applyShape">光标所在框→自定义形状</td><td style="padding:2px 8px"><b data-i18n-html="shortcut.arrowKeysEnter">方向键+Enter</b></td><td data-i18n="shortcut.keyboardDraw">直线/矩形/圆角等键盘绘制</td></tr>
       <tr><td style="padding:2px 8px"><b>A</b></td><td data-i18n="shortcut.arrow">箭头</td><td style="padding:2px 8px"><b>Shift+H</b></td><td data-i18n="shortcut.insertRow">插入行</td></tr>
-      <tr><td style="padding:2px 8px"><b>T</b></td><td data-i18n="shortcut.text">文字</td><td style="padding:2px 8px"><b>Insert</b></td><td data-i18n="shortcut.toggleInsertOverwrite">切换插入/覆盖</td></tr>
+      <tr><td style="padding:2px 8px"><b>T</b></td><td data-i18n="shortcut.text">文字</td><td style="padding:2px 8px"><b>Insert</b></td><td data-i18n="shortcut.toggleInsertOverwrite">切换插入/覆盖（文字模式）</td></tr>
       <tr><td style="padding:2px 8px"><b>W</b></td><td data-i18n="shortcut.magic">梳子理线</td><td style="padding:2px 8px"><b>Backspace</b></td><td data-i18n="shortcut.deletePrevCell">删除前一个格子</td></tr>
-      <tr><td style="padding:2px 8px"><b>M</b></td><td data-i18n="shortcut.move">移动</td><td style="padding:2px 8px"><b data-i18n-html="shortcut.shiftColorKey">Shift+色码</b></td><td data-i18n="shortcut.colorize">着色</td></tr>
-      <tr><td style="padding:2px 8px"><b>E</b></td><td data-i18n="shortcut.eraser">擦除</td><td style="padding:2px 8px"><b>Shift+m/r/o/y/g/c/b/p/e</b></td><td data-i18n="shortcut.eachColor">各颜色</td></tr>
+      <tr><td style="padding:2px 8px"><b>M</b></td><td data-i18n="shortcut.move">移动</td><td style="padding:2px 8px"><b data-i18n-html="shortcut.altColorKey">Alt+色码</b></td><td data-i18n="shortcut.colorize">着色</td></tr>
+      <tr><td style="padding:2px 8px"><b>E</b></td><td data-i18n="shortcut.eraser">擦除</td><td style="padding:2px 8px"><b>Alt+m/r/o/y/g/c/b/p/e</b></td><td data-i18n="shortcut.eachColor">各颜色</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Delete</b></td><td data-i18n="shortcut.clear">清空/框选删C列</td><td style="padding:2px 8px"><b>Ctrl+Shift+V</b></td><td data-i18n="shortcut.deleteColumn">删除列</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Backspace</b></td><td data-i18n="shortcut.deletePrevShiftLeft">删前一格左移</td><td style="padding:2px 8px"><b>Ctrl+Shift+H</b></td><td data-i18n="shortcut.deleteRow">删除行</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Space</b></td><td data-i18n="shortcut.insertSpace">插空格右移</td><td style="padding:2px 8px"><b>Ctrl+S</b></td><td data-i18n="shortcut.save">保存</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Ctrl+[</b></td><td data-i18n="shortcut.prevDiagram">上一张图</td><td style="padding:2px 8px"><b>Ctrl+]</b></td><td data-i18n="shortcut.nextDiagram">下一张图</td></tr>
 	      <tr><td style="padding:2px 8px"><b>Space</b></td><td data-i18n="shortcut.insertSpace">插空格右移</td><td style="padding:2px 8px"><b>Esc</b></td><td data-i18n="shortcut.exitTextMode">退出文字模式</td></tr>
       <tr><td style="padding:2px 8px"><b>u</b></td><td data-i18n="shortcut.undoVim">撤销(Vim)</td><td style="padding:2px 8px"><b>Ctrl+r</b></td><td data-i18n="shortcut.redoVim">重做(Vim)</td></tr>
-      <tr><td style="padding:2px 8px"><b>x / X</b></td><td data-i18n="shortcut.deleteCurPrev">删当前/前格</td><td style="padding:2px 8px"><b>dd</b></td><td data-i18n="shortcut.deleteRowVim">删当前行</td></tr>
+      <tr><td style="padding:2px 8px"><b>d / x / X</b></td><td data-i18n="shortcut.deleteCurPrev">删当前/前格</td><td style="padding:2px 8px"><b>dd</b></td><td data-i18n="shortcut.deleteRowVim">删当前行</td></tr>
       <tr><td style="padding:2px 8px"><b>p</b></td><td data-i18n="shortcut.pasteVim">粘贴(Vim)</td><td style="padding:2px 8px"><b>yy</b></td><td data-i18n="shortcut.copyRowVim">复制当前行</td></tr>
       <tr><td style="padding:2px 8px"><b>0 / $</b></td><td data-i18n="shortcut.lineStartEnd">行首/行尾</td><td style="padding:2px 8px"></td><td></td></tr>
     </table>
@@ -459,15 +459,15 @@ const I18N = {
     'shortcut.magic': '梳子理线', 'shortcut.move': '移动', 'shortcut.eraser': '擦除',
     'shortcut.undo': '撤销', 'shortcut.copy': '复制', 'shortcut.cut': '剪切', 'shortcut.paste': '粘贴',
     'shortcut.insertColumn': '插入列', 'shortcut.insertRow': '插入行',
-    'shortcut.toggleInsertOverwrite': '切换插入/覆盖', 'shortcut.deletePrevCell': '删除前一个格子',
+    'shortcut.toggleInsertOverwrite': '切换插入/覆盖（文字模式）', 'shortcut.deletePrevCell': '删除前一个格子',
     'shortcut.colorize': '着色', 'shortcut.eachColor': '各颜色', 'shortcut.clear': '清空/框选删C列',
     'shortcut.deleteColumn': '删除列', 'shortcut.deletePrevShiftLeft': '删前一格左移', 'shortcut.deleteRow': '删除行',
     'shortcut.insertSpace': '插空格右移', 'shortcut.save': '保存',
     'shortcut.prevDiagram': '上一张图', 'shortcut.nextDiagram': '下一张图',
     'shortcut.exitTextMode': '退出文字模式', 'shortcut.undoVim': '撤销(Vim)', 'shortcut.redoVim': '重做(Vim)',
-    'shortcut.deleteCurPrev': '删当前/前格', 'shortcut.deleteRowVim': '删当前行',
+    'shortcut.deleteCurPrev': '删当前/前格（并复制）', 'shortcut.deleteRowVim': '删当前行（并复制）',
     'shortcut.pasteVim': '粘贴(Vim)', 'shortcut.copyRowVim': '复制当前行',
-    'shortcut.lineStartEnd': '行首/行尾', 'shortcut.arrowKeysEnter': '方向键+Enter', 'shortcut.shiftColorKey': 'Shift+色码',
+    'shortcut.lineStartEnd': '行首/行尾', 'shortcut.arrowKeysEnter': '方向键+Enter', 'shortcut.altColorKey': 'Alt+色码',
     // 图列表 / 图下拉
     'list.selectPlaceholder': '— 选择图 —', 'list.figureN': '图 {n}', 'list.codeBlock': '代码块 {n}',
     'list.needName': '(需取名)',
@@ -604,15 +604,15 @@ const I18N = {
     'shortcut.magic': 'Comb lines', 'shortcut.move': 'Move', 'shortcut.eraser': 'Eraser',
     'shortcut.undo': 'Undo', 'shortcut.copy': 'Copy', 'shortcut.cut': 'Cut', 'shortcut.paste': 'Paste',
     'shortcut.insertColumn': 'Insert column', 'shortcut.insertRow': 'Insert row',
-    'shortcut.toggleInsertOverwrite': 'Toggle insert/overwrite', 'shortcut.deletePrevCell': 'Delete previous cell',
+    'shortcut.toggleInsertOverwrite': 'Toggle insert/overwrite (text mode)', 'shortcut.deletePrevCell': 'Delete previous cell',
     'shortcut.colorize': 'Colorize', 'shortcut.eachColor': 'Each color', 'shortcut.clear': 'Clear / delete C column in selection',
     'shortcut.deleteColumn': 'Delete column', 'shortcut.deletePrevShiftLeft': 'Delete previous cell, shift left', 'shortcut.deleteRow': 'Delete row',
     'shortcut.insertSpace': 'Insert space, shift right', 'shortcut.save': 'Save',
     'shortcut.prevDiagram': 'Previous diagram', 'shortcut.nextDiagram': 'Next diagram',
     'shortcut.exitTextMode': 'Exit text mode', 'shortcut.undoVim': 'Undo (Vim)', 'shortcut.redoVim': 'Redo (Vim)',
-    'shortcut.deleteCurPrev': 'Delete current/previous cell', 'shortcut.deleteRowVim': 'Delete current row',
+    'shortcut.deleteCurPrev': 'Delete current/previous cell (copies)', 'shortcut.deleteRowVim': 'Delete current row (copies)',
     'shortcut.pasteVim': 'Paste (Vim)', 'shortcut.copyRowVim': 'Copy current row',
-    'shortcut.lineStartEnd': 'Line start/end', 'shortcut.arrowKeysEnter': 'Arrow keys+Enter', 'shortcut.shiftColorKey': 'Shift+color-code',
+    'shortcut.lineStartEnd': 'Line start/end', 'shortcut.arrowKeysEnter': 'Arrow keys+Enter', 'shortcut.altColorKey': 'Alt+color-code',
     // Diagram list / select
     'list.selectPlaceholder': '— Select diagram —', 'list.figureN': 'Diagram {n}', 'list.codeBlock': 'Code block {n}',
     'list.needName': '(needs name)',
@@ -1235,7 +1235,7 @@ const ARROW_DIRS = {
   '→': ['L','R'], '←': ['L','R'], '↔': ['L','R'],
   '▶': ['L','R'], '◀': ['L','R'], '▷': ['L','R'], '◁': ['L','R'],
   '↓': ['U','D'], '↑': ['U','D'], '↕': ['U','D'],
-  '▼': ['U','D'], '▲': ['U','D'], '▽': ['U','D'], '△': ['U','D'],
+  '▼': ['U'], '▲': ['D'], '▽': ['U'], '△': ['D'],
 };
 function isLineChar(ch) { return !!LINE_DIRS[ch] || !!ARROW_DIRS[ch]; }
 function charDirs(ch) { return LINE_DIRS[ch] ? LINE_DIRS[ch].slice() : (ARROW_DIRS[ch] ? ARROW_DIRS[ch].slice() : []); }
@@ -1247,9 +1247,6 @@ function isColorBoxCorner(r, d) {
   if (n1 >= 0 && '123456'.includes(getCellText(r, n1))) nd++;
   const n2 = findCellByDispCol(r, nd);
   if (n2 >= 0 && isLineChar(getCellText(r, n2))) return true;
-  // 左侧：框线
-  const leftC = findCellByDispCol(r, d - 1);
-  if (leftC >= 0 && isLineChar(getCellText(r, leftC))) return true;
   return false;
 }
 
@@ -2220,6 +2217,16 @@ async function pasteAtCursor() {
   let maxD = baseD;
   for (let i = 0; i < clipboard.length; i++) {
     let d = baseD;
+    // 插入模式：先右移光标列后内容，腾出粘贴空间（p 粘贴默认插入而非覆盖）
+    if (textMode === 'insert') {
+      const rowWidth = clipboard[i].reduce((acc, s) => acc + (s ? s.width : 0), 0);
+      const cc0 = gridColByDisp(cursorR + i, baseD);
+      if (cc0 >= 0 && rowWidth > 0) {
+        ensureCapacity(cursorR + i, cc0 + rowWidth);
+        for (let c = COLS - 1; c >= cc0 + rowWidth; c--) grid[cursorR + i][c] = grid[cursorR + i][c - rowWidth];
+        for (let c = cc0; c < cc0 + rowWidth && c < COLS; c++) grid[cursorR + i][c] = '';
+      }
+    }
     for (let j = 0; j < clipboard[i].length; j++) {
       const slot = clipboard[i][j];
       if (slot && slot.char) {
@@ -2238,6 +2245,7 @@ async function pasteAtCursor() {
   }
   ensureCapacity(cursorR + clipboard.length, maxD);
   renderGrid();
+  refreshPreview();
 }
 
 // ═══════════════════════════════════════
@@ -2258,8 +2266,8 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Shift + 颜色码 (mroygcbpe)：着色光标所在框，不冲突快捷键
-  if (!e.ctrlKey && !e.metaKey && e.shiftKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') {
+  // Alt + 颜色码 (mroygcbpe)：着色光标所在框，不冲突快捷键
+  if (!e.ctrlKey && !e.metaKey && e.altKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') {
     const savedColor = activeColor;
     activeColor = e.key.toLowerCase();
     const dcell = getCell(cursorR, cursorC);
@@ -2275,8 +2283,8 @@ document.addEventListener('keydown', (e) => {
     }
     activeColor = savedColor;
   }
-  // Shift+color 按后不再触发工具快捷键
-  if (e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') { e.preventDefault(); return; }
+  // Alt+color 按后不再触发工具快捷键
+  if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.length === 1 && 'mroygcbpe'.includes(e.key.toLowerCase()) && activeTool !== 'text') { e.preventDefault(); return; }
 
   // Tool shortcuts (在文字工具下输入字符时不触发快捷键)
   if (!e.ctrlKey && !e.metaKey && !e.altKey && !(activeTool === 'text' && e.key.length === 1)) {
@@ -2325,10 +2333,12 @@ document.addEventListener('keydown', (e) => {
         isVisual = false; clearSelection(); updateStatus();
         e.preventDefault(); return;
       case 'd':
+        copySelection();
         deleteSelectionShiftLeft();
         isVisual = false; clearSelection(); updateStatus();
         e.preventDefault(); return;
       case 'x':
+        copySelection();
         eraseSelection();
         isVisual = false; clearSelection(); updateStatus();
         e.preventDefault(); return;
@@ -2651,20 +2661,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key.length >= 1 && activeTool === 'text' && !e.ctrlKey && !e.metaKey && !e.altKey
       && e.key !== 'Process' && e.key !== 'Unidentified'
       && !['Backspace','Delete','Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End','Shift','Control','Alt','Meta','CapsLock'].includes(e.key)) {
-    // 数字键 1/2 快速切换 insert/replace 模式（i 进插入模式，按 2 进替换模式）
-    if (e.key === '1') {
-      textMode = 'insert';
-      updateStatus();
-      e.preventDefault();
-      return;
-    }
-    if (e.key === '2') {
-      textMode = 'replace';
-      updateStatus();
-      e.preventDefault();
-      return;
-    }
-    // Insert 键切换 insert/replace 模式
+    // Insert 键切换 insert/replace（数字 1/2 保留为可输入字符）
     if (e.key === 'Insert') {
       textMode = (textMode === 'insert') ? 'replace' : 'insert';
       updateStatus();
@@ -3621,42 +3618,44 @@ function detectShapeBoxes(lines, boxes) {
   const result = [];
   const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
   for (let r = 0; r < lines.length; r++) {
-    const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
-    if (!m) continue;
-    const id = m[1];
-    const col = m.index;
-    if (!shapeSvg(id)) continue;
-    // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
-    const bottomCells = lineCells(lines[r]);
-    let toCol = -1;
-    for (const cell of bottomCells) {
-      if (cell.dispCol < col + m[0].length) continue;
-      if (BORDER.includes(cell.char)) continue;
-      if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
-      break;
+    const dRe = /d:([a-zA-Z0-9]{1,3})/g;
+    let m;
+    while ((m = dRe.exec(lines[r])) !== null) {
+      const id = m[1];
+      const col = m.index;
+      if (!shapeSvg(id)) continue;
+      // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
+      const bottomCells = lineCells(lines[r]);
+      let toCol = -1;
+      for (const cell of bottomCells) {
+        if (cell.dispCol < col + m[0].length) continue;
+        if (BORDER.includes(cell.char)) continue;
+        if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
+        break;
+      }
+      if (toCol < 0) continue;
+      // 顶边：向上找 ┌/╭/色码 在标记列
+      let fromRow = -1;
+      for (let tr = r - 1; tr >= 0; tr--) {
+        const c = lineCells(lines[tr]).find(cell => cell.dispCol === col);
+        if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
+      }
+      if (fromRow < 0) continue;
+      // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
+      const topRight = lineCells(lines[fromRow]).find(cell => cell.dispCol === toCol);
+      if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
+      const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
+      // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
+      let hex = null;
+      const tl = lineCells(lines[fromRow]).find(c => c.dispCol === col);
+      if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
+      if (!hex) {
+        const br = bottomCells.find(c => c.dispCol === toCol);
+        if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
+      }
+      if (hex) box.hex = hex;
+      result.push({ id, box, svg: shapeSvg(id) });
     }
-    if (toCol < 0) continue;
-    // 顶边：向上找 ┌/╭/色码 在标记列
-    let fromRow = -1;
-    for (let tr = r - 1; tr >= 0; tr--) {
-      const c = lineCells(lines[tr]).find(cell => cell.dispCol === col);
-      if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
-    }
-    if (fromRow < 0) continue;
-    // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
-    const topRight = lineCells(lines[fromRow]).find(cell => cell.dispCol === toCol);
-    if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
-    const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
-    // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
-    let hex = null;
-    const tl = lineCells(lines[fromRow]).find(c => c.dispCol === col);
-    if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
-    if (!hex) {
-      const br = bottomCells.find(c => c.dispCol === toCol);
-      if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
-    }
-    if (hex) box.hex = hex;
-    result.push({ id, box, svg: shapeSvg(id) });
   }
   return result;
 }

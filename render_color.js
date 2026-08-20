@@ -217,42 +217,44 @@ function detectShapeBoxes(lines, boxes) {
   const result = [];
   const BORDER = '─═━┬┴├┤┼▼▲│┃╫╪╌';
   for (let r = 0; r < lines.length; r++) {
-    const m = lines[r].match(/d:([a-zA-Z0-9]{1,3})/);
-    if (!m) continue;
-    const id = m[1];
-    const col = m.index;
-    if (!shapeSvg(id)) continue;
-    // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
-    const bottomCells = lineCells(lines[r]).cells;
-    let toCol = -1;
-    for (const cell of bottomCells) {
-      if (cell.dispCol < col + m[0].length) continue;
-      if (BORDER.includes(cell.char)) continue;
-      if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
-      break;
+    const dRe = /d:([a-zA-Z0-9]{1,3})/g;
+    let m;
+    while ((m = dRe.exec(lines[r])) !== null) {
+      const id = m[1];
+      const col = m.index;
+      if (!shapeSvg(id)) continue;
+      // 底边右端（右下角）：从标记后扫 ─ 到 ┘/╯/色码
+      const bottomCells = lineCells(lines[r]).cells;
+      let toCol = -1;
+      for (const cell of bottomCells) {
+        if (cell.dispCol < col + m[0].length) continue;
+        if (BORDER.includes(cell.char)) continue;
+        if (cell.char === '┘' || cell.char === '╯' || 'mroygcbpe'.includes(cell.char)) { toCol = cell.dispCol; break; }
+        break;
+      }
+      if (toCol < 0) continue;
+      // 顶边：向上找 ┌/╭/色码 在标记列
+      let fromRow = -1;
+      for (let tr = r - 1; tr >= 0; tr--) {
+        const c = lineCells(lines[tr]).cells.find(cell => cell.dispCol === col);
+        if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
+      }
+      if (fromRow < 0) continue;
+      // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
+      const topRight = lineCells(lines[fromRow]).cells.find(cell => cell.dispCol === toCol);
+      if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
+      const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
+      // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
+      let hex = null;
+      const tl = lineCells(lines[fromRow]).cells.find(c => c.dispCol === col);
+      if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
+      if (!hex) {
+        const br = bottomCells.find(c => c.dispCol === toCol);
+        if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
+      }
+      if (hex) box.hex = hex;
+      result.push({ id, box, svg: shapeSvg(id) });
     }
-    if (toCol < 0) continue;
-    // 顶边：向上找 ┌/╭/色码 在标记列
-    let fromRow = -1;
-    for (let tr = r - 1; tr >= 0; tr--) {
-      const c = lineCells(lines[tr]).cells.find(cell => cell.dispCol === col);
-      if (c && (c.char === '┌' || c.char === '╭' || 'mroygcbpe'.includes(c.char))) { fromRow = tr; break; }
-    }
-    if (fromRow < 0) continue;
-    // 确认右上角（fromRow 行 toCol 处是 ┐/╮/色码）
-    const topRight = lineCells(lines[fromRow]).cells.find(cell => cell.dispCol === toCol);
-    if (!topRight || !('┐╮'.includes(topRight.char) || 'mroygcbpe'.includes(topRight.char))) continue;
-    const box = { fromRow, toRow: r, fromCol: col, toCol: toCol + 1 };
-    // 提取框颜色：左上/右下角是色码 → 供 SVG 染色
-    let hex = null;
-    const tl = lineCells(lines[fromRow]).cells.find(c => c.dispCol === col);
-    if (tl && 'mroygcbpe'.includes(tl.char)) hex = (COLORS[tl.char] && COLORS[tl.char].hex) || COLORS[tl.char];
-    if (!hex) {
-      const br = bottomCells.find(c => c.dispCol === toCol);
-      if (br && 'mroygcbpe'.includes(br.char)) hex = (COLORS[br.char] && COLORS[br.char].hex) || COLORS[br.char];
-    }
-    if (hex) box.hex = hex;
-    result.push({ id, box, svg: shapeSvg(id) });
   }
   return result;
 }
@@ -626,7 +628,7 @@ if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
       const wc = b.toCol - b.fromCol, hc = b.toRow - b.fromRow + 1;
       // 线宽不随框缩放：给所有图形元素加 vector-effect="non-scaling-stroke"
       svg = svg.replace(/<(path|ellipse|circle|rect|line|polygon|polyline)\b/gi, '<$1 vector-effect="non-scaling-stroke"');
-      return svg.replace(/<svg/i, `<svg preserveAspectRatio="xMidYMid meet" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden"`);
+      return svg.replace(/<svg/i, `<svg preserveAspectRatio="none" data-shape="${b.fromCol},${b.fromRow},${wc},${hc}" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden"`);
     }).join('');
 
     // 形状框内的文字叠加层（显示在 SVG 上方，颜色按框色自动浅/深）
@@ -657,9 +659,9 @@ pre span{padding:0}
   pre.removeChild(probe);
   var lh=parseFloat(getComputedStyle(pre).lineHeight)||20;
   // 形状 SVG 在框内居中，四周留边距：图标不触框边，避免与框外文字贴合/重叠
-  var SHAPE_PAD_X = cw * 0.5;      // 左右各留 0.5 字符
-  var SHAPE_PAD_TOP = lh * 0.3;    // 顶部留 0.3 行
-  var SHAPE_PAD_BOTTOM = lh * 0.7; // 底部留 0.7 行（与框外下方文字/标签拉开间距）
+  var SHAPE_PAD_X = 0;              // 占满框，与编辑器预览一致
+  var SHAPE_PAD_TOP = 0;
+  var SHAPE_PAD_BOTTOM = 0;
   document.querySelectorAll('svg[data-shape]').forEach(function(svg){
     var p=svg.getAttribute('data-shape').split(',');
     svg.style.left=(20+(+p[0])*cw + SHAPE_PAD_X)+'px';
