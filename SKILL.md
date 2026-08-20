@@ -152,8 +152,8 @@ Examples: `___important___` underline, `_r_error_r_` red, `_!_congrats_!_` rainb
 |------|------|
 | Arrow keys / mouse drag | Extend the selection |
 | Drag inside the selection | Move the selected content (auto-switches to Move) |
-| `x` / `X` | Delete current / previous cell |
-| `dd` | Delete current row |
+| `d` / `x` / `X` | Delete current / previous cell (copies to clipboard) |
+| `dd` | Delete current row (copies to clipboard) |
 | `yy` / `p` | Copy row / paste |
 | `0` / `$` | Line start / line end |
 
@@ -170,7 +170,7 @@ Examples: `___important___` underline, `_r_error_r_` red, `_!_congrats_!_` rainb
 | `Shift+H` | Insert row (H = horizontal) |
 | `Ctrl+Shift+V` | Delete column (whole canvas) |
 | `Ctrl+Shift+H` | Delete row |
-| `Insert` | Toggle insert / overwrite text mode |
+| `Insert` | Toggle insert / overwrite text mode (inside text tool); digits like 1/2 type normally |
 
 #### Vim-style
 
@@ -180,7 +180,7 @@ Examples: `___important___` underline, `_r_error_r_` red, `_!_congrats_!_` rainb
 | `Ctrl+r` | Redo |
 | `Ctrl+Z` | Undo (fallback) |
 | `Ctrl+C/X/V` | Copy / cut / paste |
-| `Shift+color-code` (e.g. `Shift+G`) | Colorize the box under the cursor |
+| `Alt+color-code` (e.g. `Alt+g`) | Colorize the box under the cursor |
 | `Ctrl+Shift+D` | Toggle solid⇄dashed on the box/rounded-box under the cursor |
 | `Ctrl+Shift+R` | Toggle round⇄square corners on the box under the cursor (cycles) |
 | `Ctrl+Shift+B` | Replace the box/rounded-box under the cursor with a custom shape (pick from a dialog; writes `d:id` at the bottom-left corner) |
